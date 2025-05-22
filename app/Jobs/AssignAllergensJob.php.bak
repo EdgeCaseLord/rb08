@@ -2,7 +2,7 @@
 
 namespace App\Jobs;
 
-use App\Jobs\AssignSafeRecipesJob;
+use App\Jobs\AssignRecipesJob;
 use App\Models\Analysis;
 use App\Models\Allergen;
 use App\Models\User;
@@ -217,11 +217,11 @@ class AssignAllergensJob implements ShouldQueue
             });
         }
 
-        // Dispatch AssignSafeRecipesJob in chunks
+        // Dispatch AssignRecipesJob in chunks
         if (!empty($patients)) {
             $uniquePatients = collect($patients)->unique('id');
             $uniquePatients->chunk(10)->each(function ($chunk) {
-                AssignSafeRecipesJob::dispatch($chunk->all())->onQueue('default');
+                AssignRecipesJob::dispatch($chunk->all())->onQueue('default');
             });
 
             // Notify user of allergen assignment completion

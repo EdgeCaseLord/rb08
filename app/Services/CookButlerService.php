@@ -164,9 +164,10 @@ class CookButlerService
      * Hole Rezeptdetails für alle Rezepte in einem Batch-Aufruf.
      *
      * @param array $recipeIds Array von Rezept-IDs
+     * @param User|null $patient Optional: Patient for allergen exclusion
      * @return array Rezeptdetails
      */
-    public function fetchRecipeDetailsBatch(array $recipeIds): array
+    public function fetchRecipeDetailsBatch(array $recipeIds, User $patient = null): array
     {
         try {
             $batchData = [
@@ -174,7 +175,12 @@ class CookButlerService
                 'id_list' => $recipeIds,
                 'fields' => ['ingredients', 'steps', 'time', 'category', 'substances', 'media', 'images', 'difficulty', 'serving', 'diets', 'allergens'],
             ];
-
+            if ($patient) {
+                $query = $this->buildSearchQuery($patient);
+                if (!empty($query)) {
+                    $batchData['q'] = $query;
+                }
+            }
             $data = $this->makeApiRequest('POST', $this->batchEndpoint, $batchData);
             if (empty($data)) {
                 Log::info('Keine Rezeptdetails von der Batch-API zurückgegeben', ['rezept_ids' => $recipeIds]);
@@ -292,17 +298,16 @@ class CookButlerService
             if (!empty($filters['max_time'])) {
                 $apiFilters['max_time'] = (array)$filters['max_time'];
             }
-            // Always append allergen exclusion query to the search string
-            $searchString = '';
-            if (!empty($filters['title'])) {
-                $searchString = $filters['title'] . ' ' . $query;
+            if (!empty($filters['q'])) {
+                $searchData['q'] = $filters['q'];
             } else {
-                $searchString = $query;
+                $searchData['q'] = $query;
             }
-            $searchData['q'] = trim($searchString);
             if (!empty($apiFilters)) {
                 $searchData['filters'] = $apiFilters;
             }
+
+            Log::debug('CookButlerService: searchData payload before API request', ['searchData' => $searchData]);
 
             Log::info('CookButler available recipes search - about to make API request', [
                 'patient_id' => $patient->id,
@@ -391,9 +396,10 @@ class CookButlerService
      * Gibt alle verfügbaren Felder wie beim Batch-Call zurück.
      *
      * @param string|int $recipeId
+     * @param User|null $patient Optional: Patient for allergen exclusion
      * @return array|null
      */
-    public function fetchRecipeDetails($recipeId): ?array
+    public function fetchRecipeDetails($recipeId, User $patient = null): ?array
     {
         $jwt = $this->generateJwt();
         $headers = [
@@ -406,6 +412,12 @@ class CookButlerService
             'language' => 'de-de',
             'fields' => ['ingredients','steps','time','category','substances','media','images','difficulty','serving','diets','allergens','country','price','yield_quantity_1','yield_quantity_2','yield_info','yield_info_short','subtitle','alttitle','create','last_update','description'],
         ];
+        if ($patient) {
+            $allergenQ = $this->buildSearchQuery($patient);
+            if (!empty($allergenQ)) {
+                $query['q'] = $allergenQ;
+            }
+        }
         $response = \Illuminate\Support\Facades\Http::withHeaders($headers)->get($url, $query);
         if (!$response->successful()) {
             Log::error('Fehler beim Abrufen von Einzelrezeptdetails', [

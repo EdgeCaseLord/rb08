@@ -40,35 +40,13 @@ class FavoriteRecipesTable extends Component
 
     private function ensureRecipeCollection($recipes)
     {
-        $collection = collect();
         if ($recipes instanceof \Illuminate\Support\Collection) {
-            $arr = $recipes->all();
-            $ids_recipe = array_filter(array_map(function($r) { return is_array($r) ? ($r['id_recipe'] ?? null) : null; }, $arr));
-            $ids_external = array_filter(array_map(function($r) { return is_array($r) ? ($r['id_external'] ?? null) : null; }, $arr));
-            if (count($ids_recipe) > 0 || count($ids_external) > 0) {
-                $query = Recipe::query();
-                if (count($ids_recipe) > 0) $query->orWhereIn('id_recipe', $ids_recipe);
-                if (count($ids_external) > 0) $query->orWhereIn('id_external', $ids_external);
-                $collection = $query->get();
-            } else {
-                $collection = collect(array_filter($arr, function($r) { return $r instanceof Recipe; }));
-            }
+            return $recipes->filter(function($r) { return $r instanceof Recipe; })->values();
         } elseif (is_array($recipes)) {
-            $ids_recipe = array_filter(array_map(function($r) { return is_array($r) ? ($r['id_recipe'] ?? null) : null; }, $recipes));
-            $ids_external = array_filter(array_map(function($r) { return is_array($r) ? ($r['id_external'] ?? null) : null; }, $recipes));
-            if (count($ids_recipe) > 0 || count($ids_external) > 0) {
-                $query = Recipe::query();
-                if (count($ids_recipe) > 0) $query->orWhereIn('id_recipe', $ids_recipe);
-                if (count($ids_external) > 0) $query->orWhereIn('id_external', $ids_external);
-                $collection = $query->get();
-            } else {
-                $collection = collect(array_filter($recipes, function($r) { return $r instanceof Recipe; }));
-            }
+            return collect($recipes)->filter(function($r) { return $r instanceof Recipe; })->values();
         } else {
-            $collection = collect();
+            return collect();
         }
-        // Final guard: only allow Recipe objects
-        return $collection->filter(function($r) { return $r instanceof Recipe; })->values();
     }
 
     public function refreshRecipes()
@@ -83,9 +61,6 @@ class FavoriteRecipesTable extends Component
             ->whereNotIn('id_recipe', $bookRecipeIds)
             ->get();
         $this->recipes = $this->ensureRecipeCollection($recipes);
-        if ($this->recipes instanceof \Illuminate\Support\Collection) {
-            $this->recipes = $this->recipes->filter(function($r) { return is_object($r); })->values();
-        }
     }
 
     private function normalizeRecipes()
@@ -99,7 +74,12 @@ class FavoriteRecipesTable extends Component
         if (!$user) return;
         $user->removeFromFavorites($id);
         $this->dispatch('recipeRemovedFromFavorites', $id);
-        $this->refreshRecipes();
+        // Remove from favorites UI immediately
+        $this->recipes = $this->ensureRecipeCollection($this->recipes);
+        $this->recipes = $this->recipes->reject(function($r) use ($id) {
+            return $r->id_recipe == $id || $r->id_external == $id;
+        })->values();
+        // Do not call refreshRecipes here
     }
 
     public function addToBook($id)
@@ -107,7 +87,7 @@ class FavoriteRecipesTable extends Component
         $book = Book::find($this->bookId);
         if (!$book || !$book->patient) return;
         // Accept either internal or external id
-        $recipe = \App\Models\Recipe::where('id_recipe', $id)->orWhere('id_external', $id)->first();
+        $recipe = Recipe::where('id_recipe', $id)->orWhere('id_external', $id)->first();
         if (!$recipe) return;
         try {
             $book->addRecipe($recipe->id_recipe);
@@ -121,12 +101,11 @@ class FavoriteRecipesTable extends Component
         }
         $this->dispatch('recipeAddedToBook', $recipe->id_external ?? $recipe->id_recipe);
         // Remove from favorites UI immediately
-        $recipesCollection = $this->ensureRecipeCollection($this->recipes)->filter(function($r) { return $r instanceof Recipe; });
-        $filtered = $recipesCollection->filter(function($r) use ($recipe) {
-            return $r->id_recipe != $recipe->id_recipe && $r->id_external != $recipe->id_external;
-        });
-        $this->recipes = $filtered->values();
-        $this->refreshRecipes();
+        $this->recipes = $this->ensureRecipeCollection($this->recipes);
+        $this->recipes = $this->recipes->reject(function($r) use ($recipe) {
+            return $r->id_recipe == $recipe->id_recipe || $r->id_external == $recipe->id_external;
+        })->values();
+        // Do not call refreshRecipes here
     }
 
     public function addFavoriteRecipe($externalId)
@@ -137,24 +116,17 @@ class FavoriteRecipesTable extends Component
         $settings = $patient->settings ?? [];
         $favorites = $settings['favorites'] ?? [];
         $bookRecipeIds = $book->recipes()->pluck('id_recipe')->toArray();
-        $recipe = \App\Models\Recipe::where('id_external', $externalId)->orWhere('id_recipe', $externalId)->first();
+        $recipe = Recipe::where('id_external', $externalId)->orWhere('id_recipe', $externalId)->first();
         if (!$recipe) return;
         if (in_array($recipe->id_recipe, $bookRecipeIds)) return; // Do not add to UI if in book
-        // Only allow objects in $this->recipes
-        if (!($this->recipes instanceof \Illuminate\Support\Collection)) {
-            $this->recipes = $this->ensureRecipeCollection($this->recipes);
-        }
-        $this->recipes = $this->recipes->filter(function($r) { return $r instanceof Recipe; })->values();
-        $alreadyPresent = $this->recipes->contains(function ($r) use ($recipe) {
-            return $r instanceof Recipe && $r->id_recipe == $recipe->id_recipe;
-        });
-        if ($alreadyPresent) return;
-        if ($recipe instanceof Recipe) {
-            $this->recipes = $this->recipes->prepend($recipe);
-        }
         $this->recipes = $this->ensureRecipeCollection($this->recipes);
-        // Always refresh to remove from UI if now in book
-        $this->refreshRecipes();
+        // Always prepend, even if already present, to ensure UI update
+        $this->recipes = $this->recipes->reject(function ($r) use ($recipe) {
+            return $r->id_recipe == $recipe->id_recipe;
+        });
+        $this->recipes = $this->recipes->prepend($recipe);
+        // No need to call ensureRecipeCollection again, as all are Recipe objects
+        // Do not call refreshRecipes here, to avoid UI flicker and ensure instant update
     }
 
     public function render()

@@ -1,258 +1,263 @@
-    <style>
-    @font-face {
-        font-family: 'Roboto-Regular';
-        src: url('/fonts/Roboto-Regular.ttf') format('truetype');
-        font-weight: normal;
-        font-style: normal;
+<style>
+@font-face {
+    font-family: 'Roboto-Regular';
+    src: url('/fonts/Roboto-Regular.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+.recipe-content {
+    width: 100%;
+    margin: 0;
+    font-family: 'Roboto-Regular', Helvetica, Arial, sans-serif;
+    background: transparent;
+    font-size: 9pt;
+}
+.recipe-header {
+    display: grid;
+    grid-template-columns: 1fr 62mm;
+    align-items: stretch;
+    gap: 6mm;
+    margin-bottom: 4mm;
+    width: 100%;
+}
+.recipe-header-left {
+    background: #FF6100;
+    border-radius: 12pt;
+    padding: 12pt 16pt 12pt 16pt;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0;
+}
+.recipe-header-right {
+    display: flex;
+    align-items: stretch;
+    justify-content: flex-end;
+    background: none;
+}
+.recipe-image {
+    width: 62mm;
+    height: 48mm;
+    object-fit: cover;
+    border-radius: 12pt;
+    background: #eee;
+}
+.recipe-title {
+    font-size: 16pt;
+    font-weight: bold;
+    margin-bottom: 10pt;
+    color: #fff;
+}
+.recipe-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6pt;
+    margin-bottom: 10pt;
+}
+.recipe-tag {
+    background: #fff;
+    color: #FF6100;
+    border-radius: 12pt;
+    padding: 2pt 10pt;
+    font-size: 9pt;
+    font-weight: 500;
+    display: inline-block;
+}
+.recipe-meta {
+    font-size: 9pt;
+    margin-bottom: 2pt;
+    color: #fff;
+}
+.recipe-main {
+    display: grid;
+    grid-template-columns: 0.7fr 1fr;
+    gap: 4mm;
+}
+.recipe-main-left, .recipe-main-right {
+    display: flex;
+    flex-direction: column;
+    gap: 4mm;
+}
+.card {
+    background: white;
+    border-radius: 8pt;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    padding: 7pt 10pt 7pt 10pt;
+    margin: 0;
+    border: 1px solid #eee;
+}
+.card-orange-title {
+    color: #FF6100;
+    font-size: 12pt;
+    font-weight: bold;
+    margin-bottom: 6pt;
+}
+.nutrients-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 3mm;
+}
+.nutrient-box {
+    background: #FFF3E0;
+    color: #FF6100;
+    border-radius: 6pt;
+    text-align: center;
+    font-size: 9pt;
+    font-weight: bold;
+    padding: 4pt 0 2pt 0;
+    margin-bottom: 0;
+    min-width: 18mm;
+    min-height: 14mm;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+.nutrient-label {
+    font-size: 9pt;
+    font-weight: normal;
+    color: #FF6100;
+    margin-bottom: 1pt;
+}
+.nutrient-value {
+    font-size: 9pt;
+    font-weight: bold;
+    color: #FF6100;
+}
+.recipe-times-allergens-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 4mm;
+    width: 100%;
+    box-sizing: border-box;
+}
+.card-times, .card-allergens {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+.times-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9pt;
+    table-layout: fixed;
+}
+.times-table td, .times-table th {
+    padding: 1pt 4pt;
+    border: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.times-table .total-row {
+    font-weight: bold;
+}
+.allergens-list {
+    font-size: 9pt;
+    margin: 0;
+    padding-left: 0;
+    list-style: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.steps-list {
+    counter-reset: step;
+    margin: 0;
+    padding-left: 0;
+}
+.step-item {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 5pt;
+}
+.step-number {
+    background: #FF6100;
+    color: #fff;
+    border-radius: 50%;
+    width: 12pt;
+    height: 12pt;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9pt;
+    font-weight: bold;
+    margin-right: 7pt;
+    flex-shrink: 0;
+}
+.step-text {
+    font-size: 9pt;
+    color: #333;
+}
+.ingredient-part {
+    font-weight: bold;
+    margin-top: 6pt;
+    margin-bottom: 2pt;
+    font-size: 9pt;
+    list-style: none;
+    padding-left: 0;
+}
+.ingredients-list {
+    list-style: disc;
+    padding-left: 16pt;
+    margin: 0;
+}
+.nutrients-compact-table {
+    width: 100%;
+    max-width: 120mm;
+    border-collapse: collapse;
+    font-size: 10pt;
+    margin: 0;
+    margin-bottom: 2mm;
+    line-height: 1.2;
+    table-layout: fixed;
+    word-break: break-word;
+}
+.nutrients-compact-table th, .nutrients-compact-table td {
+    padding: 2pt 8pt;
+    border: none;
+    line-height: 1.2;
+    word-break: break-word;
+    font-size: 10pt;
+}
+.nutrients-compact-table th {
+    background: #FF6100;
+    color: #fff;
+    font-weight: bold;
+    font-size: 11pt;
+}
+.nutrients-compact-table tr {
+    break-inside: avoid;
+}
+.nutrients-compact-table tr:nth-child(even) {
+    background: #FFF5ED;
+}
+.nutrients-compact-table tr:nth-child(odd) {
+    background: #fff;
+}
+@media print {
+    .filament-panels, .filament-header, .filament-footer, .filament-sidebar {
+        display: none !important;
     }
     .recipe-content {
-        width: 100%;
-        margin: 0;
-        font-family: 'Roboto-Regular', Helvetica, Arial, sans-serif;
-        background: transparent;
-        font-size: 9pt;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
     }
-    .recipe-header {
-        display: grid;
-        grid-template-columns: 1fr 62mm;
-        align-items: stretch;
-        gap: 6mm;
-        margin-bottom: 4mm;
-        width: 100%;
-    }
-    .recipe-header-left {
-        background: #FF6100;
-        border-radius: 12pt;
-        padding: 12pt 16pt 12pt 16pt;
-        color: #fff;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        min-width: 0;
-    }
-    .recipe-header-right {
-        display: flex;
-        align-items: stretch;
-        justify-content: flex-end;
-        background: none;
-    }
-    .recipe-image {
-        width: 62mm;
-        height: 48mm;
-        object-fit: cover;
-        border-radius: 12pt;
-        background: #eee;
-    }
-    .recipe-title {
-        font-size: 16pt;
-        font-weight: bold;
-        margin-bottom: 10pt;
-        color: #fff;
-    }
-    .recipe-tags {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6pt;
-        margin-bottom: 10pt;
-    }
-    .recipe-tag {
-        background: #fff;
-        color: #FF6100;
-        border-radius: 12pt;
-        padding: 2pt 10pt;
-        font-size: 9pt;
-        font-weight: 500;
-        display: inline-block;
-    }
-    .recipe-meta {
-        font-size: 9pt;
-        margin-bottom: 2pt;
-        color: #fff;
-    }
-    .recipe-main {
-        display: grid;
-        grid-template-columns: 0.7fr 1fr;
-        gap: 4mm;
-    }
-    .recipe-main-left, .recipe-main-right {
-        display: flex;
-        flex-direction: column;
-        gap: 4mm;
-    }
-    .card {
-        background: white;
-        border-radius: 8pt;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        padding: 7pt 10pt 7pt 10pt;
-        margin: 0;
-        border: 1px solid #eee;
-    }
-    .card-orange-title {
-        color: #FF6100;
-        font-size: 12pt;
-        font-weight: bold;
-        margin-bottom: 6pt;
-    }
-    .nutrients-grid {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 3mm;
-    }
-    .nutrient-box {
-        background: #FFF3E0;
-        color: #FF6100;
-        border-radius: 6pt;
-        text-align: center;
-        font-size: 9pt;
-        font-weight: bold;
-        padding: 4pt 0 2pt 0;
-        margin-bottom: 0;
-        min-width: 18mm;
-        min-height: 14mm;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-    }
-    .nutrient-label {
-        font-size: 9pt;
-        font-weight: normal;
-        color: #FF6100;
-        margin-bottom: 1pt;
-    }
-    .nutrient-value {
-        font-size: 9pt;
-        font-weight: bold;
-        color: #FF6100;
-    }
-    .recipe-times-allergens-row {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-        gap: 4mm;
-        width: 100%;
-        box-sizing: border-box;
-    }
-    .card-times, .card-allergens {
-        width: 100%;
-        min-width: 0;
-        box-sizing: border-box;
-    }
-    .times-table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 9pt;
-        table-layout: fixed;
-    }
-    .times-table td, .times-table th {
-        padding: 1pt 4pt;
-        border: none;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-    .times-table .total-row {
-        font-weight: bold;
-    }
-    .allergens-list {
-        font-size: 9pt;
-        margin: 0;
-        padding-left: 0;
-        list-style: none;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-    .steps-list {
-        counter-reset: step;
-        margin: 0;
-        padding-left: 0;
-    }
-    .step-item {
-        display: flex;
-        align-items: flex-start;
-        margin-bottom: 5pt;
-    }
-    .step-number {
-        background: #FF6100;
-        color: #fff;
-        border-radius: 50%;
-        width: 12pt;
-        height: 12pt;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 9pt;
-        font-weight: bold;
-        margin-right: 7pt;
-        flex-shrink: 0;
-    }
-    .step-text {
-        font-size: 9pt;
-        color: #333;
-    }
-    .ingredient-part {
-        font-weight: bold;
-        margin-top: 6pt;
-        margin-bottom: 2pt;
-        font-size: 9pt;
-        list-style: none;
-        padding-left: 0;
-    }
-    .ingredients-list {
-        list-style: disc;
-        padding-left: 16pt;
-        margin: 0;
-    }
-    .nutrients-compact-table {
-        width: 100%;
-        max-width: 120mm;
-        border-collapse: collapse;
-        font-size: 10pt;
-        margin: 0;
-        margin-bottom: 2mm;
-        line-height: 1.2;
-        table-layout: fixed;
-        word-break: break-word;
-    }
-    .nutrients-compact-table th, .nutrients-compact-table td {
-        padding: 2pt 8pt;
-        border: none;
-        line-height: 1.2;
-        word-break: break-word;
-        font-size: 10pt;
-    }
-    .nutrients-compact-table th {
-        background: #FF6100;
-        color: #fff;
-        font-weight: bold;
-        font-size: 11pt;
-    }
-    .nutrients-compact-table tr {
-        break-inside: avoid;
-    }
-    .nutrients-compact-table tr:nth-child(even) {
-        background: #FFF5ED;
-    }
-    .nutrients-compact-table tr:nth-child(odd) {
-        background: #fff;
-    }
-    @media print {
-        .filament-panels, .filament-header, .filament-footer, .filament-sidebar {
-            display: none !important;
-        }
-        .recipe-content {
-            width: 100% !important;
-            margin: 0 !important;
-            padding: 0 !important;
-        }
-    }
-    </style>
+}
+</style>
 
 @php
-    // Normalize recipe data for both array and object
-    $data = $recipe ?? $record ?? null;
+    $data = $recipe ?? (isset($record) ? $record : null);
     if (!$data) {
         throw new Exception('No recipe provided to view-recipe.');
+    }
+    // If data is wrapped as {App\Models\Recipe: {...}}, extract the inner array/object
+    if (is_array($data) && count($data) === 1 && isset($data['App\\Models\\Recipe'])) {
+        $data = $data['App\\Models\\Recipe'];
+    } elseif (is_object($data) && count(get_object_vars($data)) === 1 && isset($data->{'App\\Models\\Recipe'})) {
+        $data = $data->{'App\\Models\\Recipe'};
     }
     // If Eloquent model, use getAttributes()
     if (is_object($data) && method_exists($data, 'getAttributes')) {
@@ -264,9 +269,28 @@
     $normalizeField = function($value) {
         return is_string($value) ? json_decode($value, true) : (is_array($value) ? $value : []);
     };
-    // Decode all JSON fields
+    // Force decode all JSON fields if they are strings (fix for modal not showing data)
     foreach ([
-        'category', 'diets', 'time', 'media', 'ingredients', 'substances', 'allergens', 'steps'
+        'category', 'diets', 'time', 'media', 'ingredients', 'substances', 'allergens', 'steps', 'images'
+    ] as $field) {
+        if (isset($data[$field]) && is_string($data[$field])) {
+            $decoded = json_decode($data[$field], true);
+            if (json_last_error() === JSON_ERROR_NONE) {
+                $data[$field] = $decoded;
+            }
+        }
+    }
+    // If any of these fields are still objects, convert to array
+    foreach ([
+        'category', 'diets', 'time', 'media', 'ingredients', 'substances', 'allergens', 'steps', 'images'
+    ] as $field) {
+        if (isset($data[$field]) && is_object($data[$field])) {
+            $data[$field] = (array) $data[$field];
+        }
+    }
+    // Second pass: decode again if any field is still a string (handles double-encoded JSON)
+    foreach ([
+        'category', 'diets', 'time', 'media', 'ingredients', 'substances', 'allergens', 'steps', 'images'
     ] as $field) {
         if (isset($data[$field]) && is_string($data[$field])) {
             $decoded = json_decode($data[$field], true);
@@ -285,7 +309,7 @@
     $categories = is_array($data['category'] ?? null) ? collect($data['category'])->filter() : collect();
     $diets = is_array($data['diets'] ?? null) ? $data['diets'] : [];
     $presentDiets = !empty($diets)
-        ? collect($diets)->filter(fn($diet) => $diet['value'] ?? false)->pluck('diet')->all()
+        ? collect($diets)->filter(fn($diet) => is_array($diet) ? ($diet['value'] ?? false) : false)->pluck('diet')->all()
         : [];
     $country = $data['country'] ?? null;
     $media = is_array($data['media'] ?? null) ? $data['media'] : [];
