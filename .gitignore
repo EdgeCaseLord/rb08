@@ -16,3 +16,8 @@ storage/framework/cache/
 storage/framework/sessions/
 storage/framework/cache/
 storage/framework/views/
+auth.json
+package-lock.json
+public/fonts/
+public/fonts/
+users_export.csv
