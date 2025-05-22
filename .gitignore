@@ -1,2 +1,18 @@
 
 .vscode/settings.json
+node_modules/
+vendor/
+.env
+.env.local
+.env.development
+.env.production
+.idea/
+.vscode/
+.cursor/
+storage/logs/laravel.log
+storage/logs/email.log
+storage/framework/
+storage/framework/cache/
+storage/framework/sessions/
+storage/framework/cache/
+storage/framework/views/
