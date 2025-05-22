@@ -236,6 +236,12 @@
 .nutrients-compact-table tr:nth-child(odd) {
     background: #fff;
 }
+.nutrient-row-even {
+    background: #FFF5ED;
+}
+.nutrient-row-odd {
+    background: #FFFFFF;
+}
 @media print {
     .filament-panels, .filament-header, .filament-footer, .filament-sidebar {
         display: none !important;
@@ -446,9 +452,9 @@
                                         });
                                         $value = $substance['portion']['amount'] ?? $substance['value'] ?? null;
                                         $value = is_numeric($value) ? number_format($value, 1) : '–';
-                                        $rowBg = $i % 2 == 0 ? '#FFF5ED' : '#FFFFFF';
+                                        $rowClass = $i % 2 == 0 ? 'nutrient-row-even' : 'nutrient-row-odd';
                                 @endphp
-                                    <tr style="background: {{ $rowBg }};">
+                                    <tr class="{{ $rowClass }}">
                                         <td>{{ $nutrient }}</td>
                                         <td style="text-align:right;">{{ $value }} {{ $unit }}</td>
                                     </tr>
