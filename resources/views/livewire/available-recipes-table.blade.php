@@ -22,7 +22,7 @@
         @endforeach
         </div>
     </div>
-    <div x-data="{ open: {{ (!empty($filterTitle) || !empty($filterDifficulty) || !empty($filterCourse) || !empty($filterIngredients) || !empty($filterDiets)) ? 'true' : 'false' }}, filteringSave: false, filteringApply: false }" x-init="$watch('filtering', val => { if (!val) $refs.filterForm && $refs.filterForm.reset(); })">
+    <div x-data="{ open: {{ (!empty($filterTitle) || !empty($filterDifficulty) || !empty($filterCourse) || !empty($filterIngredients) || !empty($filterDiets)) ? 'true' : 'false' }}, filteringSave: false, filteringApply: false }" x-init="">
         <div class="flex items-center justify-between mb-2 cursor-pointer select-none" @click="open = !open">
             <div class="flex items-center gap-2">
                 <svg class="h-5 w-5 text-primary-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707l-7 7V21a1 1 0 01-1.447.894l-4-2A1 1 0 017 19v-5.293l-7-7A1 1 0 013 4z" /></svg>
