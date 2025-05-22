@@ -11,13 +11,10 @@ class AnalysesWidget extends Widget
 
     protected static ?int $sort = 2;
 
-    protected int | string | array $columnSpan = 1;
-//    protected int | string | array $columnSpan = 3;
-
-    protected function getColumns(): int
-    {
-        return 1;
-    }
+    protected int | string | array $columnSpan = [
+        'default' => 2,
+        'md' => 1,
+    ];
 
     public function getData(): array
     {

@@ -10,14 +10,18 @@ class LinksWidget extends Widget
 
     protected static ?int $sort = 7;
 
-    protected int | string | array $columnSpan = 1;
+    // protected int | string | array $columnSpan = 1;
 //    protected int | string | array $columnSpan = 3;
 
-
-    protected function getColumns(): int
-    {
-        return 1;
-    }
+protected int | string | array $columnSpan =  [
+    'sm' => 1,
+    'md' => 1,
+    'xl' => 1,
+];
+    // protected function getColumns(): int
+    // {
+    //     return 1;
+    // }
 
     protected function getViewData(): array
     {

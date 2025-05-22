@@ -10,14 +10,19 @@ class HandbuchWidget extends Widget
 
     protected static ?int $sort = 6;
 
-    protected int | string | array $columnSpan = 1;
+    // protected int | string | array $columnSpan = 1;
 //    protected int | string | array $columnSpan = 3;
+protected int | string | array $columnSpan = [
+    'default' => 4,
+    'sm' => 4,
+    'md' => 1,
+    'lg' => 1,
+];
 
-
-    protected function getColumns(): int
-    {
-        return 1;
-    }
+    // protected function getColumns(): int
+    // {
+    //     return 1;
+    // }
 
 
     protected function getViewData(): array

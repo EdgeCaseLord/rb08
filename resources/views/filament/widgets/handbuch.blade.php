@@ -1,5 +1,5 @@
 <x-filament::widget>
-    <x-filament::card>
+    <x-filament::card class="w-full max-w-full sm:max-w-sm mx-auto">
         <h2 class="text-lg font-semibold mb-4">Quick Links</h2>
         <ul class="space-y-2">
             @foreach ($handbuchLinks as $link)
