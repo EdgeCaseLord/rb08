@@ -345,20 +345,22 @@
                 <span>perPage: {{ $perPage }}, loaded: {{ count($recipes) }}</span>
             </div>
             <div class="flex justify-center py-4">
-                <button
-                    type="button"
-                    class="px-4 py-2 bg-primary-600 text-white font-bold rounded hover:bg-primary-700 flex items-center gap-2"
-                    wire:click="loadMore"
-                    :disabled="$wire.loading"
-                >
-                    <span>Mehr laden</span>
-                    <template x-if="$wire.loading">
-                        <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
-                        </svg>
-                    </template>
-                </button>
+                <div x-data="{ loadingMore: false }">
+                    <button
+                        type="button"
+                        class="px-4 py-2 bg-primary-600 text-white font-bold rounded hover:bg-primary-700 flex items-center gap-2"
+                        :disabled="loadingMore"
+                        @click="loadingMore = true; $wire.loadMore().then(() => loadingMore = false);"
+                    >
+                        <span>Mehr laden</span>
+                        <template x-if="loadingMore">
+                            <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                            </svg>
+                        </template>
+                    </button>
+                </div>
             </div>
         @endif
         @if(!$hasMore && !$loading)
