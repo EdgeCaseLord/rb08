@@ -372,23 +372,7 @@
             <div class="bg-white rounded-lg shadow-lg w-full max-w-4xl relative" wire:click.stop style="max-height:90vh; overflow-y:auto;">
                 <button class="absolute top-2 right-2 text-gray-500 hover:text-gray-700" wire:click="closeRecipeModal">&times;</button>
                 <div class="p-6">
-                    @php
-                        // Normalize modalRecipe fields to string or array as needed for safe json_decode in included view
-                        if (is_object($modalRecipe)) {
-                            // Convert stdClass to array for safe access
-                            $modalRecipe = (array) $modalRecipe;
-                        }
-                        if (is_array($modalRecipe)) {
-                            foreach ([
-                                'category', 'diets', 'time', 'media', 'ingredients', 'substances', 'allergens', 'steps'
-                            ] as $field) {
-                                if (isset($modalRecipe[$field]) && !is_string($modalRecipe[$field]) && !is_array($modalRecipe[$field])) {
-                                    $modalRecipe[$field] = json_encode($modalRecipe[$field]);
-                                }
-                            }
-                        }
-                    @endphp
-                    @include('filament.resources.recipe-resource.view-recipe', ['recipe' => is_object($modalRecipe) ? (array)$modalRecipe : $modalRecipe])
+                    @include('filament.resources.recipe-resource.view-recipe', ['recipe' => $modalRecipe])
                 </div>
             </div>
         </div>

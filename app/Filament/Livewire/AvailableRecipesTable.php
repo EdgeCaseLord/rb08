@@ -551,6 +551,7 @@ class AvailableRecipesTable extends Component
             }
         }
         $this->modalRecipe = $recipe;
+        \Illuminate\Support\Facades\Log::debug('openRecipeModal', ['id' => $id, 'modalRecipe' => $this->modalRecipe]);
         $this->showRecipeModal = true;
     }
 
