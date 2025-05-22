@@ -209,8 +209,11 @@ class AvailableRecipesTable extends Component
      * @param array $recipe
      * @return array
      */
-    public static function normalizeRecipe(array $recipe): array
+    public static function normalizeRecipe(array $recipe = null): array
     {
+        if ($recipe === null) {
+            return [];
+        }
         $optional = $recipe['optional'] ?? [];
         $main = $recipe['recipe'] ?? [];
         $title = $recipe['title'] ?? $optional['title'] ?? $main['title'] ?? $recipe['name'] ?? '';

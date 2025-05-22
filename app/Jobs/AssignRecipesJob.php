@@ -165,10 +165,19 @@ class AssignRecipesJob implements ShouldQueue
             foreach ($patients as $patient) {
                 try {
                     $this->assignRecipesToPatient($patient, $recipeDetails);
-                    CreateBookJob::dispatch($patient)->onQueue('default');
+                    // Collect recipe IDs to pass to CreateBookJob
+                    $recipeIds = [];
+                    foreach ($recipeDetails as $recipeDetail) {
+                        $recipe = \App\Models\Recipe::where('id_external', $recipeDetail['id'])->first();
+                        if ($recipe) {
+                            $recipeIds[] = $recipe->id_recipe;
+                        }
+                    }
+                    CreateBookJob::dispatch($patient, $recipeIds)->onQueue('default');
                     Log::info('CreateBookJob für Patient gestartet', [
                         'patient_id' => $patient->id,
                         'rezept_anzahl' => count($recipeDetails),
+                        'recipe_ids' => $recipeIds,
                     ]);
                 } catch (\Exception $e) {
                     Log::error('Error processing recipes for patient', [

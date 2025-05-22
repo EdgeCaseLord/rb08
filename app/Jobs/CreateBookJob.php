@@ -22,11 +22,13 @@ class CreateBookJob implements ShouldQueue
     protected $patient;
     public $uniqueId;
     public $tries = 3;
+    public $recipeIds;
 
-    public function __construct(User $patient)
+    public function __construct(User $patient, array $recipeIds = null)
     {
         $this->patient = $patient;
         $this->uniqueId = 'create_book_' . $patient->id . '_' . now()->timestamp;
+        $this->recipeIds = $recipeIds;
     }
 
     public function uniqueId()
@@ -66,76 +68,95 @@ class CreateBookJob implements ShouldQueue
             ]);
             Log::channel('email')->info('Book created for patient', ['book_id' => $book->id, 'patient_id' => $patient->id]);
 
-            // Fetch recipes for the patient directly
-            $recipes = \App\Models\Recipe::whereHas('books', function($q) use ($patient) {
-                $q->where('patient_id', $patient->id);
-            })->get();
-
-            Log::channel('email')->info('Fetched recipes for patient', [
-                'patient_id' => $patient->id,
-                'recipe_count' => $recipes->count(),
-                'recipe_ids' => $recipes->pluck('id_recipe')->toArray(),
-            ]);
-
-            if ($recipes->isEmpty()) {
-                Log::channel('email')->warning('No recipes found for patient, skipping book recipe attachment', [
-                    'patient_id' => $patient->id,
+            // Attach provided recipes if available
+            if ($this->recipeIds && is_array($this->recipeIds) && count($this->recipeIds) > 0) {
+                foreach ($this->recipeIds as $recipeId) {
+                    try {
+                        $book->addRecipe($recipeId);
+                    } catch (\Exception $e) {
+                        Log::channel('email')->error('Failed to add recipe to book', [
+                            'book_id' => $book->id,
+                            'patient_id' => $patient->id,
+                            'recipe_id' => $recipeId,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                }
+                Log::channel('email')->info('Assigned provided recipes to book', [
                     'book_id' => $book->id,
+                    'patient_id' => $patient->id,
+                    'recipe_count' => count($this->recipeIds),
+                    'recipe_ids' => $this->recipeIds,
                 ]);
-                return;
-            }
-
-            // Get lab settings for recipe limits
-            $lab = $patient->lab;
-            $defaultRecipesPerCourse = [
-                'starter' => 5,
-                'main_course' => 5,
-                'dessert' => 5,
-            ];
-            $recipesPerCourse = $lab ? ($lab->settings['recipes_per_course'] ?? $defaultRecipesPerCourse) : $defaultRecipesPerCourse;
-            $totalRecipeLimit = array_sum($recipesPerCourse);
-
-            // Group recipes by course
-            $recipesByCourse = [];
-            foreach ($recipes as $recipe) {
-                if ($recipe && $recipe->course) {
-                    $recipesByCourse[$recipe->course][] = $recipe;
-                }
-            }
-
-            // Select random recipes within limits for each course
-            $selectedRecipes = [];
-            foreach ($recipesPerCourse as $course => $limit) {
-                $courseRecipes = $recipesByCourse[$course] ?? [];
-                if (!empty($courseRecipes)) {
-                    $selectedRecipes = array_merge(
-                        $selectedRecipes,
-                        collect($courseRecipes)->shuffle()->take($limit)->all()
-                    );
-                }
-            }
-
-            // Attach selected recipes to the book
-            foreach ($selectedRecipes as $recipe) {
-                try {
-                    $book->addRecipe($recipe->id_recipe);
-                } catch (\Exception $e) {
-                    Log::channel('email')->error('Failed to add recipe to book', [
-                        'book_id' => $book->id,
+            } else {
+                // Fallback to old logic
+                $recipes = \App\Models\Recipe::whereHas('books', function($q) use ($patient) {
+                    $q->where('patient_id', $patient->id);
+                })->get();
+                Log::channel('email')->info('Fetched recipes for patient', [
+                    'patient_id' => $patient->id,
+                    'recipe_count' => $recipes->count(),
+                    'recipe_ids' => $recipes->pluck('id_recipe')->toArray(),
+                ]);
+                if ($recipes->isEmpty()) {
+                    Log::channel('email')->warning('No recipes found for patient, skipping book recipe attachment', [
                         'patient_id' => $patient->id,
-                        'recipe_id' => $recipe->id_recipe,
-                        'error' => $e->getMessage(),
+                        'book_id' => $book->id,
                     ]);
+                    return;
                 }
-            }
+                // Get lab settings for recipe limits
+                $lab = $patient->lab;
+                $defaultRecipesPerCourse = [
+                    'starter' => 5,
+                    'main_course' => 5,
+                    'dessert' => 5,
+                ];
+                $recipesPerCourse = $lab ? ($lab->settings['recipes_per_course'] ?? $defaultRecipesPerCourse) : $defaultRecipesPerCourse;
+                $totalRecipeLimit = array_sum($recipesPerCourse);
 
-            Log::channel('email')->info('Assigned recipes to book', [
-                'book_id' => $book->id,
-                'patient_id' => $patient->id,
-                'recipe_count' => count($selectedRecipes),
-                'recipe_ids' => collect($selectedRecipes)->pluck('id_recipe')->toArray(),
-                'recipes_per_course' => $recipesPerCourse,
-            ]);
+                // Group recipes by course
+                $recipesByCourse = [];
+                foreach ($recipes as $recipe) {
+                    if ($recipe && $recipe->course) {
+                        $recipesByCourse[$recipe->course][] = $recipe;
+                    }
+                }
+
+                // Select random recipes within limits for each course
+                $selectedRecipes = [];
+                foreach ($recipesPerCourse as $course => $limit) {
+                    $courseRecipes = $recipesByCourse[$course] ?? [];
+                    if (!empty($courseRecipes)) {
+                        $selectedRecipes = array_merge(
+                            $selectedRecipes,
+                            collect($courseRecipes)->shuffle()->take($limit)->all()
+                        );
+                    }
+                }
+
+                // Attach selected recipes to the book
+                foreach ($selectedRecipes as $recipe) {
+                    try {
+                        $book->addRecipe($recipe->id_recipe);
+                    } catch (\Exception $e) {
+                        Log::channel('email')->error('Failed to add recipe to book', [
+                            'book_id' => $book->id,
+                            'patient_id' => $patient->id,
+                            'recipe_id' => $recipe->id_recipe,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                }
+
+                Log::channel('email')->info('Assigned recipes to book', [
+                    'book_id' => $book->id,
+                    'patient_id' => $patient->id,
+                    'recipe_count' => count($selectedRecipes),
+                    'recipe_ids' => collect($selectedRecipes)->pluck('id_recipe')->toArray(),
+                    'recipes_per_course' => $recipesPerCourse,
+                ]);
+            }
 
             // Log current recipes
             $currentRecipes = $book->recipes()->pluck('recipes.id_recipe')->toArray();

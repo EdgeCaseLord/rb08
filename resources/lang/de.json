@@ -60,7 +60,7 @@
     "Import completed with :successful_rows rows imported.": "Import abgeschlossen mit :successful_rows importierten Zeilen.",
     ":failed_rows rows failed.": ":failed_rows Zeilen fehlerhaft.",
     ":skipped_rows rows were skipped due to existing sample codes.": ":skipped_rows Zeilen wurden wegen bereits existierender Proben-Codes übersprungen.",
-    "AssignSafeRecipesJob started for :patient_count patients.": "AssignSafeRecipesJob für :patient_count Patienten gestartet.",
+    "AssignRecipesJob started for :patient_count patients.": "AssignRecipesJob für :patient_count Patienten gestartet.",
     "Doctor": "Arzt",
     "threshold": "Grenzwert",
     "Recipes Per Course": "Rezepte pro Gang",
