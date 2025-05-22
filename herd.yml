@@ -1,0 +1,5 @@
+integrations:
+  forge:
+    rezept-butler.com:
+      site-id: 2670571
+      server-id: 903394

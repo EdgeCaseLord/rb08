@@ -1,0 +1,50 @@
+created:
+    - database/factories/UserFactory.php
+    - database/factories/AllergenFactory.php
+    - database/factories/IngredientFactory.php
+    - database/factories/RecipeFactory.php
+    - database/factories/RecipeCategoryFactory.php
+    - database/factories/CountryFactory.php
+    - database/factories/BookFactory.php
+    - database/factories/AnalysisFactory.php
+    - database/migrations/2025_03_18_050336_create_users_table.php
+    - database/migrations/2025_03_18_050337_create_allergens_table.php
+    - database/migrations/2025_03_18_050338_create_ingredients_table.php
+    - database/migrations/2025_03_18_050339_create_recipes_table.php
+    - database/migrations/2025_03_18_050340_create_recipe_categories_table.php
+    - database/migrations/2025_03_18_050341_create_countries_table.php
+    - database/migrations/2025_03_18_050342_create_books_table.php
+    - database/migrations/2025_03_18_050343_create_analyses_table.php
+    - database/migrations/2025_03_18_050344_create_allergen_user_table.php
+    - database/migrations/2025_03_18_050345_create_recipe_user_table.php
+    - database/migrations/2025_03_18_050346_create_allergen_ingredient_table.php
+    - database/migrations/2025_03_18_050347_create_ingredient_recipe_table.php
+    - database/migrations/2025_03_18_050348_create_allergen_recipe_table.php
+    - database/migrations/2025_03_18_050349_create_recipe_recipe_category_table.php
+    - database/migrations/2025_03_18_050350_create_country_recipe_table.php
+    - database/migrations/2025_03_18_050351_create_book_recipe_table.php
+    - database/migrations/2025_03_18_050352_create_book_user_recipe_table.php
+    - database/migrations/2025_03_18_050353_create_allergen_analysis_table.php
+    - app/Models/User.php
+    - app/Models/Allergen.php
+    - app/Models/Ingredient.php
+    - app/Models/Recipe.php
+    - app/Models/RecipeCategory.php
+    - app/Models/Country.php
+    - app/Models/Book.php
+    - app/Models/Analysis.php
+    - database/seeders/UserSeeder.php
+    - database/seeders/AllergenSeeder.php
+    - database/seeders/IngredientSeeder.php
+    - database/seeders/RecipeSeeder.php
+    - database/seeders/BookSeeder.php
+    - database/seeders/AnalysisSeeder.php
+models:
+    User: { name: string, email: 'string unique', avatar: 'string default:"demo/default.png"', email_verified_at: 'timestamp nullable', password: string, remember_token: 'string nullable', username: 'string unique nullable', trial_ends_at: 'dateTime nullable', verification_code: 'string nullable', verified: 'tinyInteger nullable', phone: 'string nullable', address1: 'string nullable', address2: 'string nullable', zip: 'string nullable', city: 'string nullable', country: 'string nullable', state: 'string nullable', language: 'string nullable', timezone: 'string nullable', currency: 'string nullable', stripe_id: 'string nullable', card_brand: 'string nullable', card_last_four: 'string nullable', role: 'enum:admin,lab,doctor,patient nullable', lab_id: 'unsignedInteger nullable', doctor_id: 'unsignedInteger nullable', patient_code: 'string unique nullable', birthdate: 'date nullable', relationships: { hasMany: 'Book, Analysis', belongsToMany: 'Allergen, Recipe' } }
+    Allergen: { name: string, code: string, description: 'text nullable', relationships: { belongsToMany: 'Ingredient, User' } }
+    Ingredient: { name: string, description: 'text nullable', relationships: { belongsToMany: 'Recipe, Allergen' } }
+    Recipe: { title: string, subtitle: 'string nullable', serving: 'integer nullable', language: 'string nullable', images: 'json nullable', description: 'text nullable', difficulty: 'enum:einfach,mittel,schwierig nullable', diet: 'enum:vegan,vegetarisch nullable', time: 'enum:"Bis 30 Minuten","Bis 60 Minuten","Bis 2 Stunden","Mehr als 2 Stunden" nullable', relationships: { belongsToMany: 'Ingredient, Allergen, RecipeCategory, Country, Book, User' } }
+    RecipeCategory: { name: string, relationships: { belongsToMany: Recipe } }
+    Country: { name: string, code: string, telephone: string, relationships: { belongsToMany: Recipe } }
+    Book: { title: string, user_id: unsignedInteger, patient_id: unsignedInteger, relationships: { belongsTo: User, belongsToMany: UserRecipe } }
+    Analysis: { analysis_number: 'string unique', test_name: string, laboratory_number: string, analysis_date: date, evaluation_date: date, patient_id: unsignedInteger, doctor_id: unsignedInteger, lab_id: 'unsignedInteger nullable', original_values: 'text nullable', correction: 'text nullable', result: 'text nullable', relationships: { belongsTo: User, belongsToMany: Allergen } }

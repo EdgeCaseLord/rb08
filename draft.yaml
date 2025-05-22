@@ -1,0 +1,88 @@
+models:
+  # File for automatically creating models and their relations
+  User:
+    name: string
+    email: string unique
+    avatar: string default:"demo/default.png"
+    email_verified_at: timestamp nullable
+    password: string
+    remember_token: string nullable
+    username: string unique nullable
+    trial_ends_at: dateTime nullable
+    verification_code: string nullable
+    verified: tinyInteger nullable
+    phone: string nullable
+    address1: string nullable
+    address2: string nullable
+    zip: string nullable
+    city: string nullable
+    country: string nullable
+    state: string nullable
+    language: string nullable
+    timezone: string nullable
+    currency: string nullable
+    stripe_id: string nullable
+    card_brand: string nullable
+    card_last_four: string nullable
+    role: enum:admin,lab,doctor,patient nullable
+    lab_id: unsignedInteger nullable # Link to the lab for doctors and patients
+    doctor_id: unsignedInteger nullable # Linking patients to their assigned doctor
+    patient_number: string unique nullable # Only for patient users
+    birthdate: date nullable # Only for patient users
+    relationships:
+      hasMany: Book, Analysis
+      belongsToMany: Allergen, Recipe
+  Allergen:
+    name: string
+    code: string
+    description: text nullable
+    relationships:
+      belongsToMany: User
+  Recipe:
+    title: string
+    subtitle: string nullable
+    serving: integer nullable
+    language: string nullable
+    images: json nullable
+    description: text nullable
+    difficulty: enum:einfach,mittel,schwierig nullable
+    diet: enum:vegan,vegetarisch nullable
+    time: enum:"Bis 30 Minuten","Bis 60 Minuten","Bis 2 Stunden","Mehr als 2 Stunden" nullable
+    relationships:
+      belongsToMany: Allergen, RecipeCategory, Country, Book, User
+  RecipeCategory:
+    name: string # e.g., Beilage, Fingerfood, etc.
+    relationships:
+      belongsToMany: Recipe
+  Country:
+    name: string
+    code: string
+    telephone: string
+    relationships:
+      belongsToMany: Recipe
+  Book:
+    name: string
+    user_id: unsignedInteger # Links to the creator of the book (Doctor or Lab User)
+    patient_id: unsignedInteger # Links to the User (role: 'patient')
+    relationships:
+      belongsTo: User
+      belongsToMany: UserRecipe
+  Analysis:
+    analysis_number: string unique
+    test_name: string # Represents "Testbezeichnung"
+    laboratory_number: string # Identifier from the lab
+    analysis_date: date
+    evaluation_date: date
+    patient_id: unsignedInteger # Links directly to the patient
+    doctor_id: unsignedInteger # Links directly to the doctor
+    lab_id: unsignedInteger nullable # Optional, links to the lab
+    original_values: text nullable
+    correction: text nullable
+    result: text nullable
+    relationships:
+      belongsTo: User
+      belongsToMany: Allergen
+
+seeders: User, Allergen, Recipe, Book, Analysis
+
+

@@ -1,0 +1,30 @@
+{
+    "name": "jasonmccreary/laravel-test-assertions",
+    "description": "A set of helpful assertions when testing Laravel applications.",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Jason McCreary",
+            "email": "jason@pureconcepts.net"
+        }
+    ],
+    "require": {
+        "php": "^8.1",
+        "illuminate/testing": "^11.0|^12.0",
+        "mockery/mockery": "^1.4.4",
+        "phpunit/phpunit": "^10.1|^11.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "JMac\\Testing\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "JMac\\Testing\\AdditionalAssertionsServiceProvider"
+            ]
+        }
+    }
+}

@@ -1,0 +1,238 @@
+<?php
+
+namespace App\Jobs;
+
+use App\Jobs\AssignSafeRecipesJob;
+use App\Models\Analysis;
+use App\Models\Allergen;
+use App\Models\User;
+use Filament\Notifications\Notification;
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+
+class AssignAllergensJob implements ShouldQueue
+{
+    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+
+    protected $data;
+    protected $importId;
+    protected float $threshold;
+
+    public function __construct(array $data, ?int $importId = null)
+    {
+        $this->data = $data;
+        $this->importId = $importId;
+        $user = auth()->user();
+        if ($user && $user->isLab()) {
+            $this->threshold = $user->settings['allergen_threshold'] ?? 10;
+        } elseif ($user && $user->isAdmin()) {
+            $firstLab = User::labs()->first();
+            $this->threshold = $firstLab ? ($firstLab->settings['allergen_threshold'] ?? 10) : 10;
+        } else {
+            $this->threshold = 10;
+        }
+    }
+
+    public function handle(): void
+    {
+        Log::info('AssignAllergensJob started', [
+            'row_count' => count($this->data),
+            'import_id' => $this->importId,
+            'threshold' => $this->threshold,
+        ]);
+
+        if (empty($this->data)) {
+            Log::warning('No data to process in AssignAllergensJob', ['import_id' => $this->importId]);
+            return;
+        }
+
+        // Group rows by patient_code
+        $patientsData = collect($this->data)->groupBy('patient_code');
+        $patients = [];
+        $allergenData = [];
+
+        // Collect allergen data for bulk upsert
+        foreach ($this->data as $row) {
+            if (!empty($row['code']) && !empty($row['antigen_name'])) {
+                $allergenData[$row['code']] = [
+                    'code' => $row['code'],
+                    'name' => $row['antigen_name'],
+                    'description' => null,
+                    'name_latin' => null,
+                    'description_de' => null,
+                ];
+            } else {
+                Log::warning('Missing allergen data in row', [
+                    'sample_code' => $row['sample_code'] ?? null,
+                    'code' => $row['code'] ?? null,
+                    'antigen_name' => $row['antigen_name'] ?? null,
+                ]);
+            }
+        }
+
+        // Bulk upsert allergens
+        if (!empty($allergenData)) {
+            Allergen::upsert(
+                array_values($allergenData),
+                ['code'],
+                ['name', 'description', 'name_latin', 'description_de']
+            );
+            Log::info('Allergens upserted', ['count' => count($allergenData)]);
+        }
+
+        foreach ($patientsData as $patientCode => $patientRows) {
+            Log::debug('Processing patient', ['patient_code' => $patientCode, 'row_count' => count($patientRows)]);
+
+            // Get patient by patient_code
+            $patient = User::where('patient_code', $patientCode)->first();
+            if (!$patient) {
+                Log::warning('Patient not found for patient_code', ['patient_code' => $patientCode]);
+                continue;
+            }
+
+            // Load patient allergens with latest test_date
+            $patientAllergens = $patient->allergens()
+                ->withPivot('id')
+                ->get()
+                ->mapWithKeys(function ($allergen) use ($patient) {
+                    $latestAnalysis = AnalysisAllergen::where('allergen_id', $allergen->id)
+                        ->whereHas('analysis', fn($q) => $q->where('patient_id', $patient->id))
+                        ->join('analyses', 'analysis_allergens.analysis_id', '=', 'analyses.id')
+                        ->latest('test_date')
+                        ->first();
+                    return [
+                        $allergen->id => [
+                            'id' => $allergen->id,
+                            'latest_test_date' => $latestAnalysis ? $latestAnalysis->test_date : null,
+                        ],
+                    ];
+                })->toArray();
+
+            // Process each row for this patient
+            DB::transaction(function () use ($patient, $patientRows, $patientAllergens, &$patients) {
+                foreach ($patientRows as $row) {
+                    Log::debug('Processing row', [
+                        'sample_code' => $row['sample_code'] ?? null,
+                        'code' => $row['code'] ?? null,
+                        'calibrated_value' => $row['calibrated_value'] ?? null,
+                    ]);
+
+                    // Update or create Analysis record
+                    $analysisData = array_merge(
+                        array_intersect_key($row, array_flip((new Analysis())->getFillable())),
+                        [
+                            'patient_id' => $patient->id,
+                            'import_id' => $this->importId,
+                            'is_csv' => true,
+                        ]
+                    );
+                    $analysis = Analysis::updateOrCreate(
+                        ['sample_code' => $row['sample_code']],
+                        $analysisData
+                    );
+
+                    // Process allergen
+                    if (!empty($row['code']) && !empty($row['antigen_name'])) {
+                        $allergen = Allergen::where('code', $row['code'])->first();
+                        if (!$allergen) {
+                            Log::error('Allergen not found after upsert', ['code' => $row['code']]);
+                            continue;
+                        }
+
+                        $calibratedValue = (float)($row['calibrated_value'] ?? 0);
+                        $testDate = $row['test_date'] ? new \DateTime($row['test_date']) : null;
+
+                        if ($calibratedValue >= $this->threshold) {
+                            // Create or update AnalysisAllergen record
+                            $analysisAllergen = $analysis->analysisAllergens()->updateOrCreate(
+                                ['allergen_id' => $allergen->id],
+                                [
+                                    'antigen_id' => $row['antigen_id'] ?? null,
+                                    'calibrated_value' => $calibratedValue,
+                                    'signal_noise' => $row['signal_noise'] ?? null,
+                                ]
+                            );
+
+                            // Check if allergen is already assigned
+                            $isAssigned = isset($patientAllergens[$allergen->id]);
+                            if ($isAssigned) {
+                                $latestTestDate = $patientAllergens[$allergen->id]['latest_test_date']
+                                    ? new \DateTime($patientAllergens[$allergen->id]['latest_test_date'])
+                                    : null;
+
+                                if (!$testDate || !$latestTestDate || $testDate >= $latestTestDate) {
+                                    $patient->allergens()->syncWithoutDetaching([$allergen->id]);
+                                    $patientAllergens[$allergen->id]['latest_test_date'] = $testDate;
+                                    Log::info('Allergen linked to patient (newest analysis)', [
+                                        'patient_id' => $patient->id,
+                                        'allergen_id' => $allergen->id,
+                                        'calibrated_value' => $calibratedValue,
+                                        'threshold' => $this->threshold,
+                                    ]);
+                                } else {
+                                    Log::info('Skipped allergen assignment; newer analysis exists', [
+                                        'patient_id' => $patient->id,
+                                        'allergen_id' => $allergen->id,
+                                        'new_analysis_id' => $analysisAllergen->id,
+                                    ]);
+                                }
+                            } else {
+                                $patient->allergens()->syncWithoutDetaching([$allergen->id]);
+                                $patientAllergens[$allergen->id] = [
+                                    'id' => $allergen->id,
+                                    'latest_test_date' => $testDate,
+                                ];
+                                Log::info('Allergen assigned to patient', [
+                                    'patient_id' => $patient->id,
+                                    'allergen_id' => $allergen->id,
+                                    'calibrated_value' => $calibratedValue,
+                                    'threshold' => $this->threshold,
+                                ]);
+                            }
+                        } else {
+                            if (isset($patientAllergens[$allergen->id])) {
+                                $patient->allergens()->detach($allergen->id);
+                                unset($patientAllergens[$allergen->id]);
+                                Log::info('Allergen unlinked from patient due to low calibrated value', [
+                                    'patient_id' => $patient->id,
+                                    'allergen_id' => $allergen->id,
+                                    'calibrated_value' => $calibratedValue,
+                                    'threshold' => $this->threshold,
+                                ]);
+                            }
+                            Log::debug('Allergen below threshold', [
+                                'allergen_id' => $allergen->id,
+                                'calibrated_value' => $calibratedValue,
+                                'threshold' => $this->threshold,
+                            ]);
+                        }
+                    }
+                }
+                $patients[] = $patient;
+            });
+        }
+
+        // Dispatch AssignSafeRecipesJob in chunks
+        if (!empty($patients)) {
+            $uniquePatients = collect($patients)->unique('id');
+            $uniquePatients->chunk(10)->each(function ($chunk) {
+                AssignSafeRecipesJob::dispatch($chunk->all())->onQueue('default');
+            });
+
+            // Notify user of allergen assignment completion
+            Notification::make()
+                ->title('Allergen Assignment Completed')
+                ->body('Allergens assigned for ' . $uniquePatients->count() . ' patients. Safe recipes are now being assigned.')
+                ->success()
+                ->send();
+            Log::info('Allergen assignment completed', ['patient_count' => $uniquePatients->count()]);
+        } else {
+            Log::warning('No patients processed in AssignAllergensJob', ['import_id' => $this->importId]);
+        }
+    }
+}

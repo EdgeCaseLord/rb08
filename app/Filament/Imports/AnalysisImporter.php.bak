@@ -1,0 +1,216 @@
+<?php
+
+namespace App\Filament\Imports;
+
+use App\Models\Analysis;
+use Filament\Actions\Imports\ImportColumn;
+use Filament\Actions\Imports\Importer;
+use Filament\Actions\Imports\Models\Import;
+use Filament\Notifications\Notification;
+use Illuminate\Support\Facades\Log;
+
+class AnalysisImporter extends Importer
+{
+    protected static ?string $model = Analysis::class;
+
+    protected array $validationErrors = [];
+
+    public static function getColumns(): array
+    {
+        return [
+            ImportColumn::make('qr_code')->guess(['QR-Code', 'qr_code']),
+            ImportColumn::make('sample_code')
+                ->guess(['SampleCode', 'sample_code'])
+                ->requiredMappingForNewRecordsOnly()
+                ->rules(['required'])
+                ->helperText('Pflichtfeld'),
+            ImportColumn::make('sample_date')
+                ->guess(['SampleDate', 'sample_date'])
+                ->rules(['date'])
+                ->castStateUsing(fn ($state) => $state ? date('Y-m-d', strtotime($state)) : null),
+            ImportColumn::make('patient_code')
+                ->guess(['Patient Code', 'patient_code', 'Patient_Code'])
+                ->rules(['required'])
+                ->requiredMappingForNewRecordsOnly()
+                ->helperText('Pflichtfeld'),
+            ImportColumn::make('patient_name')
+                ->sensitive()
+                ->guess(['PatientName', 'patient_name', 'Patient_Name']),
+            ImportColumn::make('patient_date_of_birth')
+                ->guess(['PatientDateOfBirth', 'patient_date_of_birth', 'Patient_Date_Of_Birth'])
+                ->rules(['date'])
+                ->castStateUsing(fn ($state) => $state ? date('Y-m-d', strtotime($state)) : null),
+            ImportColumn::make('assay_date')
+                ->guess(['AssayDate', 'assay_date'])
+                ->rules(['date'])
+                ->castStateUsing(fn ($state) => $state ? date('Y-m-d', strtotime($state)) : null),
+            ImportColumn::make('test_date')
+                ->guess(['TestDate', 'test_date'])
+                ->rules(['date'])
+                ->castStateUsing(fn ($state) => $state ? date('Y-m-d', strtotime($state)) : null),
+            ImportColumn::make('test_by')->guess(['TestBy', 'test_by']),
+            ImportColumn::make('approval_date')
+                ->guess(['ApprovalDate', 'approval_date'])
+                ->rules(['date'])
+                ->castStateUsing(fn ($state) => $state ? date('Y-m-d', strtotime($state)) : null),
+            ImportColumn::make('approval_by')->guess(['ApprovalBy', 'approval_by', 'Approved By']),
+            ImportColumn::make('additional_information')->guess(['AdditionalInformation', 'additional_information']),
+            ImportColumn::make('antigen_id')->guess(['AntigenID', 'antigen_id']),
+            ImportColumn::make('antigen_name')->guess(['AntigenName', 'antigen_name']),
+            ImportColumn::make('code')->guess(['Code', 'code']),
+            ImportColumn::make('calibrated_value')
+                ->guess(['CalibratedValue', 'calibrated_value'])
+                ->numeric()
+                ->rules(['numeric']),
+            ImportColumn::make('signal_noise')
+                ->guess(['Signal-Noise', 'signal_noise'])
+                ->numeric()
+                ->rules(['numeric']),
+        ];
+    }
+
+    public function resolveRecord(): ?Analysis
+    {
+        Log::info('AnalysisImporter resolveRecord called', ['data' => $this->data]);
+
+        try {
+            $sampleCode = $this->data['sample_code'] ?? $this->data['SampleCode'] ?? null;
+            if (!$sampleCode) {
+                $this->validationErrors[] = "Missing sample_code in row";
+                Log::warning('Missing sample_code, skipping row', ['data' => $this->data]);
+                return null;
+            }
+//            if (Analysis::where('sample_code', $sampleCode)->exists()) {
+//                $this->validationErrors[] = "Duplicate sample_code: $sampleCode";
+//                Log::warning('Duplicate sample_code found, skipping row', ['sample_code' => $sampleCode]);
+//                return null;
+//            }
+
+            $patientName = $this->data['patient_name'] ?? $this->data['PatientName'] ?? null;
+            $patientDob = $this->data['patient_date_of_birth'] ?? $this->data['PatientDateOfBirth'] ?? null;
+            $patientCode = $this->data['patient_code'] ?? $this->data['Patient Code'] ?? null;
+            if (!$patientCode) {
+                $this->validationErrors[] = "Missing patient_code in row";
+                Log::warning('Missing patient_code, skipping row', ['data' => $this->data]);
+                return null;
+            }
+
+//            if (!$patientCode) { // !$patientName || !$patientDob ||
+//            $error = "Missing patient data for sample_code: $sampleCode (Name: $patientName, DOB: $patientDob, Code: $patientCode)";
+//                $this->validationErrors[] = $error;
+//                Log::warning('Missing patient data, skipping row', [
+////                    'sample_code' => $sampleCode,
+////                    'patient_name' => $patientName,
+////                    'patient_dob' => $patientDob,
+//                    'patient_code' => $patientCode,
+//                ]);
+//                return null;
+//            }
+
+            $fillable = (new Analysis)->getFillable();
+            $data = array_filter($this->data, fn($key) => in_array($key, $fillable), ARRAY_FILTER_USE_KEY);
+            if (empty($data)) {
+                $error = "No matching fillable attributes for sample_code: $sampleCode";
+                $this->validationErrors[] = $error;
+                Log::warning('No matching fillable attributes', [
+                    'sample_code' => $sampleCode,
+                    'data' => $this->data,
+                    'fillable' => $fillable,
+                ]);
+                return null;
+            }
+
+            $data['is_csv'] = true;
+            $data['approval_by'] = $this->data['approval_by'] ?? $this->data['Approved By'] ?? null;
+            $data['import_id'] = $this->import->id;
+
+            $analysis = new Analysis();
+            $analysis->fill($data);
+            $analysis->save();
+
+            Log::info('Analysis record created', ['analysis_id' => $analysis->id, 'sample_code' => $sampleCode]);
+            return $analysis;
+        } catch (\Exception $e) {
+            $error = "Error processing sample_code: $sampleCode - {$e->getMessage()}";
+            $this->validationErrors[] = $error;
+            Log::error('Error in resolveRecord', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'data' => $this->data,
+            ]);
+            return null;
+        }
+    }
+
+    public function beforeImport(Import $import): void
+    {
+        Log::info('Starting import process', [
+            'import_id' => $import->id,
+            'queue_connection' => config('queue.default'),
+        ]);
+        $this->validationErrors = [];
+        Notification::make()
+            ->title('Import Started')
+            ->body('Analysis import has started.')
+            ->success()
+            ->send();
+    }
+
+    public function afterImport(Import $import): void
+    {
+        Log::info('afterImport called', [
+            'import_id' => $import->id,
+            'successful_rows' => $import->successful_rows,
+            'failed_rows' => $import->getFailedRowsCount(),
+        ]);
+
+        try {
+            $import->update([
+                'status' => 'completed',
+                'completed_at' => now(),
+            ]);
+            Log::info('Import marked as completed', ['import_id' => $import->id]);
+
+            if ($import->getFailedRowsCount() > 0) {
+                Log::warning('Import completed with failed rows', [
+                    'import_id' => $import->id,
+                    'failed_rows' => $import->getFailedRowsCount(),
+                    'errors' => $this->validationErrors,
+                ]);
+                Notification::make()
+                    ->title('Import Completed with Errors')
+                    ->body("Import completed with {$import->getFailedRowsCount()} failed rows. Check logs for details.")
+                    ->danger()
+                    ->persistent()
+                    ->send();
+            } else {
+                Notification::make()
+                    ->title('Import Successful')
+                    ->body('All analyses imported successfully.')
+                    ->success()
+                    ->send();
+            }
+        } catch (\Exception $e) {
+            Log::error('Error in afterImport', [
+                'import_id' => $import->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            Notification::make()
+                ->title('Import Processing Failed')
+                ->body('Failed to process import. Check logs for details.')
+                ->danger()
+                ->persistent()
+                ->send();
+        }
+    }
+
+    public static function getCompletedNotificationBody(Import $import): string
+    {
+        $body = 'Your analysis import has completed and ' . number_format($import->successful_rows) . ' ' . str('row')->plural($import->successful_rows) . ' imported.';
+        if ($failedRowsCount = $import->getFailedRowsCount()) {
+            $body .= ' ' . number_format($failedRowsCount) . ' ' . str('row')->plural($failedRowsCount) . ' failed to import.';
+        }
+        return $body;
+    }
+}

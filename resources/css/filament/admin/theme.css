@@ -1,0 +1,167 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Sidebar Styling */
+.fi-sidebar {
+    background-color: #ff6100 !important;
+    color: #fff !important;
+}
+
+.fi-sidebar-header {
+    background-color: #ff6100 !important;
+    height: 80px;
+    border: 0;
+    --tw-ring-color: #ff6100;
+    @apply flex items-center justify-center mt-4;
+}
+
+.fi-sidebar-item-button span {
+    color: #fff !important;
+}
+
+.fi-sidebar-group-label {
+    color: #fff !important;
+}
+
+/* Ensure hover, focus, and active states have rounded corners and correct background */
+.fi-sidebar-item-button {
+    @apply rounded-lg !important;
+    position: relative;
+}
+
+.fi-sidebar-item-button::after {
+    content: '>';
+    color: #fff;
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.875rem;
+    margin-left: 0.5rem;
+}
+
+.fi-sidebar-item-button:hover,
+.fi-sidebar-item-button:focus,
+.fi-sidebar-item-active .fi-sidebar-item-button {
+    background-color: #f08447 !important;
+    @apply rounded-lg !important;
+}
+
+.fi-sidebar-item-button span,
+.fi-sidebar-group-label,
+.fi-sidebar-item-active .fi-sidebar-item-label {
+    color: #fff !important;
+}
+
+.filament-sidebar .fi-sidebar-item .fi-sidebar-item-icon,
+.filament-sidebar .fi-sidebar-item svg {
+    color: #ffffff !important; /* Ensure all icons are white */
+}
+
+/* Text colors for active item */
+.fi-sidebar-item-active .fi-sidebar-item-label {
+    color: #fff !important; /* White text for active item */
+}
+
+/* Remove redundant active icon rule since it's now covered above */
+.fi-sidebar-item-icon, .fi-sidebar-item-active .fi-sidebar-item-icon {
+    color: #fff !important; /* Can be removed since .filament-sidebar .fi-sidebar-item .fi-sidebar-item-icon covers it */
+}
+
+
+
+/* Custom Dashboard Grid */
+.fi-page .filament-dashboard {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    grid-template-rows: 150px 300px 300px !important;
+    gap: 1.5rem !important;
+    min-height: 750px !important;
+}
+
+.fi-page .filament-dashboard > div {
+    height: 100% !important;
+    width: 100% !important;
+}
+
+/* Widget Styling */
+.fi-page .filament-dashboard .fi-wi-stat-card .fi-section,
+.fi-page .filament-dashboard .fi-wi-handbuch .fi-section,
+.fi-page .filament-dashboard .fi-wi-links .fi-section,
+.fi-page .filament-dashboard .fi-wi-table .fi-ta-ctn {
+    background-color: #ffffff !important;
+    border: 1px solid #e5e7eb !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+    height: 100% !important;
+    @apply rounded-lg;
+}
+
+.fi-page .filament-dashboard .fi-section-content {
+    @apply p-6;
+}
+
+.fi-page .filament-dashboard .fi-wi-stat-card .text-primary {
+    color: #FF6100 !important;
+}
+
+.fi-page .filament-dashboard .fi-wi-handbuch a,
+.fi-page .filament-dashboard .fi-wi-links a {
+    color: #FF6100 !important;
+}
+
+.fi-page .filament-dashboard .fi-wi-handbuch a:hover,
+.fi-page .filament-dashboard .fi-wi-links a:hover {
+    color: #ED6B22 !important;
+}
+
+/* Table Widget Styling */
+.fi-page .filament-dashboard .fi-wi-table {
+    height: 100% !important;
+}
+
+.fi-page .filament-dashboard .fi-ta-content {
+    max-height: 100% !important;
+    overflow-y: auto !important;
+}
+
+thead {
+    background-color: #FEF0E8 !important;
+    color: #ED6B22 !important;
+}
+
+.fi-tables-table th {
+    @apply bg-gray-100 text-gray-700;
+}
+
+/* Main Container Styling */
+.fi-main,
+.fi-main-ctn {
+    @apply bg-gray-100 dark:bg-gray-900;
+}
+
+.fi-main {
+    @apply py-4;
+}
+/* Remove Padding and Margins */
+.fi-page,
+.fi-page > .flex,
+.fi-page > .flex > .flex-col {
+    padding: 0 !important;
+    margin: 0 !important;
+}
+thead {
+    background-color: #FEF0E8 !important;
+    color: #ED6B22 !important;
+}
+
+.fi-dashboard-page .fi-wi-table {
+    grid-row: span 2 / span 2; /* Spans 2 rows in the grid */
+    @apply h-full; /* Ensure it takes full height */
+}
+
+/* Remove custom background image from multi-selects */
+.filament-input[multiple] {
+    background-image: none !important;
+}
+
