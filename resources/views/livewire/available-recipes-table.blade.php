@@ -22,7 +22,7 @@
         @endforeach
         </div>
     </div>
-    <div x-data="{ open: {{ (!empty($filterTitle) || !empty($filterDifficulty) || !empty($filterCourse) || !empty($filterIngredients) || !empty($filterDiets)) ? 'true' : 'false' }} }">
+    <div x-data="{ open: {{ (!empty($filterTitle) || !empty($filterDifficulty) || !empty($filterCourse) || !empty($filterIngredients) || !empty($filterDiets)) ? 'true' : 'false' }}, filteringSave: false, filteringApply: false }" x-init="$watch('filtering', val => { if (!val) $refs.filterForm && $refs.filterForm.reset(); })">
         <div class="flex items-center justify-between mb-2 cursor-pointer select-none" @click="open = !open">
             <div class="flex items-center gap-2">
                 <svg class="h-5 w-5 text-primary-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707l-7 7V21a1 1 0 01-1.447.894l-4-2A1 1 0 017 19v-5.293l-7-7A1 1 0 013 4z" /></svg>
@@ -33,7 +33,7 @@
             </div>
             <svg :class="{'rotate-180': open}" class="h-4 w-4 transition-transform" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
         </div>
-        <form x-show="open" x-transition class="mb-4 grid grid-cols-1 md:grid-cols-5 gap-2 items-end" wire:submit.prevent>
+        <form x-show="open" x-transition class="mb-4 grid grid-cols-1 md:grid-cols-5 gap-2 items-end" wire:submit.prevent x-ref="filterForm">
             <!-- Active filter badges (no reset button here) -->
             <div class="col-span-full flex flex-wrap gap-2 items-center mb-2">
                 @foreach(['filterTitle' => __('Titel'), 'filterIngredients' => __('Zutaten')] as $key => $label)
@@ -91,7 +91,7 @@
                 </div>
                 <div class="flex items-center gap-2">
                     <input type="checkbox" id="randomizeOffset" wire:model="filterRandomizeOffset">
-                    <label for="randomizeOffset" class="mb-0">{{ __('Offset zufällig wählen') }}</label>
+                    <label for="randomizeOffset" class="mb-0">{{ __('Startwert zufällig wählen') }}</label>
                 </div>
             </div>
             <!-- Collapsible filter groups -->
@@ -252,10 +252,32 @@
             </div>
             <div class="col-span-full flex justify-between mt-2 gap-2">
                 <div class="flex gap-2">
-                    <button type="button" wire:click="resetAndReload" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">{{ __('Alle Filter zurücksetzen') }}</button>
-                    <button type="button" wire:click="saveFilters" class="px-4 py-2 bg-primary-100 text-primary-800 rounded hover:bg-primary-200" title="Das aktuelle Filter-Set wird im Benutzerprofil gespeichert und beim nächsten Buch automatisch verwendet.">{{ __('Filter speichern') }}</button>
+                    <button type="button"
+                        :disabled="filteringSave"
+                        @click="filteringSave = true; $nextTick(() => { $wire.saveFilters().then(() => filteringSave = false); })"
+                        class="px-4 py-2 bg-primary-100 text-primary-800 rounded hover:bg-primary-200 flex items-center gap-2"
+                        title="Das aktuelle Filter-Set wird im Benutzerprofil gespeichert und beim nächsten Buch automatisch verwendet.">
+                        <span>{{ __('Filter speichern') }}</span>
+                        <template x-if="filteringSave">
+                            <svg class="animate-spin h-4 w-4 text-primary-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                            </svg>
+                        </template>
+                    </button>
                 </div>
-                <button type="button" wire:click="applyFilters" class="px-4 py-2 bg-primary-600 text-white rounded hover:bg-primary-700">{{ __('Filter anwenden') }}</button>
+                <button type="button"
+                    :disabled="filteringApply"
+                    @click="filteringApply = true; $nextTick(() => { $wire.applyFilters().then(() => filteringApply = false); })"
+                    class="px-4 py-2 bg-primary-600 text-white rounded hover:bg-primary-700 flex items-center gap-2">
+                    <span>{{ __('Filter anwenden') }}</span>
+                    <template x-if="filteringApply">
+                        <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                        </svg>
+                    </template>
+                </button>
             </div>
 
     </form>
@@ -318,9 +340,25 @@
                 </svg>
             </div>
         @endif
-        @if($hasMore && !$loading)
+        @if($hasMore)
+            <div class="flex justify-center py-2 text-xs text-gray-400">
+                <span>perPage: {{ $perPage }}, loaded: {{ count($recipes) }}</span>
+            </div>
             <div class="flex justify-center py-4">
-                <button wire:click="loadMore" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">Mehr laden</button>
+                <button
+                    type="button"
+                    class="px-4 py-2 bg-primary-600 text-white font-bold rounded hover:bg-primary-700 flex items-center gap-2"
+                    wire:click="loadMore"
+                    :disabled="$wire.loading"
+                >
+                    <span>Mehr laden</span>
+                    <template x-if="$wire.loading">
+                        <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                        </svg>
+                    </template>
+                </button>
             </div>
         @endif
         @if(!$hasMore && !$loading)

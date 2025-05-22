@@ -99,16 +99,15 @@ class AvailableRecipesTable extends Component
             $bookRecipeExternalIds = $book->recipes()->pluck('id_external')->map('strval')->all();
         }
         $filters = $this->getFilters();
-        $offset = (int) $this->filterOffset;
-        if (!empty($filters['randomize_offset'])) {
-            $maxRecipes = method_exists($this->cookButlerService, 'getMaxRecipes') ? $this->cookButlerService->getMaxRecipes() : 1000;
-            $offset = random_int(0, max(0, $maxRecipes - $this->perPage));
-            $this->filterOffset = $offset;
-        }
-        $filters['offset'] = $offset;
+        // Always count both recipes in DB, favorites, and those shown in availables for offset
+        $dbCount = $book ? $book->recipes()->count() : 0;
+        $favCount = $patient ? count($patient->settings['favorites'] ?? []) : 0;
+        $availCount = count($this->recipes);
+        $this->filterOffset = $dbCount + $favCount + $availCount;
+        $filters['offset'] = $this->filterOffset;
         $filters['randomize_offset'] = false;
         $filters['q'] = $patient ? $this->cookButlerService->buildSearchQuery($patient) : '';
-        $result = $this->cookButlerService->fetchAvailableRecipesForPatient($patient, $filters, $this->perPage, $offset);
+        $result = $this->cookButlerService->fetchAvailableRecipesForPatient($patient, $filters, $this->perPage, $this->filterOffset);
         $recipeIds = $result['recipe_ids'] ?? [];
         $total = $result['total']['value'] ?? 0;
         Log::debug('AvailableRecipesTable loadMore result', ['recipeIds' => $recipeIds, 'total' => $total]);
@@ -154,7 +153,7 @@ class AvailableRecipesTable extends Component
             if (!$this->cookButlerService) {
                 $this->cookButlerService = app(\App\Services\CookButlerService::class);
             }
-            $details = $this->cookButlerService->fetchRecipeDetailsBatch($idsToFetch);
+            $details = $this->cookButlerService->fetchRecipeDetailsBatch($idsToFetch, $patient);
             foreach ($details as $detail) {
                 $detailsMap[$detail['id']] = $detail;
             }
@@ -197,6 +196,8 @@ class AvailableRecipesTable extends Component
         });
         $this->recipes = array_values(array_merge($this->recipes, $uniqueNormalized));
         $this->refreshKey++;
+        // Before incrementing filterOffset, ensure it is an int
+        $this->filterOffset = (int) $this->filterOffset;
         $this->filterOffset += count($uniqueNormalized);
         $this->page++;
         if (count($this->recipes) >= $total) {
@@ -267,7 +268,7 @@ class AvailableRecipesTable extends Component
             $this->cookButlerService = app(\App\Services\CookButlerService::class);
         }
         // Always use the single recipe fetch
-        $recipeData = $this->cookButlerService->fetchRecipeDetails($externalId);
+        $recipeData = $this->cookButlerService->fetchRecipeDetails($externalId, $book->patient);
         if (!$recipeData) return;
         $patient = $book->patient;
 
@@ -396,7 +397,7 @@ class AvailableRecipesTable extends Component
                         if (!$this->cookButlerService) {
                             $this->cookButlerService = app(\App\Services\CookButlerService::class);
                         }
-                        $apiRecipe = $this->cookButlerService->fetchRecipeDetails($arr['id_external']);
+                        $apiRecipe = $this->cookButlerService->fetchRecipeDetails($arr['id_external'], $book->patient);
                         if (!empty($apiRecipe['images'])) {
                             $arr['images'] = $apiRecipe['images'];
                         } elseif (!empty($apiRecipe['media']['preview'])) {
@@ -532,7 +533,7 @@ class AvailableRecipesTable extends Component
             } else {
                 $externalId = $id;
             }
-            $apiRecipe = $this->cookButlerService->fetchRecipeDetails($externalId);
+            $apiRecipe = $this->cookButlerService->fetchRecipeDetails($externalId, $this->getBookPatient());
             if ($apiRecipe) {
                 $recipe = $apiRecipe;
             }
@@ -673,7 +674,7 @@ class AvailableRecipesTable extends Component
                 if (!$this->cookButlerService) {
                     $this->cookButlerService = app(\App\Services\CookButlerService::class);
                 }
-                $apiRecipe = $this->cookButlerService->fetchRecipeDetails($arr['id_external']);
+                $apiRecipe = $this->cookButlerService->fetchRecipeDetails($arr['id_external'], $book->patient);
                 if (!empty($apiRecipe['images'])) {
                     $arr['images'] = $apiRecipe['images'];
                 } elseif (!empty($apiRecipe['media']['preview'])) {
