@@ -14,7 +14,12 @@ class LatestAnalysesTable extends TableWidget
 {
     protected static ?string $heading = 'Neueste Analysen';
 
-    protected int | string | array $columnSpan = '3';
+    protected int | string | array $columnSpan = [
+        'default' => 4,
+        'sm' => 4,
+        'md' => 3,
+        'lg' => 3,
+    ];
 
     public function table(Table $table): Table
     {

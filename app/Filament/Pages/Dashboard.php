@@ -18,11 +18,15 @@ class Dashboard extends \Filament\Pages\Dashboard
     // Override the view to use the custom template
 //    protected static string $view = 'filament.pages.dashboard';
 
-    protected int | string | array $columnSpan = 4;
+
 
     public function getColumns(): int | string | array
     {
-        return 4;
+        return [
+            'default' => 2,
+            'sm' => 4,
+            'md' => 4,
+        ];
     }
 //            [
 //            'sm' => 2,
