@@ -82,7 +82,7 @@
             </div>
             <div class="col-span-full grid grid-cols-2 gap-4">
                 <input type="text" placeholder="{{ __('Titel') }}" class="filament-input w-full rounded-lg" wire:model.debounce.400ms="filterTitle" wire:keydown.enter="applyFilters">
-                <input type="text" placeholder="{{ __('Zutaten') }}" class="filament-input w-full rounded-lg" wire:model.debounce.500ms="filterIngredients">
+                <input type="text" placeholder="{{ __('Zutaten (Bsp.: paprika, nudeln -aprikosen)') }}" class="filament-input w-full rounded-lg" wire:model.debounce.500ms="filterIngredients">
             </div>
             <div class="col-span-full grid grid-cols-2 gap-4">
                 <div class="flex items-center gap-2">

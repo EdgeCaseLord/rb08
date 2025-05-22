@@ -106,7 +106,6 @@ class AvailableRecipesTable extends Component
         $this->filterOffset = $dbCount + $favCount + $availCount;
         $filters['offset'] = $this->filterOffset;
         $filters['randomize_offset'] = false;
-        $filters['q'] = $patient ? $this->cookButlerService->buildSearchQuery($patient) : '';
         $result = $this->cookButlerService->fetchAvailableRecipesForPatient($patient, $filters, $this->perPage, $this->filterOffset);
         $recipeIds = $result['recipe_ids'] ?? [];
         $total = $result['total']['value'] ?? 0;
@@ -449,7 +448,15 @@ class AvailableRecipesTable extends Component
     {
         $filters = [];
         if ($this->filterTitle) $filters['title'] = $this->filterTitle;
-        if ($this->filterIngredients) $filters['ingredients'] = [$this->filterIngredients];
+        // Prepend ingredients keywords to the query string, not as a filter
+        $ingredientQuery = '';
+        if (!empty($this->filterIngredients)) {
+            // Replace commas and multiple spaces with a single space
+            $ingredientQuery = preg_replace('/[\s,]+/', ' ', $this->filterIngredients);
+            // Convert -ingredient to -- ingredient (with space)
+            $ingredientQuery = preg_replace('/\s*-([\wäöüÄÖÜß]+)/u', ' -- $1', $ingredientQuery);
+            $ingredientQuery = trim($ingredientQuery);
+        }
         // Difficulty
         if (is_array($this->filterDifficulty) && !empty($this->filterDifficulty)) {
             $selectedDifficulties = array_keys(array_filter($this->filterDifficulty));
@@ -501,6 +508,11 @@ class AvailableRecipesTable extends Component
         }
         $filters['offset'] = (int) $this->filterOffset;
         $filters['randomize_offset'] = (bool) $this->filterRandomizeOffset;
+        // Compose the q parameter: ingredients keywords + allergen exclusion
+        $patient = $this->getBookPatient();
+        $allergenQ = $patient ? $this->cookButlerService->buildSearchQuery($patient) : '';
+        $filters['q'] = trim(($ingredientQuery ? $ingredientQuery . ' ' : '') . $allergenQ);
+        \Illuminate\Support\Facades\Log::debug('AvailableRecipesTable getFilters', ['filterIngredients' => $this->filterIngredients, 'q' => $filters['q']]);
         return $filters;
     }
 

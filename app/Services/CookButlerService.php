@@ -298,17 +298,16 @@ class CookButlerService
             if (!empty($filters['max_time'])) {
                 $apiFilters['max_time'] = (array)$filters['max_time'];
             }
-            // Always append allergen exclusion query to the search string
-            $searchString = '';
-            if (!empty($filters['title'])) {
-                $searchString = $filters['title'] . ' ' . $query;
+            if (!empty($filters['q'])) {
+                $searchData['q'] = $filters['q'];
             } else {
-                $searchString = $query;
+                $searchData['q'] = $query;
             }
-            $searchData['q'] = trim($searchString);
             if (!empty($apiFilters)) {
                 $searchData['filters'] = $apiFilters;
             }
+
+            Log::debug('CookButlerService: searchData payload before API request', ['searchData' => $searchData]);
 
             Log::info('CookButler available recipes search - about to make API request', [
                 'patient_id' => $patient->id,
