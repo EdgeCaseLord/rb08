@@ -253,6 +253,12 @@ class EditBook extends EditRecord
                     }
 
                     $pdfPath = "books/book-{$this->record->id}-rezepte.pdf";
+                    $pdfDir = dirname($pdfPath);
+                    $storagePath = \Illuminate\Support\Facades\Storage::path($pdfDir);
+                    if (!file_exists($storagePath)) {
+                        mkdir($storagePath, 0775, true);
+                    }
+
                     \Spatie\LaravelPdf\Facades\Pdf::view('pdf.book', [
                         'book' => $this->record,
                         'recipes' => $this->record->recipes()->get()
