@@ -60,9 +60,12 @@ class CreateBookJob implements ShouldQueue
         Log::channel('email')->info('CreateBookJob started for patient', ['patient_id' => $patient->id]);
 
         try {
+            $latestAnalysis = \App\Models\Analysis::where('patient_id', $patient->id)->latest('created_at')->first();
             $book = Book::create([
                 'patient_id' => $patient->id,
                 'title' => "Persönliches Rezeptbuch für {$patient->name}",
+                'analysis_id' => $latestAnalysis ? $latestAnalysis->id : null,
+                'status' => 'Warten auf Versand',
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);

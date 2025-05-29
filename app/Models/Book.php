@@ -18,11 +18,15 @@ class Book extends Model
     protected $fillable = [
         'title',
         'patient_id',
+        'analysis_id',
+        'status',
     ];
 
     protected $casts = [
         'id' => 'integer',
         'patient_id' => 'integer',
+        'analysis_id' => 'integer',
+        'status' => 'string',
     ];
 
     public function patient(): BelongsTo
@@ -73,5 +77,10 @@ class Book extends Model
             'main_course' => $patientSettings['main_course'] ?? $labSettings['main_course'] ?? $defaultRecipesPerCourse['main_course'],
             'dessert' => $patientSettings['dessert'] ?? $labSettings['dessert'] ?? $defaultRecipesPerCourse['dessert']
         ];
+    }
+
+    public function analysis(): BelongsTo
+    {
+        return $this->belongsTo(Analysis::class, 'analysis_id');
     }
 }

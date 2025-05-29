@@ -57,6 +57,7 @@ class CookButlerService
     // }
 
     // NEW: Build search query using allergen codes as in the new matching table
+    // Supports both -- and - for NOT, || and / for OR (normalized in AvailableRecipesTable)
     public function buildSearchQuery(User $patient): string
     {
         // Only use allergens directly linked to this user via allergen_user

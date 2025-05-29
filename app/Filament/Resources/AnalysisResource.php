@@ -22,6 +22,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\Log;
+use App\Filament\Resources\AnalysisResource\RelationManagers\AllergensRelationManager;
 
 class AnalysisResource extends Resource
 {
@@ -229,7 +230,7 @@ class AnalysisResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            AllergensRelationManager::class,
         ];
     }
 

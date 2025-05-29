@@ -124,6 +124,22 @@ class BookResource extends Resource
                                             ->inlineLabel()
                                             ->extraAttributes(['class' => 'w-full'])
                                             ->columnSpan(1),
+                                        Forms\Components\Select::make('status')
+                                            ->label('Status')
+                                            ->options([
+                                                'Versendet' => 'Versendet',
+                                                'Warten auf Versand' => 'Warten auf Versand',
+                                                'Geändert nach Versand' => 'Geändert nach Versand',
+                                            ])
+                                            ->required()
+                                            ->columnSpan(1),
+                                        Forms\Components\Select::make('analysis_id')
+                                            ->label('Analyse (Sample Code)')
+                                            ->options(fn () => \App\Models\Analysis::pluck('sample_code', 'id'))
+                                            ->searchable()
+                                            ->preload()
+                                            ->nullable()
+                                            ->columnSpan(1),
                                         Forms\Components\Actions::make([
                                             Forms\Components\Actions\Action::make('save')
                                                 ->label('Speichern')
@@ -131,7 +147,7 @@ class BookResource extends Resource
                                                 ->color('primary'),
                                         ])->columnSpan(1),
                                     ])
-                                    ->columns(3)
+                                    ->columns(4)
                                     ->columnSpanFull()
                                     ->extraAttributes(['class' => 'flex items-center gap-4 w-full']),
                                 Forms\Components\Select::make('patient_id')
@@ -199,6 +215,19 @@ class BookResource extends Resource
                     })
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('analysis.sample_code')
+                    ->label('Analyse (Sample Code)')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\BadgeColumn::make('status')
+                    ->label('Status')
+                    ->colors([
+                        'primary' => 'Warten auf Versand',
+                        'success' => 'Versendet',
+                        'warning' => 'Geändert nach Versand',
+                    ])
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: false),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
@@ -300,6 +329,16 @@ class BookResource extends Resource
 
                         // Delete PDF after sending
                         \Illuminate\Support\Facades\Storage::delete($pdfPath);
+
+                        // Update book status to 'Versendet' and save
+                        $record->status = 'Versendet';
+                        $record->save();
+
+                        // Emit Livewire event to update status in UI
+                        if (method_exists($record, 'refresh')) {
+                            $record->refresh();
+                        }
+                        \Livewire\Livewire::emit('bookStatusUpdated', $record->id, $record->status);
 
                         \Filament\Notifications\Notification::make()
                             ->title('E-Mail gesendet')
@@ -436,6 +475,16 @@ class BookResource extends Resource
 
                     // Delete PDF after sending
                     \Illuminate\Support\Facades\Storage::delete($pdfPath);
+
+                    // Update book status to 'Versendet' and save
+                    $record->status = 'Versendet';
+                    $record->save();
+
+                    // Emit Livewire event to update status in UI
+                    if (method_exists($record, 'refresh')) {
+                        $record->refresh();
+                    }
+                    \Livewire\Livewire::emit('bookStatusUpdated', $record->id, $record->status);
 
                     \Filament\Notifications\Notification::make()
                         ->title('E-Mail gesendet')

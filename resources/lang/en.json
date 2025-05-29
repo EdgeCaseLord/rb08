@@ -79,5 +79,16 @@
     "Laboratory": "Laboratory",
     "Latest Analyses": "Latest Analyses",
     "Category": "Category",
-    "None": "None"
+    "None": "None",
+    "Suchlogik für Zutaten:": "Search logic for ingredients:",
+    "paprika / nudeln": "paprika / noodles",
+    "Rezepte mit Paprika oder Nudeln": "Recipes with paprika or noodles",
+    "paprika nudeln": "paprika noodles",
+    "Rezepte mit Paprika und Nudeln": "Recipes with paprika and noodles",
+    "paprika -aprikosen": "paprika -apricots",
+    "Rezepte mit Paprika, aber ohne Aprikosen": "Recipes with paprika, but without apricots",
+    "Tipp:": "Tip:",
+    "für ODER": "for OR",
+    "für NICHT.": "for NOT.",
+    "Alle Suchlogiken (UND, ODER, NICHT) können beliebig kombiniert werden.": "All search logics (AND, OR, NOT) can be combined arbitrarily."
 }

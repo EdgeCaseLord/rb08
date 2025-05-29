@@ -453,8 +453,9 @@ class AvailableRecipesTable extends Component
         if (!empty($this->filterIngredients)) {
             // Replace commas and multiple spaces with a single space
             $ingredientQuery = preg_replace('/[\s,]+/', ' ', $this->filterIngredients);
-            // Convert -ingredient to -- ingredient (with space)
-            $ingredientQuery = preg_replace('/\s*-([\wäöüÄÖÜß]+)/u', ' -- $1', $ingredientQuery);
+            // Convert / to || for OR, and - to -- for NOT (CookButler API expects -- and ||)
+            $ingredientQuery = preg_replace('/\s*\/\s*/', ' || ', $ingredientQuery); // OR
+            $ingredientQuery = preg_replace('/\s*-([\wäöüÄÖÜß]+)/u', ' -- $1', $ingredientQuery); // NOT
             $ingredientQuery = trim($ingredientQuery);
         }
         // Difficulty
