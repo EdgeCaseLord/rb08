@@ -16,7 +16,8 @@ class BookRecipesTable extends Component
 
     protected $listeners = [
         'recipeAddedToBook' => 'refreshRecipes',
-        'recipeRemovedFromBook' => 'refreshRecipes',
+        // Do not reload all available recipes on removal
+        // 'recipeRemovedFromBook' => 'refreshRecipes',
         // 'recipeAddedToFavorites' => 'refreshRecipes',
         // 'recipeRemovedFromFavorites' => 'refreshRecipes',
         'recipeRemovedFromFavorites' => 'updateFavoriteStatus',
@@ -32,13 +33,14 @@ class BookRecipesTable extends Component
     {
         $book = Book::find($this->bookId);
         Log::info('BookRecipesTable: refreshRecipes', ['bookId' => $this->bookId, 'book' => $book]);
-        if (!$book) { $this->recipes = []; return; }
+        if (!$book) { $this->recipes = []; $this->dispatch('bookRecipesChanged'); return; }
         $recipes = $book->recipes()->get();
         $this->recipes = array_map(function($r) {
             return \App\Filament\Livewire\AvailableRecipesTable::recipeModelToArray($r);
         }, $recipes->all());
         $idRecipes = array_map(function($r) { return $r['id_recipe'] ?? null; }, $this->recipes);
         Log::info('BookRecipesTable: recipes: ' . implode(',', $idRecipes));
+        $this->dispatch('bookRecipesChanged');
     }
 
     public function removeRecipe($id)
@@ -54,6 +56,12 @@ class BookRecipesTable extends Component
             $internalId = $recipe->id_recipe;
             // Remove from book
             $book->removeRecipe($internalId);
+            // Update status if not 'Warten auf Versand'
+            if ($book->status !== 'Warten auf Versand') {
+                $book->status = 'Geändert nach Versand';
+                $book->save();
+                $this->dispatch('bookStatusUpdated', id: $book->id, status: $book->status);
+            }
             // Remove from local array (array of arrays)
             $this->recipes = array_values(array_filter($this->recipes, function ($r) use ($internalId) {
                 return ($r['id_recipe'] ?? null) != $internalId;
@@ -67,8 +75,10 @@ class BookRecipesTable extends Component
             } else {
                 // Convert model to array for available pane
                 $arr = \App\Filament\Livewire\AvailableRecipesTable::recipeModelToArray($recipe);
+                // Only prepend to available recipes UI, do not reload all
                 $this->dispatch('prependAvailableRecipe', $arr['id'] ?? $arr['id_external'] ?? $arr['id_recipe']);
             }
+            $this->dispatch('bookRecipesChanged');
         }
     }
 

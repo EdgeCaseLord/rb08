@@ -17,10 +17,10 @@
         <div class="mb-6">
             <div class="bg-white border border-gray-200 rounded-lg shadow p-6 flex flex-col md:flex-row md:items-center md:gap-8 gap-4">
                 <div class="flex-1">
-                    <form method="POST" action="{{ $isEdit ? BookResource::getUrl('edit', ['record' => $book->id]) : BookResource::getUrl('create') }}">
+                    <form method="POST" action="{{ $isEdit ? route('book.update', ['book' => $book->id]) : BookResource::getUrl('create') }}">
                         @csrf
                         @if($isEdit)
-                            @method('PUT')
+                            <input type="hidden" name="_method" value="PUT">
                         @endif
                         <div class="flex flex-col md:flex-row md:items-center gap-4">
                             <div>
@@ -30,7 +30,12 @@
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Patient') }}</label>
                                 @if($isEdit)
-                                    <div class="py-2">{{ $patient ? $patient->name : '-' }}</div>
+                                    @if($patient)
+                                        <a href="{{ route('filament.admin.resources.patients.edit', $patient->id) }}" class="text-primary-600 underline" target="_blank">{{ $patient->name }}</a>
+
+                                    @else
+                                        <div class="py-2">-</div>
+                                    @endif
                                 @else
                                     <select name="patient_id" class="filament-input w-full rounded-lg" required>
                                         <option value="">{{ __('Bitte wählen') }}</option>
@@ -51,7 +56,9 @@
                                     <span class="py-2 text-gray-400">{{ __('Keine Analyse gefunden') }}</span>
                                 @endif
                             </div>
-                            <div x-data="{ status: @js($book->status ?? 'Warten auf Versand') }" x-init="window.Livewire && window.Livewire.on('bookStatusUpdated', (id, newStatus) => { if (id == @js($book->id)) status = newStatus })">
+                            <div x-data="{ status: @js($book->status ?? 'Warten auf Versand') }"
+                                 x-init="window.addEventListener('bookStatusUpdated', e => { if (e.detail.id == @js($book->id)) status = e.detail.status });
+                                          window.addEventListener('bookRecipesChanged', () => { $wire.$refresh() });">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Status') }}</label>
                                 @php
                                     $statusColors = [

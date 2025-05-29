@@ -75,8 +75,7 @@ class FavoriteRecipesTable extends Component
         $user->removeFromFavorites($id);
         $this->dispatch('recipeRemovedFromFavorites', $id);
         // Remove from favorites UI immediately
-        $this->recipes = $this->ensureRecipeCollection($this->recipes);
-        $this->recipes = $this->recipes->reject(function($r) use ($id) {
+        $this->recipes = collect($this->recipes)->reject(function($r) use ($id) {
             return $r->id_recipe == $id || $r->id_external == $id;
         })->values();
         // Do not call refreshRecipes here
@@ -91,6 +90,12 @@ class FavoriteRecipesTable extends Component
         if (!$recipe) return;
         try {
             $book->addRecipe($recipe->id_recipe);
+            // Update status if not 'Warten auf Versand'
+            if ($book->status !== 'Warten auf Versand') {
+                $book->status = 'Geändert nach Versand';
+                $book->save();
+                $this->dispatch('bookStatusUpdated', id: $book->id, status: $book->status);
+            }
         } catch (\Exception $e) {
             \Filament\Notifications\Notification::make()
                 ->title('Nicht hinzugefügt')
@@ -101,10 +106,10 @@ class FavoriteRecipesTable extends Component
         }
         $this->dispatch('recipeAddedToBook', $recipe->id_external ?? $recipe->id_recipe);
         // Remove from favorites UI immediately
-        $this->recipes = $this->ensureRecipeCollection($this->recipes);
-        $this->recipes = $this->recipes->reject(function($r) use ($recipe) {
-            return $r->id_recipe == $recipe->id_recipe || $r->id_external == $recipe->id_external;
-        })->values();
+        $this->recipes = $this->ensureRecipeCollection($this->recipes)
+            ->reject(function($r) use ($recipe) {
+                return $r->id_recipe == $recipe->id_recipe || $r->id_external == $recipe->id_external;
+            })->values();
         // Do not call refreshRecipes here
     }
 
@@ -119,12 +124,11 @@ class FavoriteRecipesTable extends Component
         $recipe = Recipe::where('id_external', $externalId)->orWhere('id_recipe', $externalId)->first();
         if (!$recipe) return;
         if (in_array($recipe->id_recipe, $bookRecipeIds)) return; // Do not add to UI if in book
-        $this->recipes = $this->ensureRecipeCollection($this->recipes);
         // Always prepend, even if already present, to ensure UI update
-        $this->recipes = $this->recipes->reject(function ($r) use ($recipe) {
-            return $r->id_recipe == $recipe->id_recipe;
-        });
-        $this->recipes = $this->recipes->prepend($recipe);
+        $this->recipes = collect($this->recipes)
+            ->reject(function ($r) use ($recipe) {
+                return $r->id_recipe == $recipe->id_recipe;
+            })->prepend($recipe);
         // No need to call ensureRecipeCollection again, as all are Recipe objects
         // Do not call refreshRecipes here, to avoid UI flicker and ensure instant update
     }

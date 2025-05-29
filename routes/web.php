@@ -17,6 +17,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/books/{book}/bulk-add-recipes', [BookController::class, 'bulkAddRecipes'])->name('book.bulkAddRecipes');
     Route::delete('/books/{book}/bulk-remove-recipes', [BookController::class, 'bulkRemoveRecipes'])->name('book.bulkRemoveRecipes');
     Route::post('/books', [BookController::class, 'create'])->name('book.create');
+    Route::put('/books/{book}', [BookController::class, 'update'])->name('book.update');
 
 //    Route::get('/recipe/{recipe}/view', function (Recipe $recipe) {
 //        return view('filament.resources.recipe-resource.view-recipe', ['recipe' => $recipe]);

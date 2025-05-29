@@ -334,11 +334,7 @@ class BookResource extends Resource
                         $record->status = 'Versendet';
                         $record->save();
 
-                        // Emit Livewire event to update status in UI
-                        if (method_exists($record, 'refresh')) {
-                            $record->refresh();
-                        }
-                        \Livewire\Livewire::emit('bookStatusUpdated', $record->id, $record->status);
+                        $this->dispatch('bookStatusUpdated', id: $record->id, status: $record->status);
 
                         \Filament\Notifications\Notification::make()
                             ->title('E-Mail gesendet')
@@ -480,11 +476,7 @@ class BookResource extends Resource
                     $record->status = 'Versendet';
                     $record->save();
 
-                    // Emit Livewire event to update status in UI
-                    if (method_exists($record, 'refresh')) {
-                        $record->refresh();
-                    }
-                    \Livewire\Livewire::emit('bookStatusUpdated', $record->id, $record->status);
+                    $this->dispatch('bookStatusUpdated', id: $record->id, status: $record->status);
 
                     \Filament\Notifications\Notification::make()
                         ->title('E-Mail gesendet')

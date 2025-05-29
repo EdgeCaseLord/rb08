@@ -406,9 +406,10 @@ class CookButlerService
         $headers = [
             'Authorization' => "Bearer $jwt",
             'Accept' => 'application/json',
+            'Content-Type' => 'application/json',
         ];
         $url = 'https://api.cookbutler.com/v1/recipes/recipe';
-        $query = [
+        $body = [
             'id' => $recipeId,
             'language' => 'de-de',
             'fields' => ['ingredients','steps','time','category','substances','media','images','difficulty','serving','diets','allergens','country','price','yield_quantity_1','yield_quantity_2','yield_info','yield_info_short','subtitle','alttitle','create','last_update','description'],
@@ -416,10 +417,10 @@ class CookButlerService
         if ($patient) {
             $allergenQ = $this->buildSearchQuery($patient);
             if (!empty($allergenQ)) {
-                $query['q'] = $allergenQ;
+                $body['q'] = $allergenQ;
             }
         }
-        $response = \Illuminate\Support\Facades\Http::withHeaders($headers)->get($url, $query);
+        $response = \Illuminate\Support\Facades\Http::withHeaders($headers)->post($url, $body);
         if (!$response->successful()) {
             Log::error('Fehler beim Abrufen von Einzelrezeptdetails', [
                 'status' => $response->status(),

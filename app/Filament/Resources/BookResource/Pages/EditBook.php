@@ -10,6 +10,9 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Filament\Actions;
 
+/**
+ * @property \App\Models\Book $record
+ */
 class EditBook extends EditRecord
 {
     protected static string $resource = BookResource::class;
@@ -39,6 +42,14 @@ class EditBook extends EditRecord
 
             // Remove the recipe from the book using the Book model's method
             $book->removeRecipe($recipeId);
+
+            // Update status if not 'Warten auf Versand'
+            if ($book->status !== 'Warten auf Versand') {
+                $book->status = 'Geändert nach Versand';
+                $book->save();
+                $book->refresh();
+                $this->dispatch('bookStatusUpdated', id: $book->id, status: $book->status);
+            }
 
             // Notify success
             \Filament\Notifications\Notification::make()
@@ -281,6 +292,14 @@ class EditBook extends EditRecord
                     });
 
                     \Illuminate\Support\Facades\Storage::delete($pdfPath);
+
+                    // Update book status to 'Versendet' and save
+                    if ($this->record instanceof \App\Models\Book) {
+                        $this->record->status = 'Versendet';
+                        $this->record->save(); // @phpstan-ignore-line
+                        $this->record->refresh();
+                        $this->dispatch('bookStatusUpdated', id: $this->record->id, status: $this->record->status);
+                    }
 
                     \Filament\Notifications\Notification::make()
                         ->title('E-Mail gesendet')

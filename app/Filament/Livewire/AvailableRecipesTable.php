@@ -263,17 +263,15 @@ class AvailableRecipesTable extends Component
         $user = Auth::user();
         $book = Book::find($this->bookId);
         if (!$user || !$book || !$book->patient) return;
-        if (!$this->cookButlerService) {
-            $this->cookButlerService = app(\App\Services\CookButlerService::class);
-        }
-        // Always use the single recipe fetch
-        $recipeData = $this->cookButlerService->fetchRecipeDetails($externalId, $book->patient);
-        if (!$recipeData) return;
-        $patient = $book->patient;
-
-        // Save recipe if not exists
+        // Find the recipe by externalId
         $recipe = Recipe::where('id_external', $externalId)->first();
         if (!$recipe) {
+            // Fetch details from API and create recipe
+            if (!$this->cookButlerService) {
+                $this->cookButlerService = app(CookButlerService::class);
+            }
+            $recipeData = $this->cookButlerService->fetchRecipeDetails($externalId, $book->patient);
+            if (!$recipeData) return;
             $recipe = Recipe::create([
                 'id_external' => $externalId,
                 'title' => $recipeData['title'] ?? '',
@@ -307,9 +305,15 @@ class AvailableRecipesTable extends Component
                 'last_update' => $recipeData['last_update'] ?? null,
             ]);
         }
-        // Add to book
+        // Attach to book
         try {
             $book->addRecipe($recipe->id_recipe);
+            // Update status if not 'Warten auf Versand'
+            if ($book->status !== 'Warten auf Versand') {
+                $book->status = 'Geändert nach Versand';
+                $book->save();
+                $this->dispatch('bookStatusUpdated', id: $book->id, status: $book->status);
+            }
         } catch (\Exception $e) {
             \Filament\Notifications\Notification::make()
                 ->title('Nicht hinzugefügt')
@@ -318,7 +322,7 @@ class AvailableRecipesTable extends Component
                 ->send();
             return;
         }
-        // Remove from available recipes
+        // Remove from available recipes UI
         $recipesArray = $this->recipes;
         if ($recipesArray instanceof \Illuminate\Support\Collection) {
             $recipesArray = $recipesArray->all();
@@ -391,19 +395,46 @@ class AvailableRecipesTable extends Component
                             $arr[$field] = $decoded;
                         }
                     }
-                    // Always fetch latest details from API for images when moving to availables
+                    // Always try to set images from cache if available, even if not fetching from API
+                    $shouldFetchImages = false;
+                    if (!isset($arr['images']) || (is_array($arr['images']) && count($arr['images']) === 0)) {
+                        $shouldFetchImages = true;
+                    } elseif (is_string($arr['images'])) {
+                        $decoded = json_decode($arr['images'], true);
+                        if (empty($decoded) || !is_array($decoded)) {
+                            $shouldFetchImages = true;
+                        }
+                    }
+                    $cacheKey = 'recipe_images_' . $arr['id_external'];
+                    $cachedImages = Cache::get($cacheKey);
                     if (!empty($arr['id_external'])) {
-                        if (!$this->cookButlerService) {
-                            $this->cookButlerService = app(\App\Services\CookButlerService::class);
-                        }
-                        $apiRecipe = $this->cookButlerService->fetchRecipeDetails($arr['id_external'], $book->patient);
-                        if (!empty($apiRecipe['images'])) {
-                            $arr['images'] = $apiRecipe['images'];
-                        } elseif (!empty($apiRecipe['media']['preview'])) {
-                            $arr['images'] = is_array($apiRecipe['media']['preview']) ? $apiRecipe['media']['preview'] : [$apiRecipe['media']['preview']];
-                        }
-                        if (!empty($apiRecipe['media'])) {
-                            $arr['media'] = $apiRecipe['media'];
+                        if ($cachedImages && is_array($cachedImages) && count($cachedImages) > 0) {
+                            $arr['images'] = $cachedImages;
+                            Log::debug('Loaded recipe images from cache', ['id_external' => $arr['id_external']]);
+                        } elseif ($shouldFetchImages) {
+                            Log::debug('Fetching recipe details from API for images', ['id_external' => $arr['id_external']]);
+                            if (!$this->cookButlerService) {
+                                $this->cookButlerService = app(\App\Services\CookButlerService::class);
+                            }
+                            $apiRecipe = $this->cookButlerService->fetchRecipeDetails($arr['id_external'], $book->patient);
+                            if (!empty($apiRecipe['images'])) {
+                                $arr['images'] = $apiRecipe['images'];
+                            } elseif (!empty($apiRecipe['media']['preview'])) {
+                                $arr['images'] = is_array($apiRecipe['media']['preview']) ? $apiRecipe['media']['preview'] : [$apiRecipe['media']['preview']];
+                            }
+                            if (!empty($apiRecipe['media'])) {
+                                $arr['media'] = $apiRecipe['media'];
+                            }
+                            // Cache the images for 1 day
+                            if (!empty($arr['images'])) {
+                                Cache::put($cacheKey, $arr['images'], now()->addDay());
+                                Log::debug('Cached recipe images for 1 day', ['id_external' => $arr['id_external']]);
+                            }
+                        } else if (!empty($arr['images']) && is_string($arr['images'])) {
+                            $decoded = json_decode($arr['images'], true);
+                            if (is_array($decoded)) {
+                                $arr['images'] = $decoded;
+                            }
                         }
                     }
                     $recipesArray = $this->recipes;
@@ -656,18 +687,7 @@ class AvailableRecipesTable extends Component
                 $arr[$field] = $decoded;
             }
         }
-        // Ensure images is always an array
-        if (isset($arr['images'])) {
-            if (is_string($arr['images'])) {
-                $decodedImages = json_decode($arr['images'], true);
-                $arr['images'] = is_array($decodedImages) ? $decodedImages : [];
-            } elseif (!is_array($arr['images'])) {
-                $arr['images'] = [];
-            }
-        } else {
-            $arr['images'] = [];
-        }
-        // Only fetch latest details from API for images if truly missing, but cache for 1 day
+        // Always try to set images from cache if available, even if not fetching from API
         $shouldFetchImages = false;
         if (!isset($arr['images']) || (is_array($arr['images']) && count($arr['images']) === 0)) {
             $shouldFetchImages = true;
@@ -679,11 +699,11 @@ class AvailableRecipesTable extends Component
         }
         $cacheKey = 'recipe_images_' . $arr['id_external'];
         $cachedImages = Cache::get($cacheKey);
-        if (!empty($arr['id_external']) && $shouldFetchImages) {
+        if (!empty($arr['id_external'])) {
             if ($cachedImages && is_array($cachedImages) && count($cachedImages) > 0) {
                 $arr['images'] = $cachedImages;
                 Log::debug('Loaded recipe images from cache', ['id_external' => $arr['id_external']]);
-            } else {
+            } elseif ($shouldFetchImages) {
                 Log::debug('Fetching recipe details from API for images', ['id_external' => $arr['id_external']]);
                 if (!$this->cookButlerService) {
                     $this->cookButlerService = app(\App\Services\CookButlerService::class);
@@ -701,6 +721,11 @@ class AvailableRecipesTable extends Component
                 if (!empty($arr['images'])) {
                     Cache::put($cacheKey, $arr['images'], now()->addDay());
                     Log::debug('Cached recipe images for 1 day', ['id_external' => $arr['id_external']]);
+                }
+            } else if (!empty($arr['images']) && is_string($arr['images'])) {
+                $decoded = json_decode($arr['images'], true);
+                if (is_array($decoded)) {
+                    $arr['images'] = $decoded;
                 }
             }
         }
