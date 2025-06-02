@@ -1,4 +1,4 @@
-<div class="recipe-content" style="page-break-inside: avoid;">
+<div class="recipe-content">
     <style>
     @font-face {
         font-family: 'Roboto-Regular';
@@ -312,7 +312,10 @@
         $info = $data['yield_info'] ?? $data->yield_info ?? null;
         $externalId = $data['id_external'] ?? $data->id_external ?? null;
         $allergens = is_string($data['allergens'] ?? null) ? json_decode($data['allergens'] ?? '[]', true) : (is_array($data['allergens'] ?? null) ? $data['allergens'] : []);
-        $presentAllergens = !empty($allergens) ? collect($allergens)->filter(fn($a) => $a['value'] ?? false)->pluck('allergen')->all() : [];
+        $presentAllergens = !empty($allergens) ? collect($allergens)
+            ->filter(fn($a) => ($a['value'] ?? false) && !str_starts_with($a['allergen'] ?? '', 'pro_'))
+            ->pluck('allergen')
+            ->all() : [];
         $steps = is_string($data['steps'] ?? null) ? json_decode($data['steps'] ?? '[]', true) : (is_array($data['steps'] ?? null) ? $data['steps'] : []);
         // Nutrients
         $nutrientList = [
@@ -468,11 +471,9 @@
                 <div class="card card-allergens">
                     <div class="card-orange-title">Allergien</div>
                     @if (!empty($presentAllergens))
-                        <ul class="allergens-list">
-                            @foreach ($presentAllergens as $allergen)
-                                <li>{{ $allergen }}</li>
-                            @endforeach
-                        </ul>
+                        <div class="text-xs text-gray-900 mb-2" style="font-size: 7pt;">
+                            {{ implode(', ', $presentAllergens) }}
+                        </div>
                     @else
                         <p>Keine</p>
                     @endif

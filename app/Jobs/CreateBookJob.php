@@ -114,7 +114,7 @@ class CreateBookJob implements ShouldQueue
                 if ($authUser instanceof \App\Models\User && method_exists($authUser, 'isLab') && $authUser->isLab()) {
                     $lab = $authUser;
                 } else {
-                    $lab = $patient->lab;
+                $lab = $patient->lab;
                 }
                 $defaultRecipesPerCourse = [
                     'starter' => 5,

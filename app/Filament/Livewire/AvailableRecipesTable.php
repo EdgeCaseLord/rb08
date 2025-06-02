@@ -65,7 +65,12 @@ class AvailableRecipesTable extends Component
                 'filterTitle', 'filterIngredients', 'filterAllergen', 'filterCategory', 'filterCountry', 'filterCourse', 'filterDiets', 'filterDifficulty', 'filterMaxTime'
             ] as $key) {
                 if (array_key_exists($key, $prefs)) {
-                    $this->$key = $prefs[$key];
+                    // If the filter is an array of values, convert to associative array for Livewire checkboxes
+                    if (in_array($key, ['filterAllergen','filterCategory','filterCountry','filterCourse','filterDiets','filterDifficulty','filterMaxTime']) && is_array($prefs[$key]) && array_values($prefs[$key]) === $prefs[$key]) {
+                        $this->$key = array_fill_keys($prefs[$key], true);
+                    } else {
+                        $this->$key = $prefs[$key];
+                    }
                 }
             }
         }
@@ -152,6 +157,7 @@ class AvailableRecipesTable extends Component
             if (!$this->cookButlerService) {
                 $this->cookButlerService = app(\App\Services\CookButlerService::class);
             }
+            // Always pass patient for allergen merging
             $details = $this->cookButlerService->fetchRecipeDetailsBatch($idsToFetch, $patient);
             foreach ($details as $detail) {
                 $detailsMap[$detail['id']] = $detail;
@@ -477,99 +483,20 @@ class AvailableRecipesTable extends Component
 
     protected function getFilters()
     {
-        $filters = [];
-        // Compose the q parameter: title + ingredients keywords + allergen exclusion
-        $qParts = [];
-        if (!empty($this->filterTitle)) {
-            $qParts[] = $this->filterTitle;
-        }
-        $ingredientQuery = '';
-        if (!empty($this->filterIngredients)) {
-            // Replace commas and multiple spaces with a single space
-            $ingredientQuery = preg_replace('/[\s,]+/', ' ', $this->filterIngredients);
-            // Convert / to || for OR, and - to -- for NOT (CookButler API expects -- and ||)
-            $ingredientQuery = preg_replace('/\s*\/\s*/', ' || ', $ingredientQuery); // OR
-            $ingredientQuery = preg_replace('/\s*-([\wäöüÄÖÜß]+)/u', ' -- $1', $ingredientQuery); // NOT
-            $ingredientQuery = trim($ingredientQuery);
-        }
-        if (!empty($ingredientQuery)) {
-            $qParts[] = $ingredientQuery;
-        }
-        // Difficulty
-        if (is_array($this->filterDifficulty) && !empty($this->filterDifficulty)) {
-            $selectedDifficulties = array_keys(array_filter($this->filterDifficulty));
-            if (!empty($selectedDifficulties)) {
-                $filters['difficulty'] = $selectedDifficulties;
-            }
-        }
-        // Course
-        if (is_array($this->filterCourse) && !empty($this->filterCourse)) {
-            $selectedCourses = array_keys(array_filter($this->filterCourse));
-            if (!empty($selectedCourses)) {
-                $filters['courses'] = $selectedCourses;
-            }
-        }
-        // Diets
-        if (is_array($this->filterDiets) && !empty($this->filterDiets)) {
-            $selectedDiets = array_keys(array_filter($this->filterDiets));
-            if (!empty($selectedDiets)) {
-                $filters['diets'] = $selectedDiets;
-            }
-        }
-        // Allergen
-        if (is_array($this->filterAllergen) && !empty($this->filterAllergen)) {
-            $selectedAllergens = array_keys(array_filter($this->filterAllergen));
-            if (!empty($selectedAllergens)) {
-                $filters['allergen'] = $selectedAllergens;
-            }
-        }
-        // Category
-        if (is_array($this->filterCategory) && !empty($this->filterCategory)) {
-            $selectedCategories = array_keys(array_filter($this->filterCategory));
-            if (!empty($selectedCategories)) {
-                $filters['category'] = $selectedCategories;
-            }
-        }
-        // Country
-        if (is_array($this->filterCountry) && !empty($this->filterCountry)) {
-            $selectedCountries = $this->filterCountry;
-            if (!empty($selectedCountries)) {
-                $filters['country'] = $selectedCountries;
-            }
-        }
-        // Max Time
-        if (is_array($this->filterMaxTime) && !empty($this->filterMaxTime)) {
-            $selectedTimes = array_keys(array_filter($this->filterMaxTime));
-            if (!empty($selectedTimes)) {
-                $filters['max_time'] = $selectedTimes;
-            }
-        }
-        $filters['offset'] = (int) $this->filterOffset;
-        $filters['randomize_offset'] = (bool) $this->filterRandomizeOffset;
-        $patient = $this->getBookPatient();
-        // $allergenQ = $patient ? $this->cookButlerService->buildSearchQuery($patient) : '';
-        // buildSearchQuery expects a User, not an array
-        $patientFilters = [];
-        if (!empty($patient)) {
-            $patientFilters = [
-                'filterTitle' => $this->filterTitle,
-                'filterIngredients' => $this->filterIngredients,
-                'filterAllergen' => $this->filterAllergen ?? [],
-                'filterCategory' => $this->filterCategory ?? [],
-                'filterCountry' => $this->filterCountry ?? [],
-                'filterCourse' => $this->filterCourse ?? [],
-                'filterDiets' => $this->filterDiets ?? [],
-                'filterDifficulty' => $this->filterDifficulty ?? [],
-                'filterMaxTime' => $this->filterMaxTime ?? [],
-            ];
-        }
-        // $allergenQ = $this->cookButlerService->buildSearchQuery($patientFilters);
-        // if (!empty($allergenQ)) {
-        //     $qParts[] = $allergenQ;
-        // }
-        $filters['q'] = trim(implode(' ', $qParts));
-        \Illuminate\Support\Facades\Log::debug('AvailableRecipesTable getFilters', ['filterIngredients' => $this->filterIngredients, 'q' => $filters['q']]);
-        return $filters;
+        // Only return the selected form filters, raw, as set by the user
+        return [
+            'filterTitle' => $this->filterTitle,
+            'filterIngredients' => $this->filterIngredients,
+            'filterAllergen' => array_keys(array_filter($this->filterAllergen)),
+            'filterCategory' => array_keys(array_filter($this->filterCategory)),
+            'filterCountry' => array_keys(array_filter($this->filterCountry)),
+            'filterCourse' => array_keys(array_filter($this->filterCourse)),
+            'filterDiets' => array_keys(array_filter($this->filterDiets)),
+            'filterDifficulty' => array_keys(array_filter($this->filterDifficulty)),
+            'filterMaxTime' => array_keys(array_filter($this->filterMaxTime)),
+            'offset' => (int) $this->filterOffset,
+            'randomize_offset' => (bool) $this->filterRandomizeOffset,
+        ];
     }
 
     public function resetAndReload()

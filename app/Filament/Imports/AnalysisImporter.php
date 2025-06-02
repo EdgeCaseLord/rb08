@@ -153,29 +153,16 @@ class AnalysisImporter extends Importer
 
         try {
             DB::transaction(function () use ($record, $data) {
-                // Upsert allergen
-                $allergenData = [
-                    'code' => $data['code'],
-                    'name' => $data['antigen_name'],
-                    'description' => null,
-                    'name_latin' => null,
-                    'description_de' => null,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ];
-                Allergen::upsert(
-                    [$allergenData],
-                    ['code'],
-                    ['name', 'description', 'name_latin', 'description_de', 'updated_at']
-                );
+                // Only match allergen via code, do not update existing allergens
                 $allergen = Allergen::where('code', $data['code'])->first();
-
                 if (!$allergen) {
-                    Log::error('Allergen not found after upsert', [
+                    $allergen = Allergen::create([
                         'code' => $data['code'],
-                        'analysis_id' => $record->id,
+                        'name' => $data['antigen_name'],
+                        'description' => null,
+                        'name_latin' => null,
+                        'description_de' => null,
                     ]);
-                    return;
                 }
 
                 $calibratedValue = (float)($data['calibrated_value'] ?? 0);

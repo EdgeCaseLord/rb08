@@ -267,7 +267,7 @@
 
 <!-- Impressum as first content page -->
 @php $currentPage = 1; @endphp
-<div class="content content-odd" style="page-break-inside: avoid; page-break-after: always;">
+<div class="content content-odd" style="page-break-after: always;">
     <div class="header">
 
             <span class="header-category">&nbsp;</span>
@@ -293,12 +293,12 @@
                 @if($impressumTemplate)
                     {!! $impressumTemplate->getBodyForLocale($bookLocale) !!}
                 @else
-                    <p>Medizinisches Versorgungszentrum Institut für Mikroökologie GmbH </p>
-                    <p>Auf den Lüppen 8 </p>
-                    <p>35745 Herborn</p>
-                    <p>Telefon: 02772 9810 </p>
-                    <p>E-Mail: <a href="mailto:info@ifm-herborn.de">info@ifm-herborn.de</a></p>
-                    <p><strong>Haftungsausschluss:</strong> Die Rezepte sind allergenfrei zusammengestellt, aber individuelle Allergien sollten geprüft werden. Der Herausgeber übernimmt keine Haftung für allergische Reaktionen.</p>
+                <p>Medizinisches Versorgungszentrum Institut für Mikroökologie GmbH </p>
+                <p>Auf den Lüppen 8 </p>
+                <p>35745 Herborn</p>
+                <p>Telefon: 02772 9810 </p>
+                <p>E-Mail: <a href="mailto:info@ifm-herborn.de">info@ifm-herborn.de</a></p>
+                <p><strong>Haftungsausschluss:</strong> Die Rezepte sind allergenfrei zusammengestellt, aber individuelle Allergien sollten geprüft werden. Der Herausgeber übernimmt keine Haftung für allergische Reaktionen.</p>
                 @endif
             </div>
         </div>
@@ -370,7 +370,7 @@
                 : '<h2>Sehr geehrte(r) ' . e($book->patient->name ?? 'PatientIn') . ',</h2>' .
                   '<p class="mt-8">Sie halten Ihr persönliches Kochbuch in den Händen, das Ihnen eine Anregung für den Einstieg in Ihre neue kulinarische Welt gibt. Zur Benutzung der Rezepte noch ein paar Erläuterungen:</p>' .
                   '<h4>Gewichtsangaben:</h4>' .
-                  '<p>Zur Berechnung des Nährwertes der einzelnen Rezepte sind die mengenmäßig wichtigsten Zutaten mit Gewichtsangaben versehen. Die üblichen Bezeichnungen, wie Esslöffel, Teelöffel, Tasse oder Bund sind daher in Gramm oder Milliliter umgerechnet angegeben. Die folgende Tabelle gibt Ihnen einen Überblick über die Verwendung der Maßangaben:</p>'
+                  '<p>Zur Berechnung des Nährvalues der einzelnen Rezepte sind die mengenmäßig wichtigsten Zutaten mit Gewichtsangaben versehen. Die üblichen Bezeichnungen, wie Esslöffel, Teelöffel, Tasse oder Bund sind daher in Gramm oder Milliliter umgerechnet angegeben. Die folgende Tabelle gibt Ihnen einen Überblick über die Verwendung der Maßangaben:</p>'
             !!}
 
             {!! $naehrwerttabelleTemplate
@@ -477,7 +477,7 @@
             $categoriesArr = is_string($recipe->category ?? null) ? collect(json_decode($recipe->category, true)) : (is_array($recipe->category ?? null) ? collect($recipe->category) : collect());
         @endphp
         @php $currentPage++; @endphp
-        <div class="content {{ $currentPage % 2 == 0 ? 'content-even' : 'content-odd' }}">
+        <div class="content {{ $currentPage % 2 == 0 ? 'content-even' : 'content-odd' }}" style="page-break-after: always;">
             <div class="header">
                 @php
                     $headerCategory = $categoriesArr->first(function($cat) use ($cats) {

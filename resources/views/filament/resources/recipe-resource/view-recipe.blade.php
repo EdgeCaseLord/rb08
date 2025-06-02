@@ -332,7 +332,10 @@
     $info = $data['yield_info'] ?? null;
     $externalId = $data['id_external'] ?? null;
     $allergens = is_array($data['allergens'] ?? null) ? $data['allergens'] : [];
-    $presentAllergens = !empty($allergens) ? collect($allergens)->filter(fn($a) => $a['value'] ?? false)->pluck('allergen')->all() : [];
+    $presentAllergens = !empty($allergens) ? collect($allergens)
+        ->filter(fn($a) => ($a['value'] ?? false) && !str_starts_with($a['allergen'] ?? '', 'pro_'))
+        ->pluck('allergen')
+        ->all() : [];
     $steps = is_array($data['steps'] ?? null) ? $data['steps'] : [];
     // Nutrients
     $nutrientList = [
@@ -493,11 +496,9 @@
                     <div class="card card-allergens">
                         <div class="card-orange-title">Allergien</div>
                         @if (!empty($presentAllergens))
-                            <ul class="allergens-list">
-                                @foreach ($presentAllergens as $allergen)
-                                    <li>{{ $allergen }}</li>
-                                @endforeach
-                            </ul>
+                            <div class="text-xs text-gray-900 mb-2" style="font-size: 8pt;">
+                                {{ implode(', ', $presentAllergens) }}
+                            </div>
                         @else
                             <p>Keine</p>
                         @endif

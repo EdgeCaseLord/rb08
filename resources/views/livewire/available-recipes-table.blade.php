@@ -224,7 +224,7 @@
                             'vegan' => __('Vegan'),
                             'vegetarisch' => __('Vegetarisch'),
                             'weizenfrei' => __('Weizenfrei'),
-                            'fruktose' => __('Fruktose'),
+                            'fruktose' => __('ohne Fruktose'),
                             'alcohol-free' => __('ohne Alkohol'),
                         ] as $key => $label)
                             <label class="flex items-center space-x-2">
