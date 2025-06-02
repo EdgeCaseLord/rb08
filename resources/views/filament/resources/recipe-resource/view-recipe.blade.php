@@ -332,7 +332,10 @@
     $info = $data['yield_info'] ?? null;
     $externalId = $data['id_external'] ?? null;
     $allergens = is_array($data['allergens'] ?? null) ? $data['allergens'] : [];
-    $presentAllergens = !empty($allergens) ? collect($allergens)->filter(fn($a) => $a['value'] ?? false)->pluck('allergen')->all() : [];
+    $presentAllergens = !empty($allergens) ? collect($allergens)
+        ->filter(fn($a) => ($a['value'] ?? false) && !str_starts_with($a['allergen'] ?? '', 'pro_'))
+        ->pluck('allergen')
+        ->all() : [];
     $steps = is_array($data['steps'] ?? null) ? $data['steps'] : [];
     // Nutrients
     $nutrientList = [
@@ -371,14 +374,26 @@
             <div class="recipe-header-left">
                 <div class="recipe-title">{{ $data['title'] ?? $data->title ?? 'Unbekannt' }}</div>
                 <div class="recipe-tags">
-                    @if($course && isset($courseLabels[$course]))
-                        <span class="recipe-tag">{{ $courseLabels[$course] }}</span>
+                    @php
+                        $showCourse = $course && isset($courseLabels[$course]);
+                        $catLower = $categories->map(fn($c) => mb_strtolower($c));
+                        $courseLabel = $showCourse ? $courseLabels[$course] : null;
+                        $hasCourseInCategory = $courseLabel && $catLower->contains(mb_strtolower($courseLabel));
+                    @endphp
+                    @if($showCourse)
+                        <span class="recipe-tag">{{ $courseLabel }}</span>
                     @endif
-                    @foreach($categories as $cat)
-                        <span class="recipe-tag">{{ $cat }}</span>
-                    @endforeach
+                    @if(!$hasCourseInCategory && $categories->count())
+                        <span class="recipe-tag">{{ $categories->first() }}</span>
+                    @endif
                     @foreach($presentDiets as $diet)
-                        <span class="recipe-tag">{{ $diet }}</span>
+                        <span class="recipe-tag">
+                            @if(app()->getLocale() === 'de' && $diet === 'alcohol-free')
+                                {{ 'ohne Alkohol' }}
+                            @else
+                                {{ $diet }}
+                            @endif
+                        </span>
                     @endforeach
                     @if($country)
                         <span class="recipe-tag">{{ $country }}</span>
@@ -481,11 +496,9 @@
                     <div class="card card-allergens">
                         <div class="card-orange-title">Allergien</div>
                         @if (!empty($presentAllergens))
-                            <ul class="allergens-list">
-                                @foreach ($presentAllergens as $allergen)
-                                    <li>{{ $allergen }}</li>
-                                @endforeach
-                            </ul>
+                            <div class="text-xs text-gray-900 mb-2" style="font-size: 8pt;">
+                                {{ implode(', ', $presentAllergens) }}
+                            </div>
                         @else
                             <p>Keine</p>
                         @endif

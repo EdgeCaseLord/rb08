@@ -2,6 +2,10 @@
     x-data="{ refresh: 0 }"
     x-on:availableRecipesUpdated.window="refresh++"
 >
+    @php
+        if (!isset($showRecipeModal)) $showRecipeModal = false;
+        if (!isset($modalRecipe)) $modalRecipe = null;
+    @endphp
     <div class="mb-2 p-2 bg-[#FEF0E8] rounded text-xs flex justify-end">
         <div class="text-right w-full text-[#FF6100] font-bold">
         @php
@@ -22,7 +26,7 @@
         @endforeach
         </div>
     </div>
-    <div x-data="{ open: {{ (!empty($filterTitle) || !empty($filterDifficulty) || !empty($filterCourse) || !empty($filterIngredients) || !empty($filterDiets)) ? 'true' : 'false' }}, filteringSave: false, filteringApply: false }" x-init="">
+    <div x-data="{ open: {{ (!empty($filterTitle) || !empty($filterDifficulty) || !empty($filterCourse) || !empty($filterIngredients) || !empty($filterDiets)) ? 'true' : 'false' }}, filteringSave: false, filteringApply: false }" x-init="" class="mt-4">
         <div class="flex items-center justify-between mb-2 cursor-pointer select-none" @click="open = !open">
             <div class="flex items-center gap-2">
                 <svg class="h-5 w-5 text-primary-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707l-7 7V21a1 1 0 01-1.447.894l-4-2A1 1 0 017 19v-5.293l-7-7A1 1 0 013 4z" /></svg>
@@ -61,7 +65,7 @@
                             'starter' => __('Vorspeise'), 'main_course' => __('Hauptgericht'), 'dessert' => __('Dessert'),
                         ];
                         if ($key === 'filterDiets') $valueMap = [
-                            'biologisch' => __('Biologisch'), 'eifrei' => __('Eifrei'), 'glutenfrei' => __('Glutenfrei'), 'histamin-free' => __('Histaminfrei'), 'laktosefrei' => __('Laktosefrei'), 'ohne Fisch' => __('Ohne Fisch'), 'ohne Fleisch' => __('Ohne Fleisch'), 'sojafrei' => __('Sojafrei'), 'vegan' => __('Vegan'), 'vegetarisch' => __('Vegetarisch'), 'weizenfrei' => __('Weizenfrei'),
+                            'biologisch' => __('Biologisch'), 'eifrei' => __('Eifrei'), 'glutenfrei' => __('Glutenfrei'), 'histamin-free' => __('Histaminfrei'), 'laktosefrei' => __('Laktosefrei'), 'ohne Fisch' => __('Ohne Fisch'), 'ohne Fleisch' => __('Ohne Fleisch'), 'sojafrei' => __('Sojafrei'), 'vegan' => __('Vegan'), 'vegetarisch' => __('Vegetarisch'), 'weizenfrei' => __('Weizenfrei'), 'fruktose' => __('ohne Fruktose'), 'alcohol-free' => __('ohne Alkohol'),
                         ];
                         if ($key === 'filterDifficulty') $valueMap = [
                             'easy' => __('einfach'), 'medium' => __('mittel'), 'difficult' => __('schwierig'),
@@ -82,7 +86,23 @@
             </div>
             <div class="col-span-full grid grid-cols-2 gap-4">
                 <input type="text" placeholder="{{ __('Titel') }}" class="filament-input w-full rounded-lg" wire:model.debounce.400ms="filterTitle" wire:keydown.enter="applyFilters">
-                <input type="text" placeholder="{{ __('Zutaten (Bsp.: paprika, nudeln -aprikosen)') }}" class="filament-input w-full rounded-lg" wire:model.debounce.500ms="filterIngredients">
+                <div class="relative flex items-center">
+                    <span class="mr-2 cursor-pointer group relative align-middle">
+                        <svg class="h-4 w-4 text-gray-400 inline-block" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                        <div class="absolute left-1/2 z-10 hidden group-hover:block bg-white border border-gray-300 rounded shadow-lg p-2 text-xs w-72 -translate-x-1/2 mt-2">
+                            <strong>{{ __('Suchlogik für Zutaten:') }}</strong><br>
+                            <ul class="list-disc ml-4">
+                                <li><b>{{ __('paprika / nudeln') }}</b>: {{ __('Rezepte mit Paprika oder Nudeln') }}</li>
+                                <li><b>{{ __('paprika nudeln') }}</b>: {{ __('Rezepte mit Paprika und Nudeln') }}</li>
+                                <li><b>{{ __('paprika -aprikosen') }}</b>: {{ __('Rezepte mit Paprika, aber ohne Aprikosen') }}</li>
+                            </ul>
+                            <span class="text-gray-500">{{ __('Tipp:') }} <b>/</b> {{ __('für ODER') }}, <b>-</b> {{ __('für NICHT.') }}</span>
+                            <span class="text-gray-500 block mt-1">{{ __('Alle Suchlogiken (UND, ODER, NICHT) können beliebig kombiniert werden.') }}</span>
+                        </div>
+                    </span>
+                    <input type="text" placeholder="{{ __('Zutaten (Bsp.: paprika, nudeln -aprikosen)') }}" class="filament-input w-full rounded-lg" wire:model.debounce.500ms="filterIngredients">
+
+                </div>
             </div>
             <div class="col-span-full grid grid-cols-2 gap-4">
                 <div class="flex items-center gap-2">
@@ -204,6 +224,8 @@
                             'vegan' => __('Vegan'),
                             'vegetarisch' => __('Vegetarisch'),
                             'weizenfrei' => __('Weizenfrei'),
+                            'fruktose' => __('ohne Fruktose'),
+                            'alcohol-free' => __('ohne Alkohol'),
                         ] as $key => $label)
                             <label class="flex items-center space-x-2">
                                 <input type="checkbox" wire:model="filterDiets.{{ $key }}" value="{{ $key }}" class="form-checkbox">
@@ -282,6 +304,7 @@
 
     </form>
     </div>
+    <hr class="my-4 border-primary-600" style="border-width:1px">
     @if(!empty($recipes))
         <div class="columns-1 sm:columns-2 xl:columns-3 2xl:columns-4 gap-4" wire:key="avail-list-{{ $refreshKey }}">
             @php

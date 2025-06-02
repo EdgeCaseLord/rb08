@@ -16,4 +16,13 @@ class EditPatient extends EditRecord
             Actions\DeleteAction::make(),
         ];
     }
+
+    public function getFilterPreferences(): array
+    {
+        $record = $this->getRecord();
+        if ($record && isset($record->settings['recipe_filter_set'])) {
+            return $record->settings['recipe_filter_set'];
+        }
+        return [];
+    }
 }

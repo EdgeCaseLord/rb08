@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\Analysis;
-use App\Models\Recipe;
+use App\Models\Book;
 
 class DashboardController extends Controller
 {
@@ -24,8 +24,8 @@ class DashboardController extends Controller
                 'icon' => 'M21 21l-4.35-4.35m2.85-5.65a7 7 0 11-14 0 7 7 0 0114 0z', // Magnifying glass
             ],
             'recipes' => [
-                'label' => 'Rezepte',
-                'value' => Recipe::count(),
+                'label' => 'Rezeptbücher',
+                'value' => Book::count(),
                 'icon' => 'M9 12h6m-3-3v6m-9 3h18a2 2 0 002-2V6a2 2 0 00-2-2H4a2 2 0 00-2 2v10a2 2 0 002 2z', // Document
             ],
             'doctors' => [

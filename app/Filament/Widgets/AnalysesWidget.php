@@ -22,6 +22,7 @@ class AnalysesWidget extends Widget
             'icon' => 'heroicon-o-magnifying-glass',
             'value' => Analysis::count(),
             'label' => 'Analysen',
+            'resourceName' => 'Analysis',
         ];
     }
 }

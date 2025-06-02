@@ -35,9 +35,10 @@ class PatientsWidget extends Widget
         }
 
         return [
-            'icon' => 'heroicon-o-users',
+            'icon' => 'heroicon-o-user',
             'value' => $count,
             'label' => 'Patienten',
+            'resourceName' => 'Patient',
         ];
     }
 }

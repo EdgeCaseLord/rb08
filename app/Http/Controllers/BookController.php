@@ -112,4 +112,14 @@ class BookController extends Controller
 
         return response()->json(['book_id' => $book->id], 201);
     }
+
+    public function update(Request $request, Book $book)
+    {
+        $data = $request->validate([
+            'title' => 'required|string|max:255',
+            // add other fields as needed
+        ]);
+        $book->update($data);
+        return redirect()->back()->with('success', 'Buch aktualisiert.');
+    }
 }

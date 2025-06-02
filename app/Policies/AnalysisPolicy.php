@@ -54,15 +54,17 @@ class AnalysisPolicy
      */
     public function update(User $user, Analysis $analysis): bool
     {
+        // Allow admins to update any analysis
+        if ($user->isAdmin()) {
+            return true;
+        }
         // Only lab users and doctors can update analyses
         if ($user->isLab()) {
             return $user->id === $analysis->lab_id;
         }
-
         if ($user->isDoctor()) {
             return $user->id === $analysis->doctor_id;
         }
-
         return false; // Patients cannot update
     }
 

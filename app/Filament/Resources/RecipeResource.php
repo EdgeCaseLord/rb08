@@ -20,11 +20,11 @@ class RecipeResource extends Resource
 
     protected static ?int $navigationSort = 4;
     public static function getModelLabel(): string { return 'Rezept'; }
-    public static function getPluralModelLabel(): string { return 'Rezepte'; }
+    public static function getPluralModelLabel(): string { return 'Bücher'; }
 
     public static function shouldRegisterNavigation(): bool
     {
-        return auth()->user()?->isAdmin() ?? false;
+        return false;
     }
 
     public static function form(Form $form): Form
@@ -100,7 +100,7 @@ class RecipeResource extends Resource
         return $table
             ->columns([
                 ViewColumn::make('recipe_card')
-                    ->label('Rezepte')
+                    ->label('Bücher')
                     ->view('components.filament.recipe-resource.recipe-card')
                     ->extraAttributes(['class' => 'align-middle']),
                 ViewColumn::make('actions')

@@ -65,7 +65,12 @@ class AvailableRecipesTable extends Component
                 'filterTitle', 'filterIngredients', 'filterAllergen', 'filterCategory', 'filterCountry', 'filterCourse', 'filterDiets', 'filterDifficulty', 'filterMaxTime'
             ] as $key) {
                 if (array_key_exists($key, $prefs)) {
-                    $this->$key = $prefs[$key];
+                    // If the filter is an array of values, convert to associative array for Livewire checkboxes
+                    if (in_array($key, ['filterAllergen','filterCategory','filterCountry','filterCourse','filterDiets','filterDifficulty','filterMaxTime']) && is_array($prefs[$key]) && array_values($prefs[$key]) === $prefs[$key]) {
+                        $this->$key = array_fill_keys($prefs[$key], true);
+                    } else {
+                        $this->$key = $prefs[$key];
+                    }
                 }
             }
         }
@@ -152,6 +157,7 @@ class AvailableRecipesTable extends Component
             if (!$this->cookButlerService) {
                 $this->cookButlerService = app(\App\Services\CookButlerService::class);
             }
+            // Always pass patient for allergen merging
             $details = $this->cookButlerService->fetchRecipeDetailsBatch($idsToFetch, $patient);
             foreach ($details as $detail) {
                 $detailsMap[$detail['id']] = $detail;
@@ -263,17 +269,15 @@ class AvailableRecipesTable extends Component
         $user = Auth::user();
         $book = Book::find($this->bookId);
         if (!$user || !$book || !$book->patient) return;
-        if (!$this->cookButlerService) {
-            $this->cookButlerService = app(\App\Services\CookButlerService::class);
-        }
-        // Always use the single recipe fetch
-        $recipeData = $this->cookButlerService->fetchRecipeDetails($externalId, $book->patient);
-        if (!$recipeData) return;
-        $patient = $book->patient;
-
-        // Save recipe if not exists
+        // Find the recipe by externalId
         $recipe = Recipe::where('id_external', $externalId)->first();
         if (!$recipe) {
+            // Fetch details from API and create recipe
+            if (!$this->cookButlerService) {
+                $this->cookButlerService = app(CookButlerService::class);
+            }
+            $recipeData = $this->cookButlerService->fetchRecipeDetails($externalId, $book->patient);
+            if (!$recipeData) return;
             $recipe = Recipe::create([
                 'id_external' => $externalId,
                 'title' => $recipeData['title'] ?? '',
@@ -307,9 +311,15 @@ class AvailableRecipesTable extends Component
                 'last_update' => $recipeData['last_update'] ?? null,
             ]);
         }
-        // Add to book
+        // Attach to book
         try {
             $book->addRecipe($recipe->id_recipe);
+            // Update status if not 'Warten auf Versand'
+            if ($book->status !== 'Warten auf Versand') {
+                $book->status = 'Geändert nach Versand';
+                $book->save();
+                $this->dispatch('bookStatusUpdated', id: $book->id, status: $book->status);
+            }
         } catch (\Exception $e) {
             \Filament\Notifications\Notification::make()
                 ->title('Nicht hinzugefügt')
@@ -318,7 +328,7 @@ class AvailableRecipesTable extends Component
                 ->send();
             return;
         }
-        // Remove from available recipes
+        // Remove from available recipes UI
         $recipesArray = $this->recipes;
         if ($recipesArray instanceof \Illuminate\Support\Collection) {
             $recipesArray = $recipesArray->all();
@@ -391,19 +401,46 @@ class AvailableRecipesTable extends Component
                             $arr[$field] = $decoded;
                         }
                     }
-                    // Always fetch latest details from API for images when moving to availables
+                    // Always try to set images from cache if available, even if not fetching from API
+                    $shouldFetchImages = false;
+                    if (!isset($arr['images']) || (is_array($arr['images']) && count($arr['images']) === 0)) {
+                        $shouldFetchImages = true;
+                    } elseif (is_string($arr['images'])) {
+                        $decoded = json_decode($arr['images'], true);
+                        if (empty($decoded) || !is_array($decoded)) {
+                            $shouldFetchImages = true;
+                        }
+                    }
+                    $cacheKey = 'recipe_images_' . $arr['id_external'];
+                    $cachedImages = Cache::get($cacheKey);
                     if (!empty($arr['id_external'])) {
-                        if (!$this->cookButlerService) {
-                            $this->cookButlerService = app(\App\Services\CookButlerService::class);
-                        }
-                        $apiRecipe = $this->cookButlerService->fetchRecipeDetails($arr['id_external'], $book->patient);
-                        if (!empty($apiRecipe['images'])) {
-                            $arr['images'] = $apiRecipe['images'];
-                        } elseif (!empty($apiRecipe['media']['preview'])) {
-                            $arr['images'] = is_array($apiRecipe['media']['preview']) ? $apiRecipe['media']['preview'] : [$apiRecipe['media']['preview']];
-                        }
-                        if (!empty($apiRecipe['media'])) {
-                            $arr['media'] = $apiRecipe['media'];
+                        if ($cachedImages && is_array($cachedImages) && count($cachedImages) > 0) {
+                            $arr['images'] = $cachedImages;
+                            Log::debug('Loaded recipe images from cache', ['id_external' => $arr['id_external']]);
+                        } elseif ($shouldFetchImages) {
+                            Log::debug('Fetching recipe details from API for images', ['id_external' => $arr['id_external']]);
+                            if (!$this->cookButlerService) {
+                                $this->cookButlerService = app(\App\Services\CookButlerService::class);
+                            }
+                            $apiRecipe = $this->cookButlerService->fetchRecipeDetails($arr['id_external'], $book->patient);
+                            if (!empty($apiRecipe['images'])) {
+                                $arr['images'] = $apiRecipe['images'];
+                            } elseif (!empty($apiRecipe['media']['preview'])) {
+                                $arr['images'] = is_array($apiRecipe['media']['preview']) ? $apiRecipe['media']['preview'] : [$apiRecipe['media']['preview']];
+                            }
+                            if (!empty($apiRecipe['media'])) {
+                                $arr['media'] = $apiRecipe['media'];
+                            }
+                            // Cache the images for 1 day
+                            if (!empty($arr['images'])) {
+                                Cache::put($cacheKey, $arr['images'], now()->addDay());
+                                Log::debug('Cached recipe images for 1 day', ['id_external' => $arr['id_external']]);
+                            }
+                        } else if (!empty($arr['images']) && is_string($arr['images'])) {
+                            $decoded = json_decode($arr['images'], true);
+                            if (is_array($decoded)) {
+                                $arr['images'] = $decoded;
+                            }
                         }
                     }
                     $recipesArray = $this->recipes;
@@ -446,74 +483,20 @@ class AvailableRecipesTable extends Component
 
     protected function getFilters()
     {
-        $filters = [];
-        if ($this->filterTitle) $filters['title'] = $this->filterTitle;
-        // Prepend ingredients keywords to the query string, not as a filter
-        $ingredientQuery = '';
-        if (!empty($this->filterIngredients)) {
-            // Replace commas and multiple spaces with a single space
-            $ingredientQuery = preg_replace('/[\s,]+/', ' ', $this->filterIngredients);
-            // Convert -ingredient to -- ingredient (with space)
-            $ingredientQuery = preg_replace('/\s*-([\wäöüÄÖÜß]+)/u', ' -- $1', $ingredientQuery);
-            $ingredientQuery = trim($ingredientQuery);
-        }
-        // Difficulty
-        if (is_array($this->filterDifficulty) && !empty($this->filterDifficulty)) {
-            $selectedDifficulties = array_keys(array_filter($this->filterDifficulty));
-            if (!empty($selectedDifficulties)) {
-                $filters['difficulty'] = $selectedDifficulties;
-            }
-        }
-        // Course
-        if (is_array($this->filterCourse) && !empty($this->filterCourse)) {
-            $selectedCourses = array_keys(array_filter($this->filterCourse));
-            if (!empty($selectedCourses)) {
-                $filters['courses'] = $selectedCourses;
-            }
-        }
-        // Diets
-        if (is_array($this->filterDiets) && !empty($this->filterDiets)) {
-            $selectedDiets = array_keys(array_filter($this->filterDiets));
-            if (!empty($selectedDiets)) {
-                $filters['diets'] = $selectedDiets;
-            }
-        }
-        // Allergen
-        if (is_array($this->filterAllergen) && !empty($this->filterAllergen)) {
-            $selectedAllergens = array_keys(array_filter($this->filterAllergen));
-            if (!empty($selectedAllergens)) {
-                $filters['allergen'] = $selectedAllergens;
-            }
-        }
-        // Category
-        if (is_array($this->filterCategory) && !empty($this->filterCategory)) {
-            $selectedCategories = array_keys(array_filter($this->filterCategory));
-            if (!empty($selectedCategories)) {
-                $filters['category'] = $selectedCategories;
-            }
-        }
-        // Country
-        if (is_array($this->filterCountry) && !empty($this->filterCountry)) {
-            $selectedCountries = $this->filterCountry;
-            if (!empty($selectedCountries)) {
-                $filters['country'] = $selectedCountries;
-            }
-        }
-        // Max Time
-        if (is_array($this->filterMaxTime) && !empty($this->filterMaxTime)) {
-            $selectedTimes = array_keys(array_filter($this->filterMaxTime));
-            if (!empty($selectedTimes)) {
-                $filters['max_time'] = $selectedTimes;
-            }
-        }
-        $filters['offset'] = (int) $this->filterOffset;
-        $filters['randomize_offset'] = (bool) $this->filterRandomizeOffset;
-        // Compose the q parameter: ingredients keywords + allergen exclusion
-        $patient = $this->getBookPatient();
-        $allergenQ = $patient ? $this->cookButlerService->buildSearchQuery($patient) : '';
-        $filters['q'] = trim(($ingredientQuery ? $ingredientQuery . ' ' : '') . $allergenQ);
-        \Illuminate\Support\Facades\Log::debug('AvailableRecipesTable getFilters', ['filterIngredients' => $this->filterIngredients, 'q' => $filters['q']]);
-        return $filters;
+        // Only return the selected form filters, raw, as set by the user
+        return [
+            'filterTitle' => $this->filterTitle,
+            'filterIngredients' => $this->filterIngredients,
+            'filterAllergen' => array_keys(array_filter($this->filterAllergen)),
+            'filterCategory' => array_keys(array_filter($this->filterCategory)),
+            'filterCountry' => array_keys(array_filter($this->filterCountry)),
+            'filterCourse' => array_keys(array_filter($this->filterCourse)),
+            'filterDiets' => array_keys(array_filter($this->filterDiets)),
+            'filterDifficulty' => array_keys(array_filter($this->filterDifficulty)),
+            'filterMaxTime' => array_keys(array_filter($this->filterMaxTime)),
+            'offset' => (int) $this->filterOffset,
+            'randomize_offset' => (bool) $this->filterRandomizeOffset,
+        ];
     }
 
     public function resetAndReload()
@@ -655,18 +638,7 @@ class AvailableRecipesTable extends Component
                 $arr[$field] = $decoded;
             }
         }
-        // Ensure images is always an array
-        if (isset($arr['images'])) {
-            if (is_string($arr['images'])) {
-                $decodedImages = json_decode($arr['images'], true);
-                $arr['images'] = is_array($decodedImages) ? $decodedImages : [];
-            } elseif (!is_array($arr['images'])) {
-                $arr['images'] = [];
-            }
-        } else {
-            $arr['images'] = [];
-        }
-        // Only fetch latest details from API for images if truly missing, but cache for 1 day
+        // Always try to set images from cache if available, even if not fetching from API
         $shouldFetchImages = false;
         if (!isset($arr['images']) || (is_array($arr['images']) && count($arr['images']) === 0)) {
             $shouldFetchImages = true;
@@ -678,11 +650,11 @@ class AvailableRecipesTable extends Component
         }
         $cacheKey = 'recipe_images_' . $arr['id_external'];
         $cachedImages = Cache::get($cacheKey);
-        if (!empty($arr['id_external']) && $shouldFetchImages) {
+        if (!empty($arr['id_external'])) {
             if ($cachedImages && is_array($cachedImages) && count($cachedImages) > 0) {
                 $arr['images'] = $cachedImages;
                 Log::debug('Loaded recipe images from cache', ['id_external' => $arr['id_external']]);
-            } else {
+            } elseif ($shouldFetchImages) {
                 Log::debug('Fetching recipe details from API for images', ['id_external' => $arr['id_external']]);
                 if (!$this->cookButlerService) {
                     $this->cookButlerService = app(\App\Services\CookButlerService::class);
@@ -700,6 +672,11 @@ class AvailableRecipesTable extends Component
                 if (!empty($arr['images'])) {
                     Cache::put($cacheKey, $arr['images'], now()->addDay());
                     Log::debug('Cached recipe images for 1 day', ['id_external' => $arr['id_external']]);
+                }
+            } else if (!empty($arr['images']) && is_string($arr['images'])) {
+                $decoded = json_decode($arr['images'], true);
+                if (is_array($decoded)) {
+                    $arr['images'] = $decoded;
                 }
             }
         }

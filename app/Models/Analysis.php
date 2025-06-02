@@ -20,6 +20,7 @@ class Analysis extends Model
         'patient_date_of_birth', 'assay_date', 'test_date', 'test_by',
         'approval_date', 'approval_by', 'additional_information',
         'patient_id', 'doctor_id', 'lab_id', 'import_id', 'is_csv',
+        'patient_title', 'patient_first_name', 'doctor_title', 'doctor_first_name',
     ];
 
     protected $casts = [
@@ -93,6 +94,8 @@ class Analysis extends Model
                     ->first();
                 if (!$doctor) {
                     $doctor = User::create([
+                        'title' => $analysis->doctor_title ?? null,
+                        'first_name' => $analysis->doctor_first_name ?? null,
                         'name' => $analysis->approval_by,
                         'email' => strtolower(str_replace('dr', '.', $analysis->approval_by)) . '@rezept-butler.com',
                         'password' => Hash::make('password'),
@@ -120,6 +123,8 @@ class Analysis extends Model
                 $patient = User::where('patient_code', $analysis->patient_code)->first();
                 if (!$patient) {
                     $patient = User::create([
+                        'title' => $analysis->patient_title ?? null,
+                        'first_name' => $analysis->patient_first_name ?? null,
                         'name' => $analysis->patient_name ?? 'Unbekannter Patient',
                         'email' => strtolower(str_replace(' ', '.', $analysis->patient_name ?? 'unknown')) . '.' . ($analysis->patient_code ?? 'unknown') . '@rezept-butler.com',
                         'password' => Hash::make('password'),
