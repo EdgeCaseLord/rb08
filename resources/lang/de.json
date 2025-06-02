@@ -93,5 +93,14 @@
     "Tipp:": "Tipp:",
     "für ODER": "für ODER",
     "für NICHT.": "für NICHT.",
-    "Alle Suchlogiken (UND, ODER, NICHT) können beliebig kombiniert werden.": "Alle Suchlogiken (UND, ODER, NICHT) können beliebig kombiniert werden."
+    "Alle Suchlogiken (UND, ODER, NICHT) können beliebig kombiniert werden.": "Alle Suchlogiken (UND, ODER, NICHT) können beliebig kombiniert werden.",
+    "Text Templates": "Textvorlagen",
+    "Text Template": "Textvorlage",
+    "Type": "Typ",
+    "Book Text Type": "Buch Text Typ",
+    "Subject": "Betreff",
+    "Body": "Text",
+    "Create Text Template": "Textvorlage erstellen",
+    "Edit Text Template": "Textvorlage bearbeiten",
+    "Delete Text Template": "Textvorlage löschen"
 }

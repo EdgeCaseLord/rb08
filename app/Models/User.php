@@ -26,6 +26,7 @@ class User extends Authenticatable implements FilamentUser
         'currency', 'stripe_id', 'card_brand', 'card_last_four', 'role',
         'lab_id', 'doctor_id', 'patient_code', 'birthdate', 'threshold',
         'settings','recipe_totals',
+        'title', 'first_name',
     ];
 
     protected $hidden = ['password', 'remember_token'];

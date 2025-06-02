@@ -52,6 +52,10 @@ class AnalysisImporter extends Importer
                 ->guess(['calibrated_value', 'CalibratedValue'])
                 ->castStateUsing(fn($state) => self::cleanCalibratedValue($state)),
             ImportColumn::make('signal_noise')->guess(['signal_noise', 'Signal-Noise'])->numeric(),
+            ImportColumn::make('patient_title')->guess(['patient_title', 'PatientTitle']),
+            ImportColumn::make('patient_first_name')->guess(['patient_first_name', 'PatientFirstName']),
+            ImportColumn::make('doctor_title')->guess(['doctor_title', 'DoctorTitle']),
+            ImportColumn::make('doctor_first_name')->guess(['doctor_first_name', 'DoctorFirstName']),
         ];
     }
 
@@ -282,6 +286,7 @@ class AnalysisImporter extends Importer
                         }
                     }
                 }
+
             });
         } catch (\Exception $e) {
             Log::error('Failed to process allergen', [

@@ -478,8 +478,11 @@ class AvailableRecipesTable extends Component
     protected function getFilters()
     {
         $filters = [];
-        if ($this->filterTitle) $filters['title'] = $this->filterTitle;
-        // Prepend ingredients keywords to the query string, not as a filter
+        // Compose the q parameter: title + ingredients keywords + allergen exclusion
+        $qParts = [];
+        if (!empty($this->filterTitle)) {
+            $qParts[] = $this->filterTitle;
+        }
         $ingredientQuery = '';
         if (!empty($this->filterIngredients)) {
             // Replace commas and multiple spaces with a single space
@@ -488,6 +491,9 @@ class AvailableRecipesTable extends Component
             $ingredientQuery = preg_replace('/\s*\/\s*/', ' || ', $ingredientQuery); // OR
             $ingredientQuery = preg_replace('/\s*-([\wäöüÄÖÜß]+)/u', ' -- $1', $ingredientQuery); // NOT
             $ingredientQuery = trim($ingredientQuery);
+        }
+        if (!empty($ingredientQuery)) {
+            $qParts[] = $ingredientQuery;
         }
         // Difficulty
         if (is_array($this->filterDifficulty) && !empty($this->filterDifficulty)) {
@@ -540,10 +546,28 @@ class AvailableRecipesTable extends Component
         }
         $filters['offset'] = (int) $this->filterOffset;
         $filters['randomize_offset'] = (bool) $this->filterRandomizeOffset;
-        // Compose the q parameter: ingredients keywords + allergen exclusion
         $patient = $this->getBookPatient();
-        $allergenQ = $patient ? $this->cookButlerService->buildSearchQuery($patient) : '';
-        $filters['q'] = trim(($ingredientQuery ? $ingredientQuery . ' ' : '') . $allergenQ);
+        // $allergenQ = $patient ? $this->cookButlerService->buildSearchQuery($patient) : '';
+        // buildSearchQuery expects a User, not an array
+        $patientFilters = [];
+        if (!empty($patient)) {
+            $patientFilters = [
+                'filterTitle' => $this->filterTitle,
+                'filterIngredients' => $this->filterIngredients,
+                'filterAllergen' => $this->filterAllergen ?? [],
+                'filterCategory' => $this->filterCategory ?? [],
+                'filterCountry' => $this->filterCountry ?? [],
+                'filterCourse' => $this->filterCourse ?? [],
+                'filterDiets' => $this->filterDiets ?? [],
+                'filterDifficulty' => $this->filterDifficulty ?? [],
+                'filterMaxTime' => $this->filterMaxTime ?? [],
+            ];
+        }
+        // $allergenQ = $this->cookButlerService->buildSearchQuery($patientFilters);
+        // if (!empty($allergenQ)) {
+        //     $qParts[] = $allergenQ;
+        // }
+        $filters['q'] = trim(implode(' ', $qParts));
         \Illuminate\Support\Facades\Log::debug('AvailableRecipesTable getFilters', ['filterIngredients' => $this->filterIngredients, 'q' => $filters['q']]);
         return $filters;
     }

@@ -27,7 +27,7 @@ class BookResource extends Resource
     protected static ?int $navigationSort = 5;
 
     public static function getModelLabel(): string { return 'Rezeptbuch'; }
-    public static function getPluralModelLabel(): string { return 'Rezeptbücher'; }
+    public static function getPluralModelLabel(): string { return 'Bücher'; }
     protected static ?string $navigationLabel = 'Rezeptbücher';
 
     public static function shouldRegisterNavigation(): bool
@@ -281,7 +281,7 @@ class BookResource extends Resource
                             })
                             ->required(),
                     ])
-                    ->action(function (array $data, $record) {
+                    ->action(function ($record, array $data) {
                         $recipient = $data['recipient'];
                         $email = '';
                         $name = '';
@@ -333,8 +333,6 @@ class BookResource extends Resource
                         // Update book status to 'Versendet' and save
                         $record->status = 'Versendet';
                         $record->save();
-
-                        $this->dispatch('bookStatusUpdated', id: $record->id, status: $record->status);
 
                         \Filament\Notifications\Notification::make()
                             ->title('E-Mail gesendet')
@@ -423,7 +421,7 @@ class BookResource extends Resource
                         })
                         ->required(),
                 ])
-                ->action(function (array $data, $record) {
+                ->action(function ($record, array $data) {
                     $recipient = $data['recipient'];
                     $email = '';
                     $name = '';
@@ -475,8 +473,6 @@ class BookResource extends Resource
                     // Update book status to 'Versendet' and save
                     $record->status = 'Versendet';
                     $record->save();
-
-                    $this->dispatch('bookStatusUpdated', id: $record->id, status: $record->status);
 
                     \Filament\Notifications\Notification::make()
                         ->title('E-Mail gesendet')

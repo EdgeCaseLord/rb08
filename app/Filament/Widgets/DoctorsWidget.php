@@ -24,9 +24,10 @@ class DoctorsWidget extends Widget
     public function getData(): array
     {
         return [
-            'icon' => 'heroicon-o-user-plus',
+            'icon' => 'heroicon-o-user-group',
             'value' => User::doctors()->count(),
             'label' => 'Ärzte',
+            'resourceName' => 'Doctor',
         ];
     }
 }

@@ -5,6 +5,7 @@ namespace App\Filament\Resources\PatientResource\Pages;
 use App\Filament\Resources\PatientResource;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Auth;
 
 class CreatePatient extends CreateRecord
 {
@@ -52,6 +53,10 @@ class CreatePatient extends CreateRecord
 
     protected function handleRecordCreation(array $data): Model
     {
+        $user = Auth::user();
+        if ($user instanceof \App\Models\User && $user->isLab() && empty($data['lab_id'])) {
+            $data['lab_id'] = $user->id;
+        }
         return static::getModel()::create($data);
     }
 }

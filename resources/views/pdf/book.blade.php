@@ -230,6 +230,13 @@
             $currentPage++;
         }
     }
+
+    // Ensure all template variables are defined to avoid undefined variable errors
+    $impressumTemplate = $impressumTemplate ?? null;
+    $erlaeuterung1Template = $erlaeuterung1Template ?? null;
+    $naehrwerttabelleTemplate = $naehrwerttabelleTemplate ?? null;
+    $erlaeuterung2Template = $erlaeuterung2Template ?? null;
+    $bookLocale = $bookLocale ?? (isset($book->patient->settings['language']) ? $book->patient->settings['language'] : 'de');
 @endphp
 @if ($recipes->isEmpty())
     <div class="debug">No recipes available in template</div>
@@ -283,12 +290,16 @@
             </div>
             <div class="section impressum-section">
                 <h3>Impressum</h3>
-                <p>Medizinisches Versorgungszentrum Institut für Mikroökologie GmbH </p>
-                <p>Auf den Lüppen 8 </p>
-                <p>35745 Herborn</p>
-                <p>Telefon: 02772 9810 </p>
-                <p>E-Mail: <a href="mailto:info@ifm-herborn.de">info@ifm-herborn.de</a></p>
-                <p><strong>Haftungsausschluss:</strong> Die Rezepte sind allergenfrei zusammengestellt, aber individuelle Allergien sollten geprüft werden. Der Herausgeber übernimmt keine Haftung für allergische Reaktionen.</p>
+                @if($impressumTemplate)
+                    {!! $impressumTemplate->getBodyForLocale($bookLocale) !!}
+                @else
+                    <p>Medizinisches Versorgungszentrum Institut für Mikroökologie GmbH </p>
+                    <p>Auf den Lüppen 8 </p>
+                    <p>35745 Herborn</p>
+                    <p>Telefon: 02772 9810 </p>
+                    <p>E-Mail: <a href="mailto:info@ifm-herborn.de">info@ifm-herborn.de</a></p>
+                    <p><strong>Haftungsausschluss:</strong> Die Rezepte sind allergenfrei zusammengestellt, aber individuelle Allergien sollten geprüft werden. Der Herausgeber übernimmt keine Haftung für allergische Reaktionen.</p>
+                @endif
             </div>
         </div>
     </div>
@@ -354,56 +365,51 @@
     </div>
     <div class="page-body">
         <div class="section">
+            {!! $erlaeuterung1Template
+                ? $erlaeuterung1Template->getBodyForLocale($bookLocale)
+                : '<h2>Sehr geehrte(r) ' . e($book->patient->name ?? 'PatientIn') . ',</h2>' .
+                  '<p class="mt-8">Sie halten Ihr persönliches Kochbuch in den Händen, das Ihnen eine Anregung für den Einstieg in Ihre neue kulinarische Welt gibt. Zur Benutzung der Rezepte noch ein paar Erläuterungen:</p>' .
+                  '<h4>Gewichtsangaben:</h4>' .
+                  '<p>Zur Berechnung des Nährwertes der einzelnen Rezepte sind die mengenmäßig wichtigsten Zutaten mit Gewichtsangaben versehen. Die üblichen Bezeichnungen, wie Esslöffel, Teelöffel, Tasse oder Bund sind daher in Gramm oder Milliliter umgerechnet angegeben. Die folgende Tabelle gibt Ihnen einen Überblick über die Verwendung der Maßangaben:</p>'
+            !!}
 
-            <h2>Sehr geehrte(r) {{ $book->patient->name ?? 'PatientIn' }},</h2>
+            {!! $naehrwerttabelleTemplate
+                ? $naehrwerttabelleTemplate->getBodyForLocale($bookLocale)
+                : '<h4 class="mt-8">Nährwertangaben pro Portion</h4>' .
+                  '<table class="masstabelle" style="width:100%; border-collapse: collapse; font-size: 8pt; margin-bottom: 8pt;">' .
+                  '<thead><tr><th style="padding:2pt;">Menge</th><th style="padding:2pt;">Einheit</th><th style="padding:2pt;">Zutat</th><th style="padding:2pt;">Gewicht</th></tr></thead>' .
+                  '<tbody>' .
+                  '<tr><td style="padding:2pt;">1</td><td style="padding:2pt;">TL</td><td style="padding:2pt;">Zucker</td><td style="padding:2pt;">7 g</td></tr>' .
+                  '<tr><td>1</td><td>EL</td><td>Zucker</td><td>14 g</td></tr>' .
+                  '<tr><td>1</td><td>TL</td><td>Mehl</td><td>7 g</td></tr>' .
+                  '<tr><td>1</td><td>EL</td><td>Mehl</td><td>14 g</td></tr>' .
+                  '<tr><td>1</td><td>TL</td><td>Flüssigkeit (Öl, Wasser, Essig)</td><td>3 ml</td></tr>' .
+                  '<tr><td>1</td><td>EL</td><td>Flüssigkeit (Öl, Wasser, Essig)</td><td>7 ml</td></tr>' .
+                  '<tr><td>1</td><td>Pkg</td><td>Trockenehefe</td><td>7 g</td></tr>' .
+                  '<tr><td>1</td><td>Pkg</td><td>Vanillezucker</td><td>8 g</td></tr>' .
+                  '<tr><td>1</td><td>Pkg</td><td>Backpulver</td><td>16 g</td></tr>' .
+                  '<tr><td>1</td><td>Blatt</td><td>Gelatine</td><td>2 g</td></tr>' .
+                  '<tr><td>1</td><td>ganze</td><td>Vanilleschote</td><td>3 g</td></tr>' .
+                  '<tr><td>1</td><td>mittlere</td><td>Kartoffel</td><td>130 g</td></tr>' .
+                  '<tr><td>1</td><td>mittlere</td><td>Zwiebel</td><td>100 g</td></tr>' .
+                  '<tr><td>1</td><td>mittlere</td><td>Tomate</td><td>140 g</td></tr>' .
+                  '<tr><td>1</td><td>mittlere</td><td>Zehe Knoblauch</td><td>5 g</td></tr>' .
+                  '<tr><td>1</td><td>mittleres</td><td>Ei</td><td>65 g</td></tr>' .
+                  '<tr><td>1</td><td>mittlere</td><td>Zitrone</td><td>100 g</td></tr>' .
+                  '<tr><td>1</td><td>mittlere</td><td>Orange</td><td>200 g</td></tr>' .
+                  '</tbody></table>'
+            !!}
 
-            <p class="mt-8">Sie halten Ihr persönliches Kochbuch in den Händen, das Ihnen eine Anregung für den Einstieg in Ihre neue kulinarische Welt gibt. Zur Benutzung der Rezepte noch ein paar Erläuterungen:</p>
-
-            <h4>Gewichtsangaben:</h4>
-            <p>Zur Berechnung des Nährwertes der einzelnen Rezepte sind die mengenmäßig wichtigsten Zutaten mit Gewichtsangaben versehen. Die üblichen Bezeichnungen, wie Esslöffel, Teelöffel, Tasse oder Bund sind daher in Gramm oder Milliliter umgerechnet angegeben. Die folgende Tabelle gibt Ihnen einen Überblick über die Verwendung der Maßangaben:</p>
-
-            <h4 class="mt-8">Nährwertangaben pro Portion</h4>
-            <table class="masstabelle" style="width:100%; border-collapse: collapse; font-size: 8pt; margin-bottom: 8pt;">
-                <thead>
-                    <tr>
-                        <th style="padding:2pt;">Menge</th>
-                        <th style="padding:2pt;">Einheit</th>
-                        <th style="padding:2pt;">Zutat</th>
-                        <th style="padding:2pt;">Gewicht</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr><td style="padding:2pt;">1</td><td style="padding:2pt;">TL</td><td style="padding:2pt;">Zucker</td><td style="padding:2pt;">7 g</td></tr>
-                    <tr><td>1</td><td>EL</td><td>Zucker</td><td>14 g</td></tr>
-                    <tr><td>1</td><td>TL</td><td>Mehl</td><td>7 g</td></tr>
-                    <tr><td>1</td><td>EL</td><td>Mehl</td><td>14 g</td></tr>
-                    <tr><td>1</td><td>TL</td><td>Flüssigkeit (Öl, Wasser, Essig)</td><td>3 ml</td></tr>
-                    <tr><td>1</td><td>EL</td><td>Flüssigkeit (Öl, Wasser, Essig)</td><td>7 ml</td></tr>
-                    <tr><td>1</td><td>Pkg</td><td>Trockenehefe</td><td>7 g</td></tr>
-                    <tr><td>1</td><td>Pkg</td><td>Vanillezucker</td><td>8 g</td></tr>
-                    <tr><td>1</td><td>Pkg</td><td>Backpulver</td><td>16 g</td></tr>
-                    <tr><td>1</td><td>Blatt</td><td>Gelatine</td><td>2 g</td></tr>
-                    <tr><td>1</td><td>ganze</td><td>Vanilleschote</td><td>3 g</td></tr>
-                    <tr><td>1</td><td>mittlere</td><td>Kartoffel</td><td>130 g</td></tr>
-                    <tr><td>1</td><td>mittlere</td><td>Zwiebel</td><td>100 g</td></tr>
-                    <tr><td>1</td><td>mittlere</td><td>Tomate</td><td>140 g</td></tr>
-                    <tr><td>1</td><td>mittlere</td><td>Zehe Knoblauch</td><td>5 g</td></tr>
-                    <tr><td>1</td><td>mittleres</td><td>Ei</td><td>65 g</td></tr>
-                    <tr><td>1</td><td>mittlere</td><td>Zitrone</td><td>100 g</td></tr>
-                    <tr><td>1</td><td>mittlere</td><td>Orange</td><td>200 g</td></tr>
-                </tbody>
-            </table>
-
-            <h4 class="mt-8">Pfeffer & Öl:</h4>
-            <p>Pfeffer kommt in nahezu jedem Gericht vor. Aber Pfeffer ist nicht gleich Pfeffer – es gibt eine vielfältige Auswahl von verschiedenen schärfenden Gewürzen. Diese sind z.B. Schwarzer und weißer Pfeffer, Cayenne-Pfeffer, Roter Pfeffer, bunter Pfeffer, Chili oder Peperoni etc., die sich beliebig durch einander ersetzen lassen. In diesem Rezeptbuch finden Sie deshalb in der Zutatenliste Pfeffer als allgemeine Angabe. Das gleiche gilt für die allgemeine Angabe "ÖL" in der Zutatenliste. Sie können je nach Verträglichkeit verschiedene Öle im Rotationsprinzip verwenden, z. B. Olivenöl, Sesamöl, Maiskeimöl, Kürbiskernöl, Sojaöl oder Sonnenblumenöl.</p>
-
-            <h4 class="mt-8">Butter und Sahne:</h4>
-            <p>Bei einer Allergie Typ III auf Kuhmilch der Stärke 0 und 1 können verschiedene Produkte wie Sojasahne oder Margarine durch Butter und Sahne ersetzt werden. Sie haben dadurch die Möglichkeit die Rotation zu erweitern.</p>
-
-            <h4 class="mt-8">Glutenfreie Produkte:</h4>
-            <p>Viele Fertigprodukte wie Nudeln oder Brot bestehen aus einer Vielzahl von Zutaten, wie Reis, Mais, Soja, Erbsen oder Linsen. Beim Kauf solcher Produkte sollten Sie deshalb auf die Zusammensetzung achten, um eventuell vorkommende unverträgliche Zutaten auszuschließen. Bitte verwenden Sie überwiegend sortenreine Produkte (z.B. nur aus Reis oder Mais), um die Rotation bestmöglich gestalten zu können. Aufgrund der Fülle der Produkte kann hierfür keine Nährwertangabe gemacht werden.</p>
-
-            <p class="mt-8">Nun wünschen wir Ihnen viel Erfolg und Spaß beim Kochen und vor allem beim Essen.</p>
+            {!! $erlaeuterung2Template
+                ? $erlaeuterung2Template->getBodyForLocale($bookLocale)
+                : '<h4 class="mt-8">Pfeffer & Öl:</h4>' .
+                  '<p>Pfeffer kommt in nahezu jedem Gericht vor. Aber Pfeffer ist nicht gleich Pfeffer – es gibt eine vielfältige Auswahl von verschiedenen schärfenden Gewürzen. Diese sind z.B. Schwarzer und weißer Pfeffer, Cayenne-Pfeffer, Roter Pfeffer, bunter Pfeffer, Chili oder Peperoni etc., die sich beliebig durch einander ersetzen lassen. In diesem Rezeptbuch finden Sie deshalb in der Zutatenliste Pfeffer als allgemeine Angabe. Das gleiche gilt für die allgemeine Angabe "ÖL" in der Zutatenliste. Sie können je nach Verträglichkeit verschiedene Öle im Rotationsprinzip verwenden, z. B. Olivenöl, Sesamöl, Maiskeimöl, Kürbiskernöl, Sojaöl oder Sonnenblumenöl.</p>' .
+                  '<h4 class="mt-8">Butter und Sahne:</h4>' .
+                  '<p>Bei einer Allergie Typ III auf Kuhmilch der Stärke 0 und 1 können verschiedene Produkte wie Sojasahne oder Margarine durch Butter und Sahne ersetzt werden. Sie haben dadurch die Möglichkeit die Rotation zu erweitern.</p>' .
+                  '<h4 class="mt-8">Glutenfreie Produkte:</h4>' .
+                  '<p>Viele Fertigprodukte wie Nudeln oder Brot bestehen aus einer Vielzahl von Zutaten, wie Reis, Mais, Soja, Erbsen oder Linsen. Beim Kauf solcher Produkte sollten Sie deshalb auf die Zusammensetzung achten, um eventuell vorkommende unverträgliche Zutaten auszuschließen. Bitte verwenden Sie überwiegend sortenreine Produkte (z.B. nur aus Reis oder Mais), um die Rotation bestmöglich gestalten zu können. Aufgrund der Fülle der Produkte kann hierfür keine Nährwertangabe gemacht werden.</p>' .
+                  '<p class="mt-8">Nun wünschen wir Ihnen viel Erfolg und Spaß beim Kochen und vor allem beim Essen.</p>'
+            !!}
         </div>
     </div>
     <div class="footer {{ $currentPage % 2 == 0 ? 'footer-left' : 'footer-right' }}">

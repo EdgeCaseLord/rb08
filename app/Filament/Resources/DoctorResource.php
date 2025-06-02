@@ -54,6 +54,10 @@ class DoctorResource extends Resource
 
         return $form
             ->schema([
+                Forms\Components\TextInput::make('title')
+                    ->label('Titel'),
+                Forms\Components\TextInput::make('first_name')
+                    ->label('Vorname'),
                 Forms\Components\TextInput::make('name')
                     ->required()
                     ->maxLength(255),
@@ -123,16 +127,27 @@ class DoctorResource extends Resource
 
         return $table
             ->columns([
+                Tables\Columns\TextColumn::make('title')
+                    ->label('Titel')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: false),
+                Tables\Columns\TextColumn::make('first_name')
+                    ->label('Vorname')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: false),
                 Tables\Columns\TextColumn::make('name')
                     ->sortable()
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: false),
                 Tables\Columns\TextColumn::make('email')
                     ->sortable()
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: false),
                 Tables\Columns\TextColumn::make('lab.name')
                     ->label('Laboratory')
                     ->sortable()
                     ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true)
                     ->visible($isAdmin),
             ])
             ->actions([

@@ -348,14 +348,26 @@
         <div class="recipe-header-left">
             <div class="recipe-title">{{ $data['title'] ?? $data->title ?? 'Unbekannt' }}</div>
             <div class="recipe-tags">
-                @if($course && isset($courseMap[$course]))
-                    <span class="recipe-tag">{{ $courseMap[$course] }}</span>
+                @php
+                    $showCourse = $course && isset($courseMap[$course]);
+                    $catLower = $categories->map(fn($c) => mb_strtolower($c));
+                    $courseLabel = $showCourse ? $courseMap[$course] : null;
+                    $hasCourseInCategory = $courseLabel && $catLower->contains(mb_strtolower($courseLabel));
+                @endphp
+                @if($showCourse)
+                    <span class="recipe-tag">{{ $courseLabel }}</span>
                 @endif
-                @foreach($categories as $cat)
-                    <span class="recipe-tag">{{ $cat }}</span>
-                @endforeach
+                @if(!$hasCourseInCategory && $categories->count())
+                    <span class="recipe-tag">{{ $categories->first() }}</span>
+                @endif
                 @foreach($presentDiets as $diet)
-                    <span class="recipe-tag">{{ $diet }}</span>
+                    <span class="recipe-tag">
+                        @if(app()->getLocale() === 'de' && $diet === 'alcohol-free')
+                            {{ 'ohne Alkohol' }}
+                        @else
+                            {{ $diet }}
+                        @endif
+                    </span>
                 @endforeach
                 @if($country)
                     <span class="recipe-tag">{{ $country }}</span>

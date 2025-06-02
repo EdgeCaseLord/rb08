@@ -26,7 +26,7 @@
         @endforeach
         </div>
     </div>
-    <div x-data="{ open: {{ (!empty($filterTitle) || !empty($filterDifficulty) || !empty($filterCourse) || !empty($filterIngredients) || !empty($filterDiets)) ? 'true' : 'false' }}, filteringSave: false, filteringApply: false }" x-init="">
+    <div x-data="{ open: {{ (!empty($filterTitle) || !empty($filterDifficulty) || !empty($filterCourse) || !empty($filterIngredients) || !empty($filterDiets)) ? 'true' : 'false' }}, filteringSave: false, filteringApply: false }" x-init="" class="mt-4">
         <div class="flex items-center justify-between mb-2 cursor-pointer select-none" @click="open = !open">
             <div class="flex items-center gap-2">
                 <svg class="h-5 w-5 text-primary-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707l-7 7V21a1 1 0 01-1.447.894l-4-2A1 1 0 017 19v-5.293l-7-7A1 1 0 013 4z" /></svg>
@@ -65,7 +65,7 @@
                             'starter' => __('Vorspeise'), 'main_course' => __('Hauptgericht'), 'dessert' => __('Dessert'),
                         ];
                         if ($key === 'filterDiets') $valueMap = [
-                            'biologisch' => __('Biologisch'), 'eifrei' => __('Eifrei'), 'glutenfrei' => __('Glutenfrei'), 'histamin-free' => __('Histaminfrei'), 'laktosefrei' => __('Laktosefrei'), 'ohne Fisch' => __('Ohne Fisch'), 'ohne Fleisch' => __('Ohne Fleisch'), 'sojafrei' => __('Sojafrei'), 'vegan' => __('Vegan'), 'vegetarisch' => __('Vegetarisch'), 'weizenfrei' => __('Weizenfrei'),
+                            'biologisch' => __('Biologisch'), 'eifrei' => __('Eifrei'), 'glutenfrei' => __('Glutenfrei'), 'histamin-free' => __('Histaminfrei'), 'laktosefrei' => __('Laktosefrei'), 'ohne Fisch' => __('Ohne Fisch'), 'ohne Fleisch' => __('Ohne Fleisch'), 'sojafrei' => __('Sojafrei'), 'vegan' => __('Vegan'), 'vegetarisch' => __('Vegetarisch'), 'weizenfrei' => __('Weizenfrei'), 'fruktose' => __('ohne Fruktose'), 'alcohol-free' => __('ohne Alkohol'),
                         ];
                         if ($key === 'filterDifficulty') $valueMap = [
                             'easy' => __('einfach'), 'medium' => __('mittel'), 'difficult' => __('schwierig'),
@@ -224,6 +224,8 @@
                             'vegan' => __('Vegan'),
                             'vegetarisch' => __('Vegetarisch'),
                             'weizenfrei' => __('Weizenfrei'),
+                            'fruktose' => __('Fruktose'),
+                            'alcohol-free' => __('ohne Alkohol'),
                         ] as $key => $label)
                             <label class="flex items-center space-x-2">
                                 <input type="checkbox" wire:model="filterDiets.{{ $key }}" value="{{ $key }}" class="form-checkbox">
@@ -302,6 +304,7 @@
 
     </form>
     </div>
+    <hr class="my-4 border-primary-600" style="border-width:1px">
     @if(!empty($recipes))
         <div class="columns-1 sm:columns-2 xl:columns-3 2xl:columns-4 gap-4" wire:key="avail-list-{{ $refreshKey }}">
             @php

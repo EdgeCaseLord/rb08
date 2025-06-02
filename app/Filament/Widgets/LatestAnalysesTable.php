@@ -34,7 +34,9 @@ class LatestAnalysesTable extends TableWidget
                 Tables\Columns\TextColumn::make('sample_code')
                     ->label(__('Sample Code'))
                     ->searchable()
-                    ->toggleable(isToggledHiddenByDefault: false),
+                    ->toggleable(isToggledHiddenByDefault: false)
+                    ->url(fn ($record) => \App\Filament\Resources\AnalysisResource::getUrl('edit', ['record' => $record]))
+                    ->openUrlInNewTab(),
                 Tables\Columns\TextColumn::make('patient_code')
                     ->label(__('Patient Code'))
                     ->searchable()

@@ -3,7 +3,7 @@
 namespace App\Filament\Widgets;
 
 use Filament\Widgets\Widget;
-use App\Models\Recipe;
+use App\Models\Book;
 
 class RecipesWidget extends Widget
 {
@@ -26,8 +26,9 @@ class RecipesWidget extends Widget
     {
         return [
             'icon' => 'heroicon-o-document',
-            'value' => Recipe::count(),
-            'label' => 'Rezepte',
+            'value' => Book::count(),
+            'label' => 'Bücher',
+            'resourceName' => 'Book',
         ];
     }
 }

@@ -24,7 +24,7 @@ class CookButlerService
         }
     }
 
-    protected function generateJwt(): string
+    public function generateJwt(): string
     {
         $iatTime = (new \DateTime('now', new \DateTimeZone('UTC')))->getTimestamp();
         $expTime = $iatTime + 3600;
@@ -168,7 +168,7 @@ class CookButlerService
      * @param User|null $patient Optional: Patient for allergen exclusion
      * @return array Rezeptdetails
      */
-    public function fetchRecipeDetailsBatch(array $recipeIds, User $patient = null): array
+    public function fetchRecipeDetailsBatch(array $recipeIds, ?User $patient = null): array
     {
         try {
             $batchData = [
@@ -400,7 +400,7 @@ class CookButlerService
      * @param User|null $patient Optional: Patient for allergen exclusion
      * @return array|null
      */
-    public function fetchRecipeDetails($recipeId, User $patient = null): ?array
+    public function fetchRecipeDetails($recipeId, ?User $patient = null): ?array
     {
         $jwt = $this->generateJwt();
         $headers = [

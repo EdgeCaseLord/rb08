@@ -43,6 +43,10 @@ class AdminResource extends Resource
     {
         return $form
             ->schema([
+                Forms\Components\TextInput::make('title')
+                    ->label('Titel'),
+                Forms\Components\TextInput::make('first_name')
+                    ->label('Vorname'),
                 Forms\Components\TextInput::make('name')
                     ->required()
                     ->maxLength(255),
@@ -72,14 +76,24 @@ class AdminResource extends Resource
 
         return $table
             ->columns([
+                Tables\Columns\TextColumn::make('title')
+                    ->label('Titel')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('first_name')
+                    ->label('Vorname')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('name')
                     ->sortable()
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: false),
                 Tables\Columns\TextColumn::make('email')
                     ->sortable()
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('lab_id')
-                    ->label('Lab ID'),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: false),
+                // Tables\Columns\TextColumn::make('lab_id')
+                //     ->label('Lab ID'),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),

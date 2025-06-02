@@ -29,6 +29,8 @@ models:
     doctor_id: unsignedInteger nullable # Linking patients to their assigned doctor
     patient_number: string unique nullable # Only for patient users
     birthdate: date nullable # Only for patient users
+    title: string
+    first_name: string
     relationships:
       hasMany: Book, Analysis
       belongsToMany: Allergen, Recipe

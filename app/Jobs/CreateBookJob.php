@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\Auth;
+use App\Models\TextTemplate;
 
 class CreateBookJob implements ShouldQueue
 {
@@ -109,7 +110,12 @@ class CreateBookJob implements ShouldQueue
                     return;
                 }
                 // Get lab settings for recipe limits
-                $lab = $patient->lab;
+                $authUser = Auth::user();
+                if ($authUser instanceof \App\Models\User && method_exists($authUser, 'isLab') && $authUser->isLab()) {
+                    $lab = $authUser;
+                } else {
+                    $lab = $patient->lab;
+                }
                 $defaultRecipesPerCourse = [
                     'starter' => 5,
                     'main_course' => 5,
@@ -189,28 +195,50 @@ class CreateBookJob implements ShouldQueue
 
     protected function sendEmailToLab(Book $book, User $patient): void
     {
-        // Use test email for now
-        $labEmail = 'daniel@pixelhoch.de';
-        // Uncomment to use actual lab email
-        // $lab = $patient->lab ?? null;
-        // $labEmail = $lab && $lab->email ? $lab->email : null;
+        // Get lab user and email
+        $authUser = Auth::user();
+        if ($authUser instanceof \App\Models\User && method_exists($authUser, 'isLab') && $authUser->isLab()) {
+            $lab = $authUser;
+        } else {
+            $lab = $patient->lab;
+        }
+        $labEmail = $lab && $lab->email ? $lab->email : 'daniel@pixelhoch.de';
+        $labLanguage = $lab && $lab->language ? $lab->language : 'de';
+
+        // Fetch the text template for book_send_email for this lab
+        $template = TextTemplate::where('type', 'book_send_email')
+            ->where('user_id', $lab ? $lab->id : null)
+            ->first();
+        // Fallback to global template if not found
+        if (!$template) {
+            $template = TextTemplate::where('type', 'book_send_email')->first();
+        }
 
         $editLink = url("https://rezept-butler.com/books/{$book->id}/edit");
-        $subject = 'Rezeptbuch für Ihre Patient:innen – Jetzt einsehen und bearbeiten';
-        $userName = Auth::check() ? Auth::user()->name : 'Guest';
+        $userName = $lab ? $lab->name : ($patient->name ?? 'Lab');
+        $patientName = $patient->name;
 
-        // Email template data
-        $emailData = [
-            'subject' => $subject,
-            'body' => $this->getEmailBody($editLink, $userName),
+        // Prepare replacements for template variables
+        $replacements = [
+            '{edit_link}' => $editLink,
+            '{lab_name}' => $userName,
+            '{patient_name}' => $patientName,
         ];
+
+        // Get subject and body from template, fallback to default if needed
+        $subject = $template ? $template->getSubjectForLocale($labLanguage) : 'Rezeptbuch für Ihre Patient:innen – Jetzt einsehen und bearbeiten';
+        $body = $template ? $template->getBodyForLocale($labLanguage) : $this->getEmailBody($editLink, $userName);
+
+        // Replace variables in subject and body
+        $subject = strtr($subject, $replacements);
+        $body = strtr($body, $replacements);
 
         // Log email content
         Log::channel('email')->debug('Email content prepared', [
             'book_id' => $book->id,
             'to' => $labEmail,
-            'subject' => $emailData['subject'],
-            'body' => $emailData['body'],
+            'subject' => $subject,
+            'body' => $body,
         ]);
 
         if (!$labEmail) {
@@ -222,10 +250,10 @@ class CreateBookJob implements ShouldQueue
         }
 
         try {
-            Mail::send([], [], function ($message) use ($emailData, $labEmail) {
+            Mail::send([], [], function ($message) use ($subject, $body, $labEmail) {
                 $message->to($labEmail)
-                    ->subject(mb_encode_mimeheader($emailData['subject'], 'UTF-8'))
-                    ->html($emailData['body']);
+                    ->subject(mb_encode_mimeheader($subject, 'UTF-8'))
+                    ->html($body);
             });
 
             Log::channel('email')->info('Email sent to lab', [

@@ -48,6 +48,10 @@ class AnalysisResource extends Resource
                     ->label(__('Sample Date')),
                 Forms\Components\TextInput::make('patient_code')
                     ->label(__('Patient Code')),
+                Forms\Components\TextInput::make('patient_title')
+                    ->label(__('Patient Titel')),
+                Forms\Components\TextInput::make('patient_first_name')
+                    ->label(__('Patient Vorname')),
                 Forms\Components\TextInput::make('patient_name')
                     ->label(__('Patient Name')),
                 Forms\Components\DatePicker::make('patient_date_of_birth')
@@ -60,6 +64,10 @@ class AnalysisResource extends Resource
                     ->label(__('Test By')),
                 Forms\Components\DatePicker::make('approval_date')
                     ->label(__('Approval Date')),
+                Forms\Components\TextInput::make('doctor_title')
+                    ->label(__('Doctor Titel')),
+                Forms\Components\TextInput::make('doctor_first_name')
+                    ->label(__('Doctor Vorname')),
                 Forms\Components\TextInput::make('approval_by')
                     ->label(__('Approval By')),
                 Forms\Components\Textarea::make('additional_information')
@@ -101,6 +109,14 @@ class AnalysisResource extends Resource
                     ->label(__('Patient Code'))
                     ->searchable()
                     ->toggleable(isToggledHiddenByDefault: false),
+                Tables\Columns\TextColumn::make('patient.title')
+                    ->label(__('Patient Titel'))
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('patient.first_name')
+                    ->label(__('Patient Vorname'))
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('patient_name')
                     ->label(__('Patient Name'))
                     ->searchable()
@@ -129,6 +145,14 @@ class AnalysisResource extends Resource
                     ->date()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('doctor.title')
+                    ->label(__('Doctor Titel'))
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('doctor.first_name')
+                    ->label(__('Doctor Vorname'))
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('approval_by')
                     ->label(__('Approval By'))
                     ->searchable()
@@ -138,28 +162,6 @@ class AnalysisResource extends Resource
                     ->counts('analysisAllergens')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: false),
-//                Tables\Columns\TextColumn::make('antigen_id')
-//                    ->label(__('Antigen ID'))
-//                    ->searchable()
-//                    ->toggleable(isToggledHiddenByDefault: false),
-//                Tables\Columns\TextColumn::make('antigen_name')
-//                    ->label(__('Antigen Name'))
-//                    ->searchable()
-//                    ->toggleable(isToggledHiddenByDefault: false),
-//                Tables\Columns\TextColumn::make('code')
-//                    ->label(__('Code'))
-//                    ->searchable()
-//                    ->toggleable(isToggledHiddenByDefault: false),
-//                Tables\Columns\TextColumn::make('calibrated_value')
-//                    ->label(__('Calibrated Value'))
-//                    ->numeric()
-//                    ->sortable()
-//                    ->toggleable(isToggledHiddenByDefault: false),
-//                Tables\Columns\TextColumn::make('signal_noise')
-//                    ->label(__('Signal Noise'))
-//                    ->numeric()
-//                    ->sortable()
-//                    ->toggleable(isToggledHiddenByDefault: false),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label(__('Created At'))
                     ->dateTime()
