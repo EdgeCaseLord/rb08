@@ -117,27 +117,27 @@
             margin: 0 auto;
             background: #f9fafb;
             border-radius: 8pt;
-            padding: 15pt;
+            padding: 6pt;
         }
         .toc-item {
-            margin-bottom: 8pt;
-            font-size: 11pt;
-            line-height: 1.4;
+            margin-bottom: 2pt;
+            font-size: 8pt;
+            line-height: 1.2;
             display: flex;
             justify-content: space-between;
             align-items: baseline;
         }
         .toc-item .page-number {
             font-weight: 600;
-            margin-right: 15pt;
+            margin-right: 6pt;
         }
         .toc-item .recipe-name {
             flex: 1;
         }
         .toc-chapter {
-            font-size: 14pt;
+            font-size: 10pt;
             font-weight: 600;
-            margin: 15pt 0 8pt 0;
+            margin: 6pt 0 2pt 0;
             color: #8B0000;
         }
         .toc-chapter:first-child {
@@ -179,7 +179,20 @@
             flex-direction: column;
             min-height: 0;
         }
-        .masstabelle td, .masstabelle th { border: 1px solid #000; }
+        .masstabelle { border-collapse: collapse; width: 100%; }
+        .masstabelle th, .masstabelle td {
+            padding: 4pt 8pt;
+            text-align: left;
+        }
+        .masstabelle th {
+            background: #e5e7eb;
+        }
+        .masstabelle tr:nth-child(even) td {
+            background: #f3f4f6;
+        }
+        .masstabelle tr:nth-child(odd) td {
+            background: #fafbfc;
+        }
     </style>
 </head>
 <body>
@@ -288,8 +301,17 @@
             </div>
             <div class="section impressum-section">
                 <h3>Impressum</h3>
+                @php
+                    $templateVars = [
+                        'name' => $book->patient->name ?? '',
+                        'patientName' => $book->patient->name ?? '',
+                        'book' => $book->title ?? '',
+                        'bookTitle' => $book->title ?? '',
+                        'editLink' => url('/filament/resources/books/' . $book->id . '/edit'),
+                    ];
+                @endphp
                 @if($impressumTemplate)
-                    {!! $impressumTemplate->getBodyForLocale($bookLocale) !!}
+                    {!! $impressumTemplate->getBodyForLocale($bookLocale, $templateVars) !!}
                 @else
                 <p>Medizinisches Versorgungszentrum Institut für Mikroökologie GmbH </p>
                 <p>Auf den Lüppen 8 </p>
@@ -363,10 +385,17 @@
     </div>
     <div class="page-body">
         <div class="section">
+            @php
+                $templateVars = [
+                    'name' => $book->patient->name ?? '',
+                    'patientName' => $book->patient->name ?? '',
+                    'book' => $book->title ?? '',
+                    'bookTitle' => $book->title ?? '',
+                    'editLink' => url('/filament/resources/books/' . $book->id . '/edit'),
+                ];
+            @endphp
             {!! $erlaeuterungTemplate
-                ? (is_array($erlaeuterungTemplate->getBodyForLocale($bookLocale))
-                    ? implode("\n", $erlaeuterungTemplate->getBodyForLocale($bookLocale))
-                    : $erlaeuterungTemplate->getBodyForLocale($bookLocale))
+                ? $erlaeuterungTemplate->getBodyForLocale($bookLocale, $templateVars)
                 : '<h2>Sehr geehrte(r) ' . e($book->patient->name ?? 'PatientIn') . ',</h2>' .
                   '<p class="mt-8">Sie halten Ihr persönliches Kochbuch in den Händen, das Ihnen eine Anregung für den Einstieg in Ihre neue kulinarische Welt gibt. Zur Benutzung der Rezepte noch ein paar Erläuterungen:</p>' .
                   '<h4>Gewichtsangaben:</h4>' .
