@@ -38,8 +38,8 @@ class CreateTextTemplate extends CreateRecord
 
     protected function getFormActions(): array
     {
+        // Only return valid Action or ActionGroup instances
         return [
-            \Filament\Forms\Components\View::make('filament.resources.text-template-save-warning'),
             ...parent::getFormActions(),
         ];
     }
