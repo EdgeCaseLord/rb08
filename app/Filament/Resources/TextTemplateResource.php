@@ -14,6 +14,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\Auth;
+use FilamentTiptapEditor\TiptapEditor;
 
 class TextTemplateResource extends Resource
 {
@@ -110,9 +111,7 @@ class TextTemplateResource extends Resource
 
         $bookTextOptions = [
             'impressum' => __('Impressum'),
-            'erlaeuterung_1' => __('Erläuterungen 1'),
-            'naehrwerttabelle' => __('Nährwerttabelle'),
-            'erlaeuterung_2' => __('Erläuterungen 2'),
+            'erlaeuterung' => __('Erläuterungen'),
         ];
 
         return $form->schema([
@@ -122,20 +121,45 @@ class TextTemplateResource extends Resource
                     ->label(__('Typ'))
                     ->options($typeOptions)
                     ->required()
-                    ->reactive(),
+                    ->reactive()
+                    ->afterStateHydrated(function ($component, $state, $record, $set) {
+                        if ($record && str_starts_with($record->type, 'book_text_')) {
+                            $set('type', 'book_text');
+                        }
+                    })
+                    ->disabled(fn ($record) => $record !== null),
                 \Filament\Forms\Components\Select::make('book_text_type')
                     ->label(__('Buch Text Typ'))
                     ->options($bookTextOptions)
                     ->required()
-                    ->visible(fn (\Filament\Forms\Get $get) => $get('type') === 'book_text')
-                    ->reactive(),
+                    ->visible(fn (\Filament\Forms\Get $get, $record) => ($get('type') === 'book_text' || ($record && str_starts_with($record->type, 'book_text_'))))
+                    ->reactive()
+                    ->afterStateHydrated(function ($component, $state, $record, $set) {
+                        if ($record && str_starts_with($record->type, 'book_text_')) {
+                            $subtype = substr($record->type, strlen('book_text_'));
+                            $set('book_text_type', $subtype);
+                        }
+                    })
+                    ->disabled(fn ($record) => $record !== null),
                 \Filament\Forms\Components\Select::make('language')
                     ->label(__('Sprache'))
                     ->options([
                         'de' => 'Deutsch',
                         'en' => 'English',
                     ])
-                    ->default('de')
+                    ->default(function ($record) {
+                        if ($record && isset($record->body) && is_array($record->body)) {
+                            if (array_key_exists('de', $record->body)) {
+                                return 'de';
+                            }
+                            // Pick the first available language key
+                            $firstLang = array_key_first($record->body);
+                            if ($firstLang) {
+                                return $firstLang;
+                            }
+                        }
+                        return 'de';
+                    })
                     ->reactive()
                     ->visible(fn(\Filament\Forms\Get $get) =>
                         ($get('type') !== 'book_text' && filled($get('type')))
@@ -180,15 +204,13 @@ class TextTemplateResource extends Resource
                         $set('subject', $subject);
                         return $state;
                     }),
-                \Filament\Forms\Components\RichEditor::make('body_by_language')
+                    TiptapEditor::make('body_by_language')
                     ->label(fn(\Filament\Forms\Get $get) => __('Text') . ' (' . ($get('language') === 'de' ? 'Deutsch' : ($get('language') === 'en' ? 'English' : $get('language'))) . ')')
                     ->visible(fn (\Filament\Forms\Get $get) =>
                         (filled($get('type')) && $get('type') !== 'book_text')
                         || ($get('type') === 'book_text' && filled($get('book_text_type')))
                     )
-                    ->toolbarButtons([
-                        'bold', 'italic', 'underline', 'strike', 'link', 'blockquote', 'codeBlock', 'h2', 'h3', 'orderedList', 'bulletList', 'undo', 'redo',
-                    ])
+                    ->profile('default')
                     ->extraAttributes(['style' => 'min-height:300px;'])
                     ->reactive()
                     ->afterStateHydrated(function ($component, $state, $record, $set, $get) {
@@ -240,9 +262,7 @@ class TextTemplateResource extends Resource
                     if ($state === 'book_text' && !empty($record->book_text_type)) {
                         $bookTextTypes = [
                             'impressum' => __('Impressum'),
-                            'erlaeuterung_1' => __('Erläuterungen 1'),
-                            'naehrwerttabelle' => __('Nährwerttabelle'),
-                            'erlaeuterung_2' => __('Erläuterungen 2'),
+                            'erlaeuterung' => __('Erläuterungen'),
                         ];
                         $typeLabel = __('Buch Text');
                         $bookTypeLabel = $bookTextTypes[$record->book_text_type] ?? $record->book_text_type;

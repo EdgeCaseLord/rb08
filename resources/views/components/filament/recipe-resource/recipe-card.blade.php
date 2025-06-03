@@ -56,7 +56,28 @@
             }
         }
     }
-    $allergensText = !empty($presentAllergens) ? implode(', ', $presentAllergens) : __('Keine');
+    $allowedAllergens = [
+        'Glutenhaltiges Getreide' => ['de' => 'Glutenhaltiges Getreide', 'en' => 'Cereals containing gluten'],
+        'Hühnerei' => ['de' => 'Hühnerei', 'en' => 'Eggs'],
+        'Erdnüsse' => ['de' => 'Erdnüsse', 'en' => 'Peanuts'],
+        'Milch' => ['de' => 'Milch', 'en' => 'Milk'],
+        'Sellerie' => ['de' => 'Sellerie', 'en' => 'Celery'],
+        'Sesamsamen' => ['de' => 'Sesamsamen', 'en' => 'Sesame seeds'],
+        'Lupinen' => ['de' => 'Lupinen', 'en' => 'Lupin'],
+        'Krebstiere' => ['de' => 'Krebstiere', 'en' => 'Crustaceans'],
+        'Fisch' => ['de' => 'Fisch', 'en' => 'Fish'],
+        'Soja' => ['de' => 'Soja', 'en' => 'Soybeans'],
+        'Schalenfrüchte' => ['de' => 'Schalenfrüchte', 'en' => 'Tree nuts'],
+        'Senf' => ['de' => 'Senf', 'en' => 'Mustard'],
+        'Schwefeldioxid und Sulfit' => ['de' => 'Schwefeldioxid und Sulfit', 'en' => 'Sulphur dioxide and sulphites'],
+        'Weichtiere' => ['de' => 'Weichtiere', 'en' => 'Molluscs'],
+    ];
+    $filteredAllergens = collect($presentAllergens)
+        ->filter(fn($a) => array_key_exists($a, $allowedAllergens))
+        ->values();
+    $allergensText = !$filteredAllergens->isEmpty()
+        ? implode(', ', $filteredAllergens->map(fn($a) => $allowedAllergens[$a][app()->getLocale()] ?? $allowedAllergens[$a]['de'])->all())
+        : __('Keine');
 
     $favorites = [];
     if (!empty($bookId)) {
@@ -92,6 +113,7 @@
         'keto' => 'Keto',
         'halal' => 'Halal',
         'kosher' => 'Koscher',
+        'alcohol-free' => app()->getLocale() === 'de' || !app()->getLocale() ? 'ohne Alkohol' : 'alcohol-free',
         'none' => 'Keine',
     ];
     $dietList = [];
@@ -132,7 +154,7 @@
         <div class="space-y-2 text-sm text-gray-600">
             <p><strong>{{ __('Kategorie') }}:</strong> {{ $categoryText }}</p>
             <p><strong>{{ __('Allergene') }}:</strong> {{ $allergensText }}</p>
-            <p><strong>{{ __('Diäten') }}:</strong> {{ $dietsText }}</p>
+            <p><strong>{{ __('Ernährungsweise') }}:</strong> {{ $dietsText }}</p>
         </div>
 
         @if($showActions)

@@ -226,6 +226,9 @@
                             'weizenfrei' => __('Weizenfrei'),
                             'fruktose' => __('ohne Fruktose'),
                             'alcohol-free' => __('ohne Alkohol'),
+                            'vitamin_b' => __('Vitamin B'),
+                            'ballaststoffe' => __('Ballaststoffe'),
+                            'proteine' => __('Proteine'),
                         ] as $key => $label)
                             <label class="flex items-center space-x-2">
                                 <input type="checkbox" wire:model="filterDiets.{{ $key }}" value="{{ $key }}" class="form-checkbox">

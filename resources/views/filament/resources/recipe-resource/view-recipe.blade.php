@@ -366,6 +366,25 @@
         if (($time['timetype'] ?? null) !== 'Vorbereitung' && ($time['timetype'] ?? null) !== 'Gesamt') $orderedTimes->push($time);
     }
     if ($gesamtzeit) $orderedTimes->push($gesamtzeit);
+    $allowedAllergens = [
+        'Glutenhaltiges Getreide' => ['de' => 'Glutenhaltiges Getreide', 'en' => 'Cereals containing gluten'],
+        'Hühnerei' => ['de' => 'Hühnerei', 'en' => 'Eggs'],
+        'Erdnüsse' => ['de' => 'Erdnüsse', 'en' => 'Peanuts'],
+        'Milch' => ['de' => 'Milch', 'en' => 'Milk'],
+        'Sellerie' => ['de' => 'Sellerie', 'en' => 'Celery'],
+        'Sesamsamen' => ['de' => 'Sesamsamen', 'en' => 'Sesame seeds'],
+        'Lupinen' => ['de' => 'Lupinen', 'en' => 'Lupin'],
+        'Krebstiere' => ['de' => 'Krebstiere', 'en' => 'Crustaceans'],
+        'Fisch' => ['de' => 'Fisch', 'en' => 'Fish'],
+        'Soja' => ['de' => 'Soja', 'en' => 'Soybeans'],
+        'Schalenfrüchte' => ['de' => 'Schalenfrüchte', 'en' => 'Tree nuts'],
+        'Senf' => ['de' => 'Senf', 'en' => 'Mustard'],
+        'Schwefeldioxid und Sulfit' => ['de' => 'Schwefeldioxid und Sulfit', 'en' => 'Sulphur dioxide and sulphites'],
+        'Weichtiere' => ['de' => 'Weichtiere', 'en' => 'Molluscs'],
+    ];
+    $filteredAllergens = collect($presentAllergens)
+        ->filter(fn($a) => array_key_exists($a, $allowedAllergens))
+        ->values();
 @endphp
 
 <x-filament-panels::page>
@@ -495,9 +514,9 @@
                     </div>
                     <div class="card card-allergens">
                         <div class="card-orange-title">Allergien</div>
-                        @if (!empty($presentAllergens))
+                        @if (!$filteredAllergens->isEmpty())
                             <div class="text-xs text-gray-900 mb-2" style="font-size: 8pt;">
-                                {{ implode(', ', $presentAllergens) }}
+                                {{ implode(', ', $filteredAllergens->map(fn($a) => $allowedAllergens[$a][app()->getLocale()] ?? $allowedAllergens[$a]['de'])->all()) }}
                             </div>
                         @else
                             <p>Keine</p>

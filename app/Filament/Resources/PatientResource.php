@@ -186,6 +186,9 @@ class PatientResource extends Resource
                                 'weizenfrei' => __('Weizenfrei'),
                                 'fruktose' => __('ohne Fruktose'),
                                 'alcohol-free' => __('ohne Alkohol'),
+                                'vitamin_b' => __('Vitamin B'),
+                                'ballaststoffe' => __('Ballaststoffe'),
+                                'proteine' => __('Proteine'),
                             ])
                             ->columns(2)
                             ->nullable()
