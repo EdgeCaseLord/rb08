@@ -466,9 +466,10 @@ class BookResource extends Resource
                                 'mime' => 'application/pdf',
                             ]);
                     });
-
-                    // Delete PDF after sending
-                    \Illuminate\Support\Facades\Storage::delete($pdfPath);
+                    // Log only the filename, not the file content or path
+                    \Illuminate\Support\Facades\Log::info('Email sent with attachment', [
+                        'filename' => "buch-{$record->id}-rezepte.pdf",
+                    ]);
 
                     // Update book status to 'Versendet' and save
                     $record->status = 'Versendet';

@@ -35,8 +35,17 @@ class BookPdfController extends Controller
             ]);
         }
 
+        // Fetch book text templates
+        $impressumTemplate = \App\Models\TextTemplate::where('type', 'book_text_impressum')->first();
+        $erlaeuterungTemplate = \App\Models\TextTemplate::where('type', 'book_text_erlaeuterung')->first();
+
         // PDF mit --no-sandbox generieren
-        return Pdf::view('pdf.book', ['book' => $book, 'recipes' => $recipes])
+        return Pdf::view('pdf.book', [
+            'book' => $book,
+            'recipes' => $recipes,
+            'impressumTemplate' => $impressumTemplate,
+            'erlaeuterungTemplate' => $erlaeuterungTemplate,
+        ])
             ->format('a4')
             ->name('buch-' . $book->id . '-rezepte.pdf')
             ->withBrowsershot(function (Browsershot $browsershot) {

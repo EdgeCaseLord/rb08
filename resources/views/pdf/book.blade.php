@@ -233,9 +233,7 @@
 
     // Ensure all template variables are defined to avoid undefined variable errors
     $impressumTemplate = $impressumTemplate ?? null;
-    $erlaeuterung1Template = $erlaeuterung1Template ?? null;
-    $naehrwerttabelleTemplate = $naehrwerttabelleTemplate ?? null;
-    $erlaeuterung2Template = $erlaeuterung2Template ?? null;
+    $erlaeuterungTemplate = $erlaeuterungTemplate ?? null;
     $bookLocale = $bookLocale ?? (isset($book->patient->settings['language']) ? $book->patient->settings['language'] : 'de');
 @endphp
 @if ($recipes->isEmpty())
@@ -365,17 +363,15 @@
     </div>
     <div class="page-body">
         <div class="section">
-            {!! $erlaeuterung1Template
-                ? $erlaeuterung1Template->getBodyForLocale($bookLocale)
+            {!! $erlaeuterungTemplate
+                ? (is_array($erlaeuterungTemplate->getBodyForLocale($bookLocale))
+                    ? implode("\n", $erlaeuterungTemplate->getBodyForLocale($bookLocale))
+                    : $erlaeuterungTemplate->getBodyForLocale($bookLocale))
                 : '<h2>Sehr geehrte(r) ' . e($book->patient->name ?? 'PatientIn') . ',</h2>' .
                   '<p class="mt-8">Sie halten Ihr persönliches Kochbuch in den Händen, das Ihnen eine Anregung für den Einstieg in Ihre neue kulinarische Welt gibt. Zur Benutzung der Rezepte noch ein paar Erläuterungen:</p>' .
                   '<h4>Gewichtsangaben:</h4>' .
-                  '<p>Zur Berechnung des Nährvalues der einzelnen Rezepte sind die mengenmäßig wichtigsten Zutaten mit Gewichtsangaben versehen. Die üblichen Bezeichnungen, wie Esslöffel, Teelöffel, Tasse oder Bund sind daher in Gramm oder Milliliter umgerechnet angegeben. Die folgende Tabelle gibt Ihnen einen Überblick über die Verwendung der Maßangaben:</p>'
-            !!}
-
-            {!! $naehrwerttabelleTemplate
-                ? $naehrwerttabelleTemplate->getBodyForLocale($bookLocale)
-                : '<h4 class="mt-8">Nährwertangaben pro Portion</h4>' .
+                  '<p>Zur Berechnung des Nährvalues der einzelnen Rezepte sind die mengenmäßig wichtigsten Zutaten mit Gewichtsangaben versehen. Die üblichen Bezeichnungen, wie Esslöffel, Teelöffel, Tasse oder Bund sind daher in Gramm oder Milliliter umgerechnet angegeben. Die folgende Tabelle gibt Ihnen einen Überblick über die Verwendung der Maßangaben:</p>' .
+                  '<h4 class="mt-8">Nährwertangaben pro Portion</h4>' .
                   '<table class="masstabelle" style="width:100%; border-collapse: collapse; font-size: 8pt; margin-bottom: 8pt;">' .
                   '<thead><tr><th style="padding:2pt;">Menge</th><th style="padding:2pt;">Einheit</th><th style="padding:2pt;">Zutat</th><th style="padding:2pt;">Gewicht</th></tr></thead>' .
                   '<tbody>' .
@@ -397,12 +393,8 @@
                   '<tr><td>1</td><td>mittleres</td><td>Ei</td><td>65 g</td></tr>' .
                   '<tr><td>1</td><td>mittlere</td><td>Zitrone</td><td>100 g</td></tr>' .
                   '<tr><td>1</td><td>mittlere</td><td>Orange</td><td>200 g</td></tr>' .
-                  '</tbody></table>'
-            !!}
-
-            {!! $erlaeuterung2Template
-                ? $erlaeuterung2Template->getBodyForLocale($bookLocale)
-                : '<h4 class="mt-8">Pfeffer & Öl:</h4>' .
+                  '</tbody></table>' .
+                  '<h4 class="mt-8">Pfeffer & Öl:</h4>' .
                   '<p>Pfeffer kommt in nahezu jedem Gericht vor. Aber Pfeffer ist nicht gleich Pfeffer – es gibt eine vielfältige Auswahl von verschiedenen schärfenden Gewürzen. Diese sind z.B. Schwarzer und weißer Pfeffer, Cayenne-Pfeffer, Roter Pfeffer, bunter Pfeffer, Chili oder Peperoni etc., die sich beliebig durch einander ersetzen lassen. In diesem Rezeptbuch finden Sie deshalb in der Zutatenliste Pfeffer als allgemeine Angabe. Das gleiche gilt für die allgemeine Angabe "ÖL" in der Zutatenliste. Sie können je nach Verträglichkeit verschiedene Öle im Rotationsprinzip verwenden, z. B. Olivenöl, Sesamöl, Maiskeimöl, Kürbiskernöl, Sojaöl oder Sonnenblumenöl.</p>' .
                   '<h4 class="mt-8">Butter und Sahne:</h4>' .
                   '<p>Bei einer Allergie Typ III auf Kuhmilch der Stärke 0 und 1 können verschiedene Produkte wie Sojasahne oder Margarine durch Butter und Sahne ersetzt werden. Sie haben dadurch die Möglichkeit die Rotation zu erweitern.</p>' .

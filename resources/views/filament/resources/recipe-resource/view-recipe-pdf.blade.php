@@ -346,6 +346,32 @@
             if (($time['timetype'] ?? null) !== 'Vorbereitung' && ($time['timetype'] ?? null) !== 'Gesamt') $orderedTimes->push($time);
         }
         if ($gesamtzeit) $orderedTimes->push($gesamtzeit);
+        // Determine book/patient locale
+        $bookLocale = 'de';
+        if (isset($book) && isset($book->patient) && isset($book->patient->settings['language'])) {
+            $bookLocale = $book->patient->settings['language'] ?: 'de';
+        } elseif (isset($patient) && isset($patient->settings['language'])) {
+            $bookLocale = $patient->settings['language'] ?: 'de';
+        }
+        $allowedAllergens = [
+            'Glutenhaltiges Getreide' => ['de' => 'Glutenhaltiges Getreide', 'en' => 'Cereals containing gluten'],
+            'Hühnerei' => ['de' => 'Hühnerei', 'en' => 'Eggs'],
+            'Erdnüsse' => ['de' => 'Erdnüsse', 'en' => 'Peanuts'],
+            'Milch' => ['de' => 'Milch', 'en' => 'Milk'],
+            'Sellerie' => ['de' => 'Sellerie', 'en' => 'Celery'],
+            'Sesamsamen' => ['de' => 'Sesamsamen', 'en' => 'Sesame seeds'],
+            'Lupinen' => ['de' => 'Lupinen', 'en' => 'Lupin'],
+            'Krebstiere' => ['de' => 'Krebstiere', 'en' => 'Crustaceans'],
+            'Fisch' => ['de' => 'Fisch', 'en' => 'Fish'],
+            'Soja' => ['de' => 'Soja', 'en' => 'Soybeans'],
+            'Schalenfrüchte' => ['de' => 'Schalenfrüchte', 'en' => 'Tree nuts'],
+            'Senf' => ['de' => 'Senf', 'en' => 'Mustard'],
+            'Schwefeldioxid und Sulfit' => ['de' => 'Schwefeldioxid und Sulfit', 'en' => 'Sulphur dioxide and sulphites'],
+            'Weichtiere' => ['de' => 'Weichtiere', 'en' => 'Molluscs'],
+        ];
+        $filteredAllergens = collect($presentAllergens)
+            ->filter(fn($a) => array_key_exists($a, $allowedAllergens))
+            ->values();
     @endphp
     <div class="recipe-header">
         <div class="recipe-header-left">
@@ -365,7 +391,7 @@
                 @endif
                 @foreach($presentDiets as $diet)
                     <span class="recipe-tag">
-                        @if(app()->getLocale() === 'de' && $diet === 'alcohol-free')
+                        @if($bookLocale === 'de' && $diet === 'alcohol-free')
                             {{ 'ohne Alkohol' }}
                         @else
                             {{ $diet }}
@@ -470,9 +496,9 @@
                 </div>
                 <div class="card card-allergens">
                     <div class="card-orange-title">Allergien</div>
-                    @if (!empty($presentAllergens))
+                    @if (!$filteredAllergens->isEmpty())
                         <div class="text-xs text-gray-900 mb-2" style="font-size: 7pt;">
-                            {{ implode(', ', $presentAllergens) }}
+                            {{ implode(', ', $filteredAllergens->map(fn($a) => $allowedAllergens[$a][$bookLocale] ?? $allowedAllergens[$a]['de'])->all()) }}
                         </div>
                     @else
                         <p>Keine</p>
