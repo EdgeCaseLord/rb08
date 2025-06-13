@@ -45,6 +45,8 @@ class AvailableRecipesTable extends Component
         'openRecipeModal' => 'openRecipeModal',
         'recipeRemovedFromFavorites' => 'prependAvailableRecipe',
         'prependAvailableRecipe' => 'prependAvailableRecipe',
+        'applyFilters' => 'applyFilters',
+        'saveFilters' => 'saveFilters',
     ];
 
     public function mount($bookId, CookButlerService $cookButlerService)
@@ -703,6 +705,7 @@ class AvailableRecipesTable extends Component
     public function applyFilters()
     {
         $this->resetAndReload();
+        return true;
     }
 
     public function saveFilters()
