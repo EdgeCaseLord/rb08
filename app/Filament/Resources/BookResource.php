@@ -18,6 +18,7 @@ use Livewire\Component;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Illuminate\Support\Facades\Blade;
+use Filament\Forms\Components\TextEntry;
 
 class BookResource extends Resource
 {
@@ -84,6 +85,14 @@ class BookResource extends Resource
         return $validCategories[0];
     }
 
+    public static function getAnalysisLink($analysisId)
+    {
+        if (!$analysisId) return 'Keine Analyse ausgewählt';
+        $analysis = \App\Models\Analysis::find($analysisId);
+        if (!$analysis) return 'Keine Analyse ausgewählt';
+        return new \Illuminate\Support\HtmlString('<a href="' . route('filament.admin.resources.analyses.edit', ['record' => $analysisId]) . '" class="text-primary-600 hover:text-primary-500" target="_blank">' . $analysis->sample_code . '</a>');
+    }
+
     public static function form(Form $form): Form
     {
         /** @var \App\Models\User|null $user */
@@ -116,40 +125,6 @@ class BookResource extends Resource
                         Forms\Components\Group::make()
                             ->extraAttributes(['class' => 'w-full'])
                             ->schema([
-                                Forms\Components\Fieldset::make('')
-                                    ->schema([
-                                        Forms\Components\TextInput::make('title')
-                                            ->required()
-                                            ->label('Titel')
-                                            ->inlineLabel()
-                                            ->extraAttributes(['class' => 'w-full'])
-                                            ->columnSpan(1),
-                                        Forms\Components\Select::make('status')
-                                            ->label('Status')
-                                            ->options([
-                                                'Versendet' => 'Versendet',
-                                                'Warten auf Versand' => 'Warten auf Versand',
-                                                'Geändert nach Versand' => 'Geändert nach Versand',
-                                            ])
-                                            ->required()
-                                            ->columnSpan(1),
-                                        Forms\Components\Select::make('analysis_id')
-                                            ->label('Analyse (Sample Code)')
-                                            ->options(fn () => \App\Models\Analysis::pluck('sample_code', 'id'))
-                                            ->searchable()
-                                            ->preload()
-                                            ->nullable()
-                                            ->columnSpan(1),
-                                        Forms\Components\Actions::make([
-                                            Forms\Components\Actions\Action::make('save')
-                                                ->label('Speichern')
-                                                ->submit('save')
-                                                ->color('primary'),
-                                        ])->columnSpan(1),
-                                    ])
-                                    ->columns(4)
-                                    ->columnSpanFull()
-                                    ->extraAttributes(['class' => 'flex items-center gap-4 w-full']),
                                 Forms\Components\Select::make('patient_id')
                                     ->relationship('patient', 'name', function ($query) use ($user) {
                                         $query->where('role', 'patient');
@@ -164,9 +139,78 @@ class BookResource extends Resource
                                     ->searchable()
                                     ->preload()
                                     ->live()
-                                    ->columnSpan(1)
+                                    ->inlineLabel()
+                                    ->columnSpanFull()
+                                    ->getOptionLabelFromRecordUsing(fn ($record) => "{$record->name} ({$record->patient_code})")
+                                    ->afterStateUpdated(function ($state, Forms\Set $set) {
+                                        if ($state) {
+                                            $latestAnalysis = \App\Models\Analysis::where('patient_id', $state)
+                                                ->latest()
+                                                ->first();
+                                            if ($latestAnalysis) {
+                                                $set('analysis_id', $latestAnalysis->id);
+                                            } else {
+                                                $set('analysis_id', null);
+                                            }
+                                        } else {
+                                            $set('analysis_id', null);
+                                        }
+                                    })
                                     ->visible(fn () => $form->getOperation() === 'create' && $user && ($user->isAdmin() || $user->isLab()))
                                     ->default(fn () => request()->get('patient_id')),
+                                Forms\Components\Fieldset::make('book_details')
+                                    ->label(__('Book Details'))
+                                    ->schema([
+                                        Forms\Components\TextInput::make('title')
+                                            ->label(__('Title'))
+                                            ->required()
+                                            ->inlineLabel()
+                                            ->extraAttributes(['class' => 'w-full'])
+                                            ->columnSpanFull(),
+                                        Forms\Components\Select::make('status')
+                                            ->label(__('Status'))
+                                            ->options([
+                                                'Versendet' => 'Versendet',
+                                                'Warten auf Versand' => 'Warten auf Versand',
+                                                'Geändert nach Versand' => 'Geändert nach Versand',
+                                            ])
+                                            ->default('Warten auf Versand')
+                                            ->disabled()
+                                            ->dehydrated()
+                                            ->required()
+                                            ->inlineLabel()
+                                            ->columnSpanFull(),
+                                        Forms\Components\Placeholder::make('analysis')
+                                            ->label('Analyse')
+                                            ->content(function ($record, $get) {
+                                                if ($record) {
+                                                    return static::getAnalysisLink($record->analysis_id);
+                                                }
+
+                                                $patientId = $get('patient_id');
+                                                if ($patientId) {
+                                                    $latestAnalysis = \App\Models\Analysis::where('patient_id', $patientId)
+                                                        ->latest()
+                                                        ->first();
+                                                    if ($latestAnalysis) {
+                                                        return static::getAnalysisLink($latestAnalysis->id);
+                                                    }
+                                                }
+
+                                                return 'Keine Analyse ausgewählt';
+                                            })
+                                            ->live()
+                                            ->inlineLabel()
+                                            ->columnSpanFull(),
+                                        Forms\Components\Actions::make([
+                                            Forms\Components\Actions\Action::make('save')
+                                                ->label('Speichern')
+                                                ->submit('save')
+                                                ->color('primary'),
+                                        ])->columnSpanFull(),
+                                    ])
+                                    ->columnSpanFull()
+                                    ->extraAttributes(['class' => 'flex flex-col gap-4 w-full']),
                             ])
                             ->columns(2),
                     ]),
