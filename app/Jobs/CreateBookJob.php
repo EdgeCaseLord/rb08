@@ -24,12 +24,14 @@ class CreateBookJob implements ShouldQueue
     public $uniqueId;
     public $tries = 3;
     public $recipeIds;
+    protected $bookId;
 
-    public function __construct(User $patient, array $recipeIds = null)
+    public function __construct(User $patient, array $recipeIds = null, $bookId = null)
     {
         $this->patient = $patient;
         $this->uniqueId = 'create_book_' . $patient->id . '_' . now()->timestamp;
         $this->recipeIds = $recipeIds;
+        $this->bookId = $bookId;
     }
 
     public function uniqueId()
@@ -40,45 +42,76 @@ class CreateBookJob implements ShouldQueue
     public function handle(): void
     {
         $patient = $this->patient;
+        Log::debug('CreateBookJob: Starting handle()', [
+            'patient_id' => $patient ? $patient->id : null,
+            'recipeIds_provided' => $this->recipeIds,
+            'bookId' => $this->bookId,
+        ]);
 
         // Validate patient
         if (!$patient) {
-            Log::channel('email')->warning('No patient provided, skipping book creation', ['patient_id' => null]);
+            Log::warning('No patient provided, skipping book creation', ['patient_id' => null]);
             return;
         }
         if ($patient->id === 1) {
-            Log::channel('email')->warning('Unexpected dispatch for admin user ID 1, skipping book creation', ['patient_id' => 1]);
+            Log::warning('Unexpected dispatch for admin user ID 1, skipping book creation', ['patient_id' => 1]);
             return;
         }
         if ($patient->role !== 'patient') {
-            Log::channel('email')->warning('User is not a patient, skipping book creation', [
+            Log::warning('User is not a patient, skipping book creation', [
                 'user_id' => $patient->id,
                 'role' => $patient->role,
             ]);
             return;
         }
-
-        Log::channel('email')->info('CreateBookJob started for patient', ['patient_id' => $patient->id]);
+        Log::info('CreateBookJob: Patient validated', ['patient_id' => $patient->id]);
 
         try {
             $latestAnalysis = \App\Models\Analysis::where('patient_id', $patient->id)->latest('created_at')->first();
-            $book = Book::create([
+            Log::debug('CreateBookJob: Latest analysis fetched', [
                 'patient_id' => $patient->id,
-                'title' => "Persönliches Rezeptbuch für {$patient->name}",
-                'analysis_id' => $latestAnalysis ? $latestAnalysis->id : null,
-                'status' => 'Warten auf Versand',
-                'created_at' => now(),
-                'updated_at' => now(),
+                'latest_analysis_id' => $latestAnalysis ? $latestAnalysis->id : null,
             ]);
-            Log::channel('email')->info('Book created for patient', ['book_id' => $book->id, 'patient_id' => $patient->id]);
+
+            $createdNewBook = false;
+            // If bookId is given, use existing book, else create new
+            if ($this->bookId) {
+                $book = \App\Models\Book::find($this->bookId);
+                if (!$book) {
+                    Log::error('CreateBookJob: Book not found for update', ['book_id' => $this->bookId]);
+                    return;
+                }
+                Log::info('CreateBookJob: Using existing book for update', ['book_id' => $book->id, 'patient_id' => $patient->id]);
+                // Clear recipes
+                $book->recipes()->detach();
+            } else {
+                $book = Book::create([
+                    'patient_id' => $patient->id,
+                    'title' => "Persönliches Rezeptbuch für {$patient->name}",
+                    'analysis_id' => $latestAnalysis ? $latestAnalysis->id : null,
+                    'status' => 'Warten auf Versand',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+                Log::info('CreateBookJob: Book created', ['book_id' => $book->id, 'patient_id' => $patient->id]);
+                $createdNewBook = true;
+            }
 
             // Attach provided recipes if available
             if ($this->recipeIds && is_array($this->recipeIds) && count($this->recipeIds) > 0) {
+                Log::debug('CreateBookJob: Attaching provided recipes', [
+                    'book_id' => $book->id,
+                    'recipe_ids' => $this->recipeIds,
+                ]);
                 foreach ($this->recipeIds as $recipeId) {
                     try {
+                        Log::debug('CreateBookJob: Adding recipe to book', [
+                            'book_id' => $book->id,
+                            'recipe_id' => $recipeId,
+                        ]);
                         $book->addRecipe($recipeId);
                     } catch (\Exception $e) {
-                        Log::channel('email')->error('Failed to add recipe to book', [
+                        Log::error('Failed to add recipe to book', [
                             'book_id' => $book->id,
                             'patient_id' => $patient->id,
                             'recipe_id' => $recipeId,
@@ -86,24 +119,26 @@ class CreateBookJob implements ShouldQueue
                         ]);
                     }
                 }
-                Log::channel('email')->info('Assigned provided recipes to book', [
+                Log::info('CreateBookJob: Assigned provided recipes to book', [
                     'book_id' => $book->id,
                     'patient_id' => $patient->id,
                     'recipe_count' => count($this->recipeIds),
                     'recipe_ids' => $this->recipeIds,
                 ]);
             } else {
-                // Fallback to old logic
+                Log::debug('CreateBookJob: No provided recipes, using fallback logic', [
+                    'patient_id' => $patient->id,
+                ]);
                 $recipes = \App\Models\Recipe::whereHas('books', function($q) use ($patient) {
                     $q->where('patient_id', $patient->id);
                 })->get();
-                Log::channel('email')->info('Fetched recipes for patient', [
+                Log::info('CreateBookJob: Fetched recipes for patient', [
                     'patient_id' => $patient->id,
                     'recipe_count' => $recipes->count(),
                     'recipe_ids' => $recipes->pluck('id_recipe')->toArray(),
                 ]);
                 if ($recipes->isEmpty()) {
-                    Log::channel('email')->warning('No recipes found for patient, skipping book recipe attachment', [
+                    Log::warning('No recipes found for patient, skipping book recipe attachment', [
                         'patient_id' => $patient->id,
                         'book_id' => $book->id,
                     ]);
@@ -114,7 +149,7 @@ class CreateBookJob implements ShouldQueue
                 if ($authUser instanceof \App\Models\User && method_exists($authUser, 'isLab') && $authUser->isLab()) {
                     $lab = $authUser;
                 } else {
-                $lab = $patient->lab;
+                    $lab = $patient->lab;
                 }
                 $defaultRecipesPerCourse = [
                     'starter' => 5,
@@ -123,7 +158,10 @@ class CreateBookJob implements ShouldQueue
                 ];
                 $recipesPerCourse = $lab ? ($lab->settings['recipes_per_course'] ?? $defaultRecipesPerCourse) : $defaultRecipesPerCourse;
                 $totalRecipeLimit = array_sum($recipesPerCourse);
-
+                Log::debug('CreateBookJob: Recipes per course', [
+                    'recipes_per_course' => $recipesPerCourse,
+                    'total_recipe_limit' => $totalRecipeLimit,
+                ]);
                 // Group recipes by course
                 $recipesByCourse = [];
                 foreach ($recipes as $recipe) {
@@ -131,25 +169,32 @@ class CreateBookJob implements ShouldQueue
                         $recipesByCourse[$recipe->course][] = $recipe;
                     }
                 }
-
+                Log::debug('CreateBookJob: Grouped recipes by course', [
+                    'recipes_by_course' => array_map(function($r) { return collect($r)->pluck('id_recipe')->toArray(); }, $recipesByCourse),
+                ]);
                 // Select random recipes within limits for each course
                 $selectedRecipes = [];
                 foreach ($recipesPerCourse as $course => $limit) {
                     $courseRecipes = $recipesByCourse[$course] ?? [];
                     if (!empty($courseRecipes)) {
-                        $selectedRecipes = array_merge(
-                            $selectedRecipes,
-                            collect($courseRecipes)->shuffle()->take($limit)->all()
-                        );
+                        $selected = collect($courseRecipes)->shuffle()->take($limit)->all();
+                        Log::debug('CreateBookJob: Selected recipes for course', [
+                            'course' => $course,
+                            'selected_recipe_ids' => collect($selected)->pluck('id_recipe')->toArray(),
+                        ]);
+                        $selectedRecipes = array_merge($selectedRecipes, $selected);
                     }
                 }
-
                 // Attach selected recipes to the book
                 foreach ($selectedRecipes as $recipe) {
                     try {
+                        Log::debug('CreateBookJob: Adding selected recipe to book', [
+                            'book_id' => $book->id,
+                            'recipe_id' => $recipe->id_recipe,
+                        ]);
                         $book->addRecipe($recipe->id_recipe);
                     } catch (\Exception $e) {
-                        Log::channel('email')->error('Failed to add recipe to book', [
+                        Log::error('Failed to add recipe to book', [
                             'book_id' => $book->id,
                             'patient_id' => $patient->id,
                             'recipe_id' => $recipe->id_recipe,
@@ -157,8 +202,7 @@ class CreateBookJob implements ShouldQueue
                         ]);
                     }
                 }
-
-                Log::channel('email')->info('Assigned recipes to book', [
+                Log::info('CreateBookJob: Assigned fallback recipes to book', [
                     'book_id' => $book->id,
                     'patient_id' => $patient->id,
                     'recipe_count' => count($selectedRecipes),
@@ -169,22 +213,42 @@ class CreateBookJob implements ShouldQueue
 
             // Log current recipes
             $currentRecipes = $book->recipes()->pluck('recipes.id_recipe')->toArray();
-            Log::channel('email')->info('Current recipes in book', [
+            Log::info('CreateBookJob: Current recipes in book', [
                 'book_id' => $book->id,
                 'recipe_ids' => $currentRecipes,
             ]);
 
             // Send email to lab
+            Log::debug('CreateBookJob: Sending email to lab', [
+                'book_id' => $book->id,
+                'patient_id' => $patient->id,
+            ]);
             $this->sendEmailToLab($book, $patient);
 
-            Notification::make()
-                ->title('Rezeptbuch erstellt')
-                ->body("Ein personalisiertes Rezeptbuch wurde für {$patient->name} erstellt.")
-                ->success()
-                ->send();
+            if ($createdNewBook) {
+                \Filament\Notifications\Notification::make()
+                    ->title('Rezeptbuch erstellt')
+                    ->body("Ein personalisiertes Rezeptbuch wurde für {$patient->name} erstellt.")
+                    ->success()
+                    ->send();
+            } elseif ($this->bookId) {
+                \Filament\Notifications\Notification::make()
+                    ->title('Rezeptbuch aktualisiert')
+                    ->body("Das Rezeptbuch wurde mit neuen Rezepten basierend auf dem aktuellen Filter-Set aktualisiert.")
+                    ->success()
+                    ->send();
+                // Emit Livewire event for UI refresh
+                if (method_exists(\Livewire\Livewire::class, 'emit')) {
+                    \Livewire\Livewire::emit('bookUpdated', $book->id);
+                }
+            }
 
+            Log::debug('CreateBookJob: handle() completed successfully', [
+                'book_id' => $book->id,
+                'patient_id' => $patient->id,
+            ]);
         } catch (\Exception $e) {
-            Log::channel('email')->error('Failed to create book for patient', [
+            Log::error('Failed to create book for patient', [
                 'patient_id' => $patient->id,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
@@ -234,7 +298,7 @@ class CreateBookJob implements ShouldQueue
         $body = strtr($body, $replacements);
 
         // Log email content
-        Log::channel('email')->debug('Email content prepared', [
+        Log::debug('Email content prepared', [
             'book_id' => $book->id,
             'to' => $labEmail,
             'subject' => $subject,
@@ -242,7 +306,7 @@ class CreateBookJob implements ShouldQueue
         ]);
 
         if (!$labEmail) {
-            Log::channel('email')->warning('Lab email not found, skipping email', [
+            Log::warning('Lab email not found, skipping email', [
                 'book_id' => $book->id,
                 'patient_id' => $patient->id,
             ]);
@@ -256,13 +320,13 @@ class CreateBookJob implements ShouldQueue
                     ->html($body);
             });
 
-            Log::channel('email')->info('Email sent to lab', [
+            Log::info('Email sent to lab', [
                 'book_id' => $book->id,
                 'lab_email' => $labEmail,
                 'patient_id' => $patient->id,
             ]);
         } catch (\Exception $e) {
-            Log::channel('email')->error('Failed to send email to lab', [
+            Log::error('Failed to send email to lab', [
                 'book_id' => $book->id,
                 'lab_email' => $labEmail,
                 'patient_id' => $patient->id,
@@ -291,7 +355,7 @@ EOT;
 
     public function failed(\Throwable $exception): void
     {
-        Log::channel('email')->error('CreateBookJob failed permanently', [
+        Log::error('CreateBookJob failed permanently', [
             'exception' => $exception->getMessage(),
             'trace' => $exception->getTraceAsString(),
         ]);

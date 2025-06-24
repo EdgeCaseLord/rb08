@@ -23,6 +23,8 @@ class AnalysisImporter extends Importer
     public array $rows = [];
     protected float $threshold = 10; // Default threshold
     protected static int $skippedRows = 0; // Make it static
+    protected static array $validationErrors = []; // Track validation errors
+    protected static int $currentRowNumber = 0; // Track current row number
 
     public static function getColumns(): array
     {
@@ -61,16 +63,76 @@ class AnalysisImporter extends Importer
 
     public function resolveRecord(): ?Model
     {
-        $patientCode = $this->data['patient_code'] ?? null;
-        $sampleCode = $this->data['sample_code'] ?? null;
+        // Reset counter on first call (when row number is 0)
+        if (self::$currentRowNumber === 0) {
+            self::$validationErrors = [];
+            self::$skippedRows = 0;
+        }
 
-        if (!$patientCode || !$sampleCode) {
-            Log::warning('Skipping row due to missing required fields', [
+        $patientCode = trim($this->data['patient_code'] ?? '');
+        $sampleCode = trim($this->data['sample_code'] ?? '');
+        $calibratedValue = $this->data['calibrated_value'] ?? null;
+        $antigenName = trim($this->data['antigen_name'] ?? '');
+        $code = trim($this->data['code'] ?? '');
+        $patientName = trim($this->data['patient_name'] ?? '');
+
+        // Skip specific allergen codes that should not be processed at all
+        $skipCodes = ['GD1', 'GD2', 'GD3'];
+        if (in_array($code, $skipCodes)) {
+            Log::info('Skipping allergen code (not processed)', [
+                'code' => $code,
+                'antigen_name' => $antigenName,
                 'patient_code' => $patientCode,
                 'sample_code' => $sampleCode,
-                'row' => $this->data,
+                'reason' => 'Code in skip list (GD1, GD2, GD3)',
             ]);
+            return null; // Mark row as skipped
+        }
+
+        // Validate required fields and provide specific error messages
+        $errors = [];
+
+        if (empty($patientCode)) {
+            $errors[] = "Patient Code ist erforderlich";
+        }
+
+        if (empty($sampleCode)) {
+            $errors[] = "Sample Code ist erforderlich";
+        }
+
+        if (empty($calibratedValue) && $calibratedValue !== 0) {
+            $errors[] = "Calibrated Value ist erforderlich";
+        }
+
+        if (empty($antigenName)) {
+            $errors[] = "Antigen Name ist erforderlich";
+        }
+
+        if (empty($code)) {
+            $errors[] = "Code ist erforderlich";
+        }
+
+        // If there are validation errors, return null to mark row as failed
+        if (!empty($errors)) {
+            $rowNumber = $this->getRowNumber();
+            $errorMessage = "Zeile {$rowNumber}: " . implode(', ', $errors);
+
+            // Store error for reporting
+            self::$validationErrors[] = $errorMessage;
+
+            // Return null to mark this row as failed (don't throw exception)
             return null;
+        }
+
+        // Check if patient exists, but allow auto-creation
+        $patient = User::where('patient_code', $patientCode)->where('role', 'patient')->first();
+        if (!$patient) {
+            // Log that a new patient will be created (can be anonymous)
+            Log::info('New patient will be created during import', [
+                'patient_code' => $patientCode,
+                'patient_name' => $patientName ?: 'Unbekannter Patient',
+                'row_number' => $this->getRowNumber(),
+            ]);
         }
 
         // Check if sample code already exists in database, excluding current import
@@ -80,10 +142,10 @@ class AnalysisImporter extends Importer
             ->first();
         if ($existingAnalysis) {
             self::$skippedRows++; // Use static property
-            Log::info('Skipping row due to existing sample code', [
-                'sample_code' => $sampleCode,
-                'existing_analysis_id' => $existingAnalysis->id,
-            ]);
+            $rowNumber = $this->getRowNumber();
+            $errorMessage = "Zeile {$rowNumber}: Sample Code '{$sampleCode}' existiert bereits";
+            self::$validationErrors[] = $errorMessage;
+            // Return null to mark this row as failed (don't throw exception)
             return null;
         }
 
@@ -105,6 +167,23 @@ class AnalysisImporter extends Importer
         return $this->sampleCodes[$sampleCode];
     }
 
+    /**
+     * Get the current row number for error reporting
+     */
+    protected function getRowNumber(): int
+    {
+        return ++self::$currentRowNumber;
+    }
+
+    /**
+     * Reset row counter for new import
+     */
+    public static function resetRowCounter(): void
+    {
+        self::$currentRowNumber = 0;
+        self::$validationErrors = [];
+        self::$skippedRows = 0;
+    }
 
     protected function afterSave(): void
     {
@@ -115,7 +194,7 @@ class AnalysisImporter extends Importer
         $user = \Filament\Facades\Filament::auth()->user();
         if ($user && $user->role === 'lab') {
             $this->threshold = $user->settings['allergen_threshold'] ?? 10;
-        } elseif ($user && $user->isAdmin()) {
+        } elseif ($user instanceof \App\Models\User && $user->isAdmin()) {
             $firstLab = User::labs()->first();
             $this->threshold = $firstLab ? ($firstLab->settings['allergen_threshold'] ?? 10) : 10;
         }
@@ -343,6 +422,25 @@ class AnalysisImporter extends Importer
             $body .= ' ' . __(':failed_rows rows failed.', ['failed_rows' => number_format($failedRowsCount)]);
         }
 
+        // Add validation errors to the notification
+        if (!empty(self::$validationErrors)) {
+            $body .= "\n\n**Validierungsfehler:**\n";
+            foreach (array_slice(self::$validationErrors, 0, 10) as $error) { // Show first 10 errors
+                $body .= "• {$error}\n";
+            }
+            if (count(self::$validationErrors) > 10) {
+                $body .= "• ... und " . (count(self::$validationErrors) - 10) . " weitere Fehler\n";
+            }
+            $body .= "\nBitte überprüfen Sie die CSV-Datei und korrigieren Sie die angezeigten Fehler.";
+            $body .= "\n\n**Hinweise:**";
+            $body .= "\n• Neue Patienten werden automatisch erstellt. Patient Name ist optional (anonyme Analysen sind erlaubt).";
+            $body .= "\n• Allergen-Codes GD1, GD2 und GD3 werden automatisch übersprungen (Kontrollantigene).";
+        } else {
+            $body .= "\n\n**Hinweise:**";
+            $body .= "\n• Neue Patienten werden automatisch erstellt. Patient Name ist optional (anonyme Analysen sind erlaubt).";
+            $body .= "\n• Allergen-Codes GD1, GD2 und GD3 werden automatisch übersprungen (Kontrollantigene).";
+        }
+
         $patientIds = Analysis::where('import_id', $import->id)
             ->distinct()
             ->pluck('patient_id')
@@ -359,6 +457,7 @@ class AnalysisImporter extends Importer
                 'successful_rows' => $import->successful_rows,
                 'failed_rows' => $failedRowsCount,
                 'skipped_rows' => self::$skippedRows,
+                'validation_errors' => self::$validationErrors,
             ]);
         } else {
             Log::warning('No patients found for recipe assignment', ['import_id' => $import->id]);
@@ -369,7 +468,11 @@ class AnalysisImporter extends Importer
             'successful_rows' => $import->successful_rows,
             'failed_rows' => $failedRowsCount,
             'skipped_rows' => self::$skippedRows,
+            'validation_errors' => self::$validationErrors,
         ]);
+
+        // Reset validation errors for next import
+        self::$validationErrors = [];
 
         return $body;
     }

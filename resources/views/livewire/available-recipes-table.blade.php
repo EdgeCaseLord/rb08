@@ -275,6 +275,12 @@
                     </div>
                 </div>
             </div>
+            <div class="col-span-full flex items-center gap-2 mt-2">
+                <input type="checkbox" id="updateBookWithFilters" wire:model="updateBookWithFilters">
+                <label for="updateBookWithFilters" class="mb-0">
+                    {{ isset($context) && $context === 'edit-patient' ? __('Letztes Buch mit aktuellem Filter-Set aktualisieren') : __('Buch mit aktuellem Filter-Set aktualisieren') }}
+                </label>
+            </div>
             <div class="col-span-full flex justify-between mt-2 gap-2">
                 <div class="flex gap-2">
                     <button type="button"

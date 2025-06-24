@@ -282,7 +282,7 @@ class CookButlerService
                 $apiFilters['country'] = (array)$merged['country'];
             }
             if (!empty($merged['max_time'])) {
-                $apiFilters['max_time'] = (array)$merged['max_time'];
+                $apiFilters['max_time'] = (string)$merged['max_time'][0];
             }
             if (!empty($apiFilters)) {
                 $searchData['filters'] = $apiFilters;
@@ -456,9 +456,34 @@ class CookButlerService
         // Handle offset and randomize_offset separately
         $apiOffset = isset($filters['offset']) ? (int) $filters['offset'] : 0;
         $randomizeOffset = isset($filters['randomize_offset']) ? (bool) $filters['randomize_offset'] : false;
+        // After $apiFilters and $q are defined
         if ($randomizeOffset) {
-            // If randomize_offset is true, randomize the offset up to a reasonable max (e.g., 1000)
-            $apiOffset = random_int(0, 1000);
+            // Try to get the total number of available recipes for the current filters
+            $total = null;
+            try {
+                $searchDataForCount = [
+                    'language' => 'de-de',
+                    'searchtype' => 'extended',
+                    'add_info' => [],
+                    'limit' => 1,
+                    'offset' => 0,
+                ];
+                if (!empty($apiFilters)) {
+                    $searchDataForCount['filters'] = $apiFilters;
+                }
+                if (!empty($q)) {
+                    $searchDataForCount['q'] = $q;
+                }
+                $countData = $this->makeApiRequest('POST', $this->searchEndpoint, $searchDataForCount, $patient, !empty($apiFilters['allergen']) ? (array)$apiFilters['allergen'] : []);
+                $total = $countData['total']['value'] ?? null;
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::warning('CookButlerService: Could not fetch total for random offset', ['error' => $e->getMessage()]);
+            }
+            $maxOffset = 1000;
+            if ($total !== null && $total > $limit) {
+                $maxOffset = $total - $limit;
+            }
+            $apiOffset = random_int(0, max(0, $maxOffset));
         }
         Log::info('fetchAvailableRecipesForPatient called', [
             'patient_id' => $patient->id,
@@ -516,7 +541,7 @@ class CookButlerService
                 $apiFilters['country'] = (array)$merged['country'];
             }
             if (!empty($merged['max_time'])) {
-                $apiFilters['max_time'] = (array)$merged['max_time'];
+                $apiFilters['max_time'] = (string)$merged['max_time'][0];
             }
             // Build q from title and ingredients only (string replacements handled in buildSearchQuery)
             $q = $this->buildSearchQuery($merged);

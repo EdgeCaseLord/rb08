@@ -37,6 +37,7 @@ class AvailableRecipesTable extends Component
     public $filterOffset = 0;
     public $filterRandomizeOffset = false;
     public $refreshKey = 0;
+    public $updateBookWithFilters = false;
     protected $cookButlerService;
 
     protected $listeners = [
@@ -47,6 +48,7 @@ class AvailableRecipesTable extends Component
         'prependAvailableRecipe' => 'prependAvailableRecipe',
         'applyFilters' => 'applyFilters',
         'saveFilters' => 'saveFilters',
+        'bookUpdated' => 'onBookUpdated',
     ];
 
     public function mount($bookId, CookButlerService $cookButlerService)
@@ -705,6 +707,19 @@ class AvailableRecipesTable extends Component
     public function applyFilters()
     {
         $this->resetAndReload();
+        // Also update the book if the checkbox is checked
+        if ($this->updateBookWithFilters) {
+            $book = Book::find($this->bookId);
+            if ($book) {
+                $filters = $this->getFilters();
+                $patient = $this->getBookPatient();
+                \App\Jobs\CreateBookJob::dispatch($patient, null, $this->bookId);
+                // Remove local notification here; rely on job notification
+                // Listen for bookUpdated event to refresh UI
+                $this->updateBookWithFilters = false;
+                $this->dispatch('bookUpdated', $this->bookId);
+            }
+        }
         return true;
     }
 
@@ -731,6 +746,24 @@ class AvailableRecipesTable extends Component
             ->body(__('Das aktuelle Filter-Set wurde im Benutzerprofil gespeichert.'))
             ->success()
             ->send();
+        // If updateBookWithFilters is checked, update the book
+        if ($this->updateBookWithFilters) {
+            $book = Book::find($this->bookId);
+            if ($book) {
+                $filters = $this->getFilters();
+                $patient = $this->getBookPatient();
+                \App\Jobs\CreateBookJob::dispatch($patient, null, $this->bookId);
+                // Remove local notification here; rely on job notification
+                // Listen for bookUpdated event to refresh UI
+                $this->updateBookWithFilters = false;
+                $this->dispatch('bookUpdated', $this->bookId);
+            }
+        }
+    }
+
+    public function onBookUpdated()
+    {
+        $this->refreshRecipes();
     }
 
     // Utility function for hardening json_decode for all recipe fields

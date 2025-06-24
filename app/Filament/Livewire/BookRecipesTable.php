@@ -21,6 +21,7 @@ class BookRecipesTable extends Component
         // 'recipeAddedToFavorites' => 'refreshRecipes',
         // 'recipeRemovedFromFavorites' => 'refreshRecipes',
         'recipeRemovedFromFavorites' => 'updateFavoriteStatus',
+        'bookUpdated' => 'refreshRecipes',
     ];
 
     public function mount($bookId)
