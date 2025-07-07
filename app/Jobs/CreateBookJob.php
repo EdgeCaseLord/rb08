@@ -25,13 +25,15 @@ class CreateBookJob implements ShouldQueue
     public $tries = 3;
     public $recipeIds;
     protected $bookId;
+    protected $filters;
 
-    public function __construct(User $patient, array $recipeIds = null, $bookId = null)
+    public function __construct(User $patient, array $recipeIds = null, $bookId = null, array $filters = null)
     {
         $this->patient = $patient;
         $this->uniqueId = 'create_book_' . $patient->id . '_' . now()->timestamp;
         $this->recipeIds = $recipeIds;
         $this->bookId = $bookId;
+        $this->filters = $filters;
     }
 
     public function uniqueId()
@@ -126,25 +128,9 @@ class CreateBookJob implements ShouldQueue
                     'recipe_ids' => $this->recipeIds,
                 ]);
             } else {
-                Log::debug('CreateBookJob: No provided recipes, using fallback logic', [
+                Log::debug('CreateBookJob: No provided recipes, fetching from CookButlerService using patient filters', [
                     'patient_id' => $patient->id,
                 ]);
-                $recipes = \App\Models\Recipe::whereHas('books', function($q) use ($patient) {
-                    $q->where('patient_id', $patient->id);
-                })->get();
-                Log::info('CreateBookJob: Fetched recipes for patient', [
-                    'patient_id' => $patient->id,
-                    'recipe_count' => $recipes->count(),
-                    'recipe_ids' => $recipes->pluck('id_recipe')->toArray(),
-                ]);
-                if ($recipes->isEmpty()) {
-                    Log::warning('No recipes found for patient, skipping book recipe attachment', [
-                        'patient_id' => $patient->id,
-                        'book_id' => $book->id,
-                    ]);
-                    return;
-                }
-                // Get lab settings for recipe limits
                 $authUser = Auth::user();
                 if ($authUser instanceof \App\Models\User && method_exists($authUser, 'isLab') && $authUser->isLab()) {
                     $lab = $authUser;
@@ -157,56 +143,37 @@ class CreateBookJob implements ShouldQueue
                     'dessert' => 5,
                 ];
                 $recipesPerCourse = $lab ? ($lab->settings['recipes_per_course'] ?? $defaultRecipesPerCourse) : $defaultRecipesPerCourse;
-                $totalRecipeLimit = array_sum($recipesPerCourse);
-                Log::debug('CreateBookJob: Recipes per course', [
-                    'recipes_per_course' => $recipesPerCourse,
-                    'total_recipe_limit' => $totalRecipeLimit,
-                ]);
-                // Group recipes by course
-                $recipesByCourse = [];
-                foreach ($recipes as $recipe) {
-                    if ($recipe && $recipe->course) {
-                        $recipesByCourse[$recipe->course][] = $recipe;
-                    }
-                }
-                Log::debug('CreateBookJob: Grouped recipes by course', [
-                    'recipes_by_course' => array_map(function($r) { return collect($r)->pluck('id_recipe')->toArray(); }, $recipesByCourse),
-                ]);
-                // Select random recipes within limits for each course
+                $service = new \App\Services\CookButlerService();
                 $selectedRecipes = [];
                 foreach ($recipesPerCourse as $course => $limit) {
-                    $courseRecipes = $recipesByCourse[$course] ?? [];
-                    if (!empty($courseRecipes)) {
-                        $selected = collect($courseRecipes)->shuffle()->take($limit)->all();
-                        Log::debug('CreateBookJob: Selected recipes for course', [
-                            'course' => $course,
-                            'selected_recipe_ids' => collect($selected)->pluck('id_recipe')->toArray(),
-                        ]);
-                        $selectedRecipes = array_merge($selectedRecipes, $selected);
+                    $courseFilter = ['filterCourse' => [$course]];
+                    $requestFilters = array_merge($this->filters ?? [], $courseFilter);
+                    $result = $service->fetchAvailableRecipesForPatient($patient, $requestFilters, $limit);
+                    $recipeIds = $result['recipe_ids'] ?? [];
+                    Log::debug('CreateBookJob: CookButlerService fetched recipes', [
+                        'course' => $course,
+                        'recipe_ids' => $recipeIds,
+                        'limit' => $limit,
+                    ]);
+                    foreach ($recipeIds as $recipeId) {
+                        try {
+                            $book->addRecipe($recipeId);
+                        } catch (\Exception $e) {
+                            Log::error('Failed to add recipe to book', [
+                                'book_id' => $book->id,
+                                'patient_id' => $patient->id,
+                                'recipe_id' => $recipeId,
+                                'error' => $e->getMessage(),
+                            ]);
+                        }
                     }
+                    $selectedRecipes = array_merge($selectedRecipes, $recipeIds);
                 }
-                // Attach selected recipes to the book
-                foreach ($selectedRecipes as $recipe) {
-                    try {
-                        Log::debug('CreateBookJob: Adding selected recipe to book', [
-                            'book_id' => $book->id,
-                            'recipe_id' => $recipe->id_recipe,
-                        ]);
-                        $book->addRecipe($recipe->id_recipe);
-                    } catch (\Exception $e) {
-                        Log::error('Failed to add recipe to book', [
-                            'book_id' => $book->id,
-                            'patient_id' => $patient->id,
-                            'recipe_id' => $recipe->id_recipe,
-                            'error' => $e->getMessage(),
-                        ]);
-                    }
-                }
-                Log::info('CreateBookJob: Assigned fallback recipes to book', [
+                Log::info('CreateBookJob: Assigned CookButlerService recipes to book', [
                     'book_id' => $book->id,
                     'patient_id' => $patient->id,
                     'recipe_count' => count($selectedRecipes),
-                    'recipe_ids' => collect($selectedRecipes)->pluck('id_recipe')->toArray(),
+                    'recipe_ids' => $selectedRecipes,
                     'recipes_per_course' => $recipesPerCourse,
                 ]);
             }

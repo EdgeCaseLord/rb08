@@ -79,11 +79,24 @@ class CookButlerService
     {
         $qParts = [];
         if (!empty($filters['title'])) {
-            $qParts[] = $filters['title'];
+            if (is_array($filters['title'])) {
+                foreach ($filters['title'] as $titlePart) {
+                    if (is_string($titlePart)) {
+                        $qParts[] = trim($titlePart);
+                    }
+                }
+            } elseif (is_string($filters['title'])) {
+                $qParts[] = trim($filters['title']);
+            }
         }
         $ingredientQuery = '';
         if (!empty($filters['ingredients'])) {
-            $ingredientQuery = preg_replace('/[\s,]+/', ' ', $filters['ingredients']);
+            if (is_array($filters['ingredients'])) {
+                $ingredientQuery = implode(' ', array_map('strval', $filters['ingredients']));
+            } else {
+                $ingredientQuery = $filters['ingredients'];
+            }
+            $ingredientQuery = preg_replace('/[\s,]+/', ' ', $ingredientQuery);
             $ingredientQuery = preg_replace('/\s*\/\s*/', ' || ', $ingredientQuery); // OR
             $ingredientQuery = preg_replace('/\s*-([\wäöüÄÖÜß]+)/u', ' -- $1', $ingredientQuery); // NOT
             $ingredientQuery = trim($ingredientQuery);
@@ -118,15 +131,6 @@ class CookButlerService
         return array_unique(array_merge($patientAllergens, $filterAllergens));
     }
 
-    private function mapDietFilters($diets) {
-        if (!is_array($diets)) return $diets;
-        return array_map(function($diet) {
-            if ($diet === 'ohne Fruktose') return $this->dietSlugMap['ohne Fruktose'];
-            if ($diet === 'fruktose') return $this->dietSlugMap['fruktose'];
-            return $this->dietSlugMap[$diet] ?? $diet;
-        }, $diets);
-    }
-
     private function normalizeFilterArray($arr) {
         if (is_array($arr) && array_values($arr) === $arr) {
             // Numeric array, treat as values
@@ -155,6 +159,10 @@ class CookButlerService
             }
             $data['filters']['allergen'] = $mergedAllergens;
         }
+        // Ensure allergene is always a numerically indexed array for JSON
+        if (isset($data['filters']['allergen']) && is_array($data['filters']['allergen'])) {
+            $data['filters']['allergen'] = array_values($data['filters']['allergen']);
+        }
 
         Log::debug('CookButler API request debug', [
             'jwt' => $jwt,
@@ -168,7 +176,9 @@ class CookButlerService
 
         Log::debug('CookButler API response', [
             'status' => $response->status(),
-            'body' => $response->body(),
+            // Only log recipe IDs if present
+            'recipe_ids' => ($response->json('data.recipes') ? array_column($response->json('data.recipes'), 'id') : null),
+            'recipe_count' => ($response->json('data.recipes') ? count($response->json('data.recipes')) : null),
         ]);
 
         if (!$response->successful()) {
@@ -213,6 +223,7 @@ class CookButlerService
                 'filterCountry' => 'country',
                 'filterCourse' => 'courses',
                 'filterDiets' => 'diets',
+                'filterSubstances' => 'substances',
                 'filterDifficulty' => 'difficulty',
                 'filterMaxTime' => 'max_time',
             ];
@@ -229,15 +240,18 @@ class CookButlerService
                 $filterAllergens = $merged['allergen'];
             }
             $allAllergens = array_unique(array_merge($patientAllergens, $filterAllergens));
+            // Remove any boolean values from the allergen list
+            $allAllergens = array_filter($allAllergens, function($v) { return is_string($v) && $v !== ''; });
             if (!empty($allAllergens)) {
-                $merged['allergen'] = $allAllergens;
+                $merged['allergen'] = array_values($allAllergens);
+                $merged['allergen'] = $merged['allergen']; // for API naming
             }
             // Always set the course filter
             $merged['courses'] = [$course];
             // Build q from title and ingredients only
             $q = $this->buildSearchQuery($merged);
             // Normalize all filter arrays before mapping diets and building $apiFilters
-            foreach (['diets','allergen','category','country','courses','difficulty','max_time'] as $filterKey) {
+            foreach (['diets','substances','allergen','category','country','courses','difficulty','max_time'] as $filterKey) {
                 if (!empty($merged[$filterKey])) {
                     $merged[$filterKey] = $this->normalizeFilterArray($merged[$filterKey]);
                 }
@@ -269,10 +283,12 @@ class CookButlerService
                 $apiFilters['difficulty'] = (array)$merged['difficulty'];
             }
             if (!empty($merged['diets'])) {
-                $merged['diets'] = $this->mapDietFilters($merged['diets']);
                 $apiFilters['diet'] = (array)$merged['diets'];
             }
             if (!empty($merged['allergen'])) {
+                $merged['allergen'] = array_filter($merged['allergen'], function($v) {
+                    return $v !== 'biologisch' && $v !== 'histamin-free';
+                });
                 $apiFilters['allergen'] = (array)$merged['allergen'];
             }
             if (!empty($merged['category'])) {
@@ -283,6 +299,9 @@ class CookButlerService
             }
             if (!empty($merged['max_time'])) {
                 $apiFilters['max_time'] = (string)$merged['max_time'][0];
+            }
+            if (!empty($merged['substances'])) {
+                $apiFilters['substances'] = (array)$merged['substances'];
             }
             if (!empty($apiFilters)) {
                 $searchData['filters'] = $apiFilters;
@@ -409,8 +428,9 @@ class CookButlerService
      */
     public function fetchAvailableRecipesForPatient(User $patient, array $filters = [], int $limit = 10, int $offset = 0): array
     {
-        // Merge patient settings with form filters, form filters take precedence
-        $prefs = $this->getUserFilterPreferences($patient);
+        // Merge patient settings with form filters, using the dedicated recursive method
+        $merged = $this->mergeUserPreferencesWithFilters($patient, $filters);
+
         // Map UI keys to API keys
         $map = [
             'filterTitle' => 'title',
@@ -420,39 +440,29 @@ class CookButlerService
             'filterCountry' => 'country',
             'filterCourse' => 'courses',
             'filterDiets' => 'diets',
+            'filterSubstances' => 'substances',
             'filterDifficulty' => 'difficulty',
             'filterMaxTime' => 'max_time',
         ];
-        $merged = [];
+
+        $apiReadyFilters = [];
         foreach ($map as $from => $to) {
-            if (isset($prefs[$from]) && $prefs[$from] !== '' && $prefs[$from] !== [] && $prefs[$from] !== null) {
-                $merged[$to] = $prefs[$from];
+            if (isset($merged[$from]) && !empty($merged[$from])) {
+                $apiReadyFilters[$to] = $merged[$from];
             }
         }
-        foreach ($map as $from => $to) {
-            $val = $filters[$from] ?? null;
-            if (is_array($val)) {
-                // If associative (checkbox style), convert to keys; if already list of values, keep as-is
-                if (array_values($val) !== $val) {
-                    $val = array_keys(array_filter($val));
-                } else {
-                    $val = array_values(array_filter($val, fn($v) => $v !== false && $v !== null && $v !== ''));
-                }
-            }
-            if ($val !== '' && $val !== [] && $val !== null) {
-                $merged[$to] = $val;
-            }
-        }
+
         // Allergen logic: always combine patient allergens (pro_*) and filter allergens
         $patientAllergens = $this->getPatientAllergenCodes($patient);
-        $filterAllergens = [];
-        if (isset($merged['allergen']) && is_array($merged['allergen'])) {
-            $filterAllergens = $merged['allergen'];
-        }
+        $filterAllergens = $apiReadyFilters['allergen'] ?? [];
+
         $allAllergens = array_unique(array_merge($patientAllergens, $filterAllergens));
         if (!empty($allAllergens)) {
-            $merged['allergen'] = $allAllergens;
+            $apiReadyFilters['allergen'] = array_values($allAllergens);
+            // API expects 'allergen', not 'allergene'
+            $apiReadyFilters['allergen'] = $apiReadyFilters['allergen'];
         }
+
         // Handle offset and randomize_offset separately
         $apiOffset = isset($filters['offset']) ? (int) $filters['offset'] : 0;
         $randomizeOffset = isset($filters['randomize_offset']) ? (bool) $filters['randomize_offset'] : false;
@@ -468,13 +478,13 @@ class CookButlerService
                     'limit' => 1,
                     'offset' => 0,
                 ];
-                if (!empty($apiFilters)) {
-                    $searchDataForCount['filters'] = $apiFilters;
+                if (!empty($apiReadyFilters)) {
+                    $searchDataForCount['filters'] = $apiReadyFilters;
                 }
                 if (!empty($q)) {
                     $searchDataForCount['q'] = $q;
                 }
-                $countData = $this->makeApiRequest('POST', $this->searchEndpoint, $searchDataForCount, $patient, !empty($apiFilters['allergen']) ? (array)$apiFilters['allergen'] : []);
+                $countData = $this->makeApiRequest('POST', $this->searchEndpoint, $searchDataForCount, $patient, !empty($apiReadyFilters['allergen']) ? (array)$apiReadyFilters['allergen'] : []);
                 $total = $countData['total']['value'] ?? null;
             } catch (\Exception $e) {
                 \Illuminate\Support\Facades\Log::warning('CookButlerService: Could not fetch total for random offset', ['error' => $e->getMessage()]);
@@ -487,7 +497,7 @@ class CookButlerService
         }
         Log::info('fetchAvailableRecipesForPatient called', [
             'patient_id' => $patient->id,
-            'filters' => $merged,
+            'filters' => $apiReadyFilters,
             'limit' => $limit,
             'offset' => $apiOffset,
             'randomize_offset' => $randomizeOffset,
@@ -496,22 +506,37 @@ class CookButlerService
             // Log raw filters and merged filters for debugging
             Log::debug('CookButlerService: raw filters received', ['filters' => $filters]);
             Log::debug('CookButlerService: merged filters after merging', ['merged' => $merged]);
+            Log::debug('CookButlerService: API-ready filters after mapping', ['apiReadyFilters' => $apiReadyFilters]);
+
             // Normalize all filter arrays before mapping diets and building $apiFilters
             foreach (['diets','allergen','category','country','courses','difficulty','max_time'] as $filterKey) {
-                if (!empty($merged[$filterKey])) {
-                    $merged[$filterKey] = $this->normalizeFilterArray($merged[$filterKey]);
+                if (!empty($apiReadyFilters[$filterKey])) {
+                    $apiReadyFilters[$filterKey] = $this->normalizeFilterArray($apiReadyFilters[$filterKey]);
                 }
             }
-            // After normalization, add this before mapping diets:
-            if (!empty($merged['diets'])) {
-                // If diets is a numeric array, map indices to keys
-                if (is_array($merged['diets']) && isset($merged['diets'][0]) && is_numeric($merged['diets'][0])) {
-                    $merged['diets'] = array_map(fn($i) => $this->dietIndexToKey[$i] ?? $i, $merged['diets']);
-                }
-                // Remove any numeric indices (should now be string keys)
-                $merged['diets'] = array_filter($merged['diets'], fn($v) => is_string($v) && $v !== '' && !is_numeric($v));
-                Log::debug('CookButlerService: diets after index-to-key normalization', ['diets' => $merged['diets']]);
+            // Remove any non-string values from allergen array (e.g., true, null)
+            if (!empty($apiReadyFilters['allergen'])) {
+                $apiReadyFilters['allergen'] = array_values(array_filter($apiReadyFilters['allergen'], fn($v) => is_string($v) && $v !== '' && !is_numeric($v)));
             }
+
+            // Robust diet normalization: always flatten to string keys, then map
+            if (!empty($apiReadyFilters['diets'])) {
+                // If associative (key=>true/false), convert to keys where value is true
+                if (array_values($apiReadyFilters['diets']) !== $apiReadyFilters['diets']) {
+                    $apiReadyFilters['diets'] = array_keys(array_filter($apiReadyFilters['diets']));
+                }
+                // Remove any numeric indices, keep only non-empty strings
+                $apiReadyFilters['diets'] = array_filter($apiReadyFilters['diets'], fn($v) => is_string($v) && $v !== '' && !is_numeric($v));
+                // Deduplicate
+                $apiReadyFilters['diets'] = array_values(array_unique($apiReadyFilters['diets']));
+                Log::debug('CookButlerService: diets after robust normalization', ['diets' => $apiReadyFilters['diets']]);
+            }
+
+            // Robust substance normalization: support both array and associative object for API
+            if (!empty($apiReadyFilters['substances']) && is_array($apiReadyFilters['substances'])) {
+                $finalApiFilters['substances'] = $apiReadyFilters['substances'];
+            }
+
             $searchData = [
                 'language' => 'de-de',
                 'searchtype' => 'extended',
@@ -519,59 +544,65 @@ class CookButlerService
                 'limit' => min($limit, 100),
                 'offset' => $apiOffset,
             ];
-            $apiFilters = [];
-            // Map all supported filters to API filters array
-            if (!empty($merged['courses'])) {
-                $apiFilters['course'] = (array)$merged['courses'];
+
+            $finalApiFilters = [];
+            if (!empty($apiReadyFilters['courses'])) {
+                $finalApiFilters['course'] = (array)$apiReadyFilters['courses'];
             }
-            if (!empty($merged['difficulty'])) {
-                $apiFilters['difficulty'] = (array)$merged['difficulty'];
+            if (!empty($apiReadyFilters['difficulty'])) {
+                $finalApiFilters['difficulty'] = (array)$apiReadyFilters['difficulty'];
             }
-            if (!empty($merged['diets'])) {
-                $merged['diets'] = $this->mapDietFilters($merged['diets']);
-                $apiFilters['diet'] = (array)$merged['diets'];
+            // Only set 'diet' if 'diets' is present and not empty after mapping
+            if (!empty($apiReadyFilters['diets'])) {
+                $apiReadyFilters['diets'] = $this->normalizeFilterArray($apiReadyFilters['diets']);
+                if (!empty($apiReadyFilters['diets'])) {
+                    $finalApiFilters['diet'] = (array)$apiReadyFilters['diets'];
+                }
             }
-            if (!empty($merged['allergen'])) {
-                $apiFilters['allergen'] = (array)$merged['allergen'];
+            // Always set 'allergen' if present
+            if (!empty($apiReadyFilters['allergen'])) {
+                $apiReadyFilters['allergen'] = array_filter($apiReadyFilters['allergen'], function($v) {
+                    return $v !== 'biologisch' && $v !== 'histamin-free';
+                });
+                $finalApiFilters['allergen'] = (array)$apiReadyFilters['allergen'];
             }
-            if (!empty($merged['category'])) {
-                $apiFilters['category'] = (array)$merged['category'];
+            if (!empty($apiReadyFilters['category'])) {
+                $finalApiFilters['category'] = (array)$apiReadyFilters['category'];
             }
-            if (!empty($merged['country'])) {
-                $apiFilters['country'] = (array)$merged['country'];
+            if (!empty($apiReadyFilters['country'])) {
+                $finalApiFilters['country'] = (array)$apiReadyFilters['country'];
             }
-            if (!empty($merged['max_time'])) {
-                $apiFilters['max_time'] = (string)$merged['max_time'][0];
+            if (!empty($apiReadyFilters['max_time'])) {
+                $finalApiFilters['max_time'] = (string)$apiReadyFilters['max_time'][0];
             }
+            // FIX: Always set 'substances' if present
+            if (!empty($apiReadyFilters['substances']) && is_array($apiReadyFilters['substances'])) {
+                $finalApiFilters['substances'] = $apiReadyFilters['substances'];
+            }
+
             // Build q from title and ingredients only (string replacements handled in buildSearchQuery)
-            $q = $this->buildSearchQuery($merged);
+            $q = $this->buildSearchQuery($apiReadyFilters);
             if (!empty($q)) {
                 $searchData['q'] = $q;
             }
-            if (!empty($apiFilters)) {
-                $searchData['filters'] = $apiFilters;
-            }
-            // Warn if any filter is not mapped (do not treat offset/randomize_offset as filters)
-            $handled = ['courses','difficulty','ingredients','diets','allergen','category','country','max_time','title','q'];
-            foreach ($merged as $key => $val) {
-                if (!in_array($key, $handled)) {
-                    Log::warning('CookButlerService: Unhandled filter key in fetchAvailableRecipesForPatient', ['key' => $key, 'value' => $val]);
-                }
+            if (!empty($finalApiFilters)) {
+                $searchData['filters'] = $finalApiFilters;
             }
 
             Log::debug('CookButlerService: searchData payload before API request', ['searchData' => $searchData]);
 
             Log::info('CookButler available recipes search - about to make API request', [
                 'patient_id' => $patient->id,
-                'filters' => $merged,
-                'apiFilters' => $apiFilters,
+                'filters' => $apiReadyFilters,
+                'apiFilters' => $finalApiFilters,
                 'searchData' => $searchData,
             ]);
 
-            $data = $this->makeApiRequest('POST', $this->searchEndpoint, $searchData, $patient, !empty($apiFilters['allergen']) ? (array)$apiFilters['allergen'] : []);
+            $data = $this->makeApiRequest('POST', $this->searchEndpoint, $searchData, $patient, !empty($finalApiFilters['allergen']) ? (array)$finalApiFilters['allergen'] : []);
             Log::info('CookButler available recipes search - API response', [
                 'patient_id' => $patient->id,
-                'response_data' => $data,
+                'recipe_ids' => (isset($data['recipes']) ? array_column($data['recipes'], 'id') : null),
+                'recipe_count' => (isset($data['recipes']) ? count($data['recipes']) : null),
             ]);
             $recipes = $data['recipes'] ?? [];
             $total = $data['total']['value'] ?? 0;
@@ -608,20 +639,10 @@ class CookButlerService
             }
             // \Illuminate\Support\Facades\Log::debug('Course counts (filtered, not stored)', ['starter' => $starter, 'main_course' => $main_course, 'dessert' => $dessert]);
 
-            // Do NOT update $patient->recipe_totals here. This value should only be set by the analysis import (AssignRecipesJob).
-            // if ($patient) {
-            //     $recipeTotals = $patient->recipe_totals ?? [];
-            //     $recipeTotals['starter'] = $starter;
-            //     $recipeTotals['main_course'] = $main_course;
-            //     $recipeTotals['dessert'] = $dessert;
-            //     $patient->recipe_totals = $recipeTotals;
-            //     $patient->save();
-            // }
-
             if (empty($recipes)) {
                 Log::warning('Keine verfügbaren Rezepte von der Such-API zurückgegeben', [
                     'patient_id' => $patient->id,
-                    'filters' => $merged,
+                    'filters' => $apiReadyFilters,
                     'query' => $searchData['q'] ?? '',
                     'api_response' => $data,
                 ]);
@@ -636,7 +657,7 @@ class CookButlerService
         } catch (\Exception $e) {
             Log::error('Fehler beim Abrufen von verfügbaren Rezepten', [
                 'patient_id' => $patient->id,
-                'filters' => $merged,
+                'filters' => $apiReadyFilters,
                 'error' => $e->getMessage(),
             ]);
             return ['recipe_ids' => [], 'total' => ['value' => 0]];
@@ -687,26 +708,7 @@ class CookButlerService
         if (!is_array($settings)) {
             return [];
         }
-        $prefs = $settings['recipe_filter_set'] ?? [];
-        // Map UI keys to API keys
-        $map = [
-            'filterTitle' => 'title',
-            'filterIngredients' => 'ingredients',
-            'filterAllergen' => 'allergen',
-            'filterCategory' => 'category',
-            'filterCountry' => 'country',
-            'filterCourse' => 'courses',
-            'filterDiets' => 'diets',
-            'filterDifficulty' => 'difficulty',
-            'filterMaxTime' => 'max_time',
-        ];
-        $result = [];
-        foreach ($map as $from => $to) {
-            if (isset($prefs[$from]) && $prefs[$from] !== '' && $prefs[$from] !== [] && $prefs[$from] !== null) {
-                $result[$to] = $prefs[$from];
-            }
-        }
-        return $result;
+        return $settings['recipe_filter_set'] ?? [];
     }
 
     /**
@@ -719,7 +721,31 @@ class CookButlerService
     public function mergeUserPreferencesWithFilters(User $user, array $filters = []): array
     {
         $prefs = $this->getUserFilterPreferences($user);
-        // Provided filters take precedence
-        return array_merge($prefs, $filters);
+
+        // Special handling for filterDiets: if provided in $filters, use it directly
+        if (isset($filters['filterDiets'])) {
+            $prefs['filterDiets'] = $filters['filterDiets'];
+        }
+
+        // Use a recursive merge for all other filters
+        return array_merge_recursive($prefs, $filters);
+    }
+
+    /**
+     * Ensure all given recipe IDs exist locally, fetching missing ones in a batch call.
+     * @param array $recipeIds
+     * @param User|null $patient
+     */
+    public function ensureRecipesExist(array $recipeIds, $patient = null): void
+    {
+        $existing = \App\Models\Recipe::whereIn('id_external', $recipeIds)
+            ->orWhereIn('id_recipe', $recipeIds)
+            ->pluck('id_external', 'id_recipe')
+            ->all();
+        $existingIds = array_unique(array_merge(array_keys($existing), array_values($existing)));
+        $missing = array_diff($recipeIds, $existingIds);
+        if (!empty($missing)) {
+            $this->fetchRecipeDetailsBatch(array_values($missing), $patient);
+        }
     }
 }

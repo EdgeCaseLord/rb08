@@ -8,6 +8,7 @@ use Spatie\LaravelPdf\Facades\Pdf;
 use App\Http\Controllers\BookPdfController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\BookController; // Add this
+use App\Http\Controllers\PdfController;
 
 Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
@@ -74,3 +75,5 @@ Route::middleware(['auth'])->group(function () {
         return $real_path ?: 'Path not resolved';
     });
 });
+
+Route::get('/books/{book}/pdf', [PdfController::class, 'downloadBook'])->name('book.pdf');

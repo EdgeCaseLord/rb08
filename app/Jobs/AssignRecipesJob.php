@@ -80,20 +80,10 @@ class AssignRecipesJob implements ShouldQueue
             }
 
             $service = new CookButlerService();
-            $allRecipeIds = [];
             $courses = ['starter', 'main_course', 'dessert'];
 
             foreach ($patients as $patient) {
-                // First recheck existing recipe assignments
-                // $this->recheckExistingRecipeAssignments($patient);
-
-                Log::info('Verarbeite Patient für Rezeptabholung', [
-                    'patient_id' => $patient->id,
-                    'allergens' => $patient->allergens->pluck('name')->toArray(),
-                    'settings' => $patient->settings,
-                    'recipe_totals' => $patient->recipe_totals,
-                ]);
-
+                $perCourseRecipeIds = [];
                 foreach ($courses as $course) {
                     try {
                         $defaultRecipesPerCourse = [
@@ -110,6 +100,10 @@ class AssignRecipesJob implements ShouldQueue
                         $response = $service->fetchRecipesForPatientByCourse($patient, $course, $limit, $offset);
                         $recipeIds = $response['recipe_ids'] ?? [];
 
+                        // Only keep up to $limit recipes per course
+                        $recipeIds = array_slice($recipeIds, 0, $limit);
+                        $perCourseRecipeIds[$course] = $recipeIds;
+
                         $totalRecipes = $response['total']['value'] ?? $totalRecipes;
                         if ($totalRecipes > 0) {
                             $recipeTotals = $patient->recipe_totals;
@@ -124,7 +118,6 @@ class AssignRecipesJob implements ShouldQueue
                         }
 
                         if (!empty($recipeIds)) {
-                            $allRecipeIds = array_merge($allRecipeIds, $recipeIds);
                             Log::info('Rezepte für Gang abgerufen', [
                                 'patient_id' => $patient->id,
                                 'gang' => $course,
@@ -146,45 +139,34 @@ class AssignRecipesJob implements ShouldQueue
                         ]);
                     }
                 }
-            }
-
-            $allRecipeIds = array_unique($allRecipeIds);
-            if (empty($allRecipeIds)) {
-                Log::warning('Keine Rezepte für Patienten abgerufen');
-                return 0;
-            }
-
-            // Fetch recipe details in batch
-            $recipeDetails = $service->fetchRecipeDetailsBatch($allRecipeIds);
-            if (empty($recipeDetails)) {
-                Log::error('Keine Rezeptdetails abgerufen', ['rezept_ids' => $allRecipeIds]);
-                return 0;
-            }
-
-            // Assign all fetched recipes to each patient (no more filtering)
-            foreach ($patients as $patient) {
-                try {
-                    $this->assignRecipesToPatient($patient, $recipeDetails);
-                    // Collect recipe IDs to pass to CreateBookJob
-                    $recipeIds = [];
-                    foreach ($recipeDetails as $recipeDetail) {
-                        $recipe = \App\Models\Recipe::where('id_external', $recipeDetail['id'])->first();
-                        if ($recipe) {
-                            $recipeIds[] = $recipe->id_recipe;
-                        }
-                    }
-                    CreateBookJob::dispatch($patient, $recipeIds)->onQueue('default');
-                    Log::info('CreateBookJob für Patient gestartet', [
-                        'patient_id' => $patient->id,
-                        'rezept_anzahl' => count($recipeDetails),
-                        'recipe_ids' => $recipeIds,
-                    ]);
-                } catch (\Exception $e) {
-                    Log::error('Error processing recipes for patient', [
-                        'patient_id' => $patient->id,
-                        'error' => $e->getMessage(),
-                    ]);
+                // Merge all per-course recipe IDs for this patient
+                $patientRecipeIds = array_unique(array_merge(...array_values($perCourseRecipeIds)));
+                if (empty($patientRecipeIds)) {
+                    Log::warning('Keine Rezepte für Patient abgerufen', ['patient_id' => $patient->id]);
+                    continue;
                 }
+                // Fetch recipe details for this patient only
+                $recipeDetails = $service->fetchRecipeDetailsBatch($patientRecipeIds);
+                if (empty($recipeDetails)) {
+                    Log::error('Keine Rezeptdetails abgerufen', ['patient_id' => $patient->id, 'rezept_ids' => $patientRecipeIds]);
+                    continue;
+                }
+                // Assign only this patient's recipes to their book
+                $this->assignRecipesToPatient($patient, $recipeDetails);
+                // Collect recipe IDs to pass to CreateBookJob
+                $recipeIds = [];
+                foreach ($recipeDetails as $recipeDetail) {
+                    $recipe = \App\Models\Recipe::where('id_external', $recipeDetail['id'])->first();
+                    if ($recipe) {
+                        $recipeIds[] = $recipe->id_recipe;
+                    }
+                }
+                CreateBookJob::dispatch($patient, $recipeIds)->onQueue('default');
+                Log::info('CreateBookJob für Patient gestartet', [
+                    'patient_id' => $patient->id,
+                    'rezept_anzahl' => count($recipeIds),
+                    'recipe_ids' => $recipeIds,
+                ]);
             }
 
             Log::info('AssignRecipesJob abgeschlossen', ['patient_anzahl' => $patients->count()]);

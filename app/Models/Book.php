@@ -39,11 +39,36 @@ class Book extends Model
         return $this->belongsToMany(Recipe::class, 'book_recipe', 'book_id', 'recipe_id')->withTimestamps();
     }
 
-    public function addRecipe(int $recipeId): void
+    /**
+     * Add one or more recipes to the book, ensuring they exist locally (batch fetch if needed).
+     * @param int|array $recipeIds
+     */
+    public function addRecipe($recipeIds): void
     {
-        $this->recipes()->syncWithoutDetaching([$recipeId]);
+        $ids = is_array($recipeIds) ? $recipeIds : [$recipeIds];
+        // Ensure all recipes exist locally (batch fetch if needed)
+        $service = app(\App\Services\CookButlerService::class);
+        $patient = $this->patient;
+        $service->ensureRecipesExist($ids, $patient);
+        // Map all input IDs (API or local) to local id_recipe
+        $localIds = collect($ids)
+            ->map(function($id) {
+                // Try as local PK
+                $recipe = \App\Models\Recipe::find($id);
+                if ($recipe) return $recipe->id_recipe;
+                // Try as API id_external
+                $recipe = \App\Models\Recipe::where('id_external', $id)->first();
+                return $recipe ? $recipe->id_recipe : null;
+            })
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+        if (!empty($localIds)) {
+            $this->recipes()->syncWithoutDetaching($localIds);
+        }
         $updatedRecipes = $this->recipes()->pluck('id_recipe')->toArray();
-        Log::info('After adding recipe, current recipes', [
+        \Log::info('After adding recipe(s), current recipes', [
             'book_id' => $this->id,
             'recipe_count' => count($updatedRecipes),
             'recipe_ids' => $updatedRecipes,
@@ -54,11 +79,32 @@ class Book extends Model
     {
         $this->recipes()->detach($recipeId);
         $updatedRecipes = $this->recipes()->pluck('id_recipe')->toArray();
-        Log::info('After removing recipe, current recipes', [
+        \Log::info('After removing recipe, current recipes', [
             'book_id' => $this->id,
             'recipe_count' => count($updatedRecipes),
             'recipe_ids' => $updatedRecipes,
         ]);
+        // Remove recipe if not referenced by any book or as a favourite
+        $recipe = \App\Models\Recipe::find($recipeId);
+        if ($recipe) {
+            $bookCount = $recipe->books()->count();
+            // Check for favourites in user settings
+            $isFavourite = false;
+            $users = \App\Models\User::whereNotNull('settings')->get();
+            foreach ($users as $user) {
+                $settings = is_string($user->settings) ? json_decode($user->settings, true) : $user->settings;
+                if (isset($settings['favorites']) && is_array($settings['favorites']) && (in_array($recipe->id_external, $settings['favorites']) || in_array($recipe->id_recipe, $settings['favorites']))) {
+                    $isFavourite = true;
+                    break;
+                }
+            }
+            if ($bookCount === 0 && !$isFavourite) {
+                $recipe->delete();
+                \Log::info('Recipe deleted as it is no longer referenced', [
+                    'recipe_id' => $recipeId
+                ]);
+            }
+        }
     }
 
     public function getRecipesPerCourse(): array

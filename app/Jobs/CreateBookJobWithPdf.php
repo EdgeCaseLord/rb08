@@ -170,10 +170,17 @@ class CreateBookJobWithPdf implements ShouldQueue
                 return null;
             }
 
-            $pdfPath = "books/book-{$book->id}-rezepte.pdf";
+            // Use sample_code from analysis if available
+            $analysis = $book->analysis;
+            if (!$analysis && $book->patient) {
+                $analysis = \App\Models\Analysis::where('patient_id', $book->patient->id)->latest()->first();
+            }
+            $sampleCode = $analysis?->sample_code;
+            $pdfFileName = $sampleCode ? ($sampleCode . '_RB.pdf') : "book-{$book->id}-rezepte.pdf";
+            $pdfPath = "books/" . $pdfFileName;
             Pdf::view('pdf.book', ['book' => $book, 'recipes' => $recipes])
                 ->format('a4')
-                ->name("buch-{$book->id}-rezepte.pdf")
+                ->name($pdfFileName)
                 ->withBrowsershot(function (Browsershot $browsershot) {
                     $browsershot->noSandbox();
                 })
@@ -208,7 +215,7 @@ class CreateBookJobWithPdf implements ShouldQueue
             'subject' => $subject,
             'body' => $this->getEmailBody($editLink, $patient->name),
             'pdfPath' => Storage::path($pdfPath),
-            'pdfName' => "buch-{$book->id}-rezepte.pdf",
+            'pdfName' => basename($pdfPath),
         ];
 
         // Log email content

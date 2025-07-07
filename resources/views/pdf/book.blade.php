@@ -113,19 +113,22 @@
         .toc-list {
             list-style: none;
             padding-left: 0;
-            width: 66.67%;
+            width: 100%;
             margin: 0 auto;
             background: #f9fafb;
             border-radius: 8pt;
             padding: 6pt;
+            column-count: 2;
+            column-gap: 40pt;
         }
         .toc-item {
             margin-bottom: 2pt;
-            font-size: 8pt;
-            line-height: 1.2;
+            font-size: 9pt;
+            line-height: 1.4;
             display: flex;
             justify-content: space-between;
             align-items: baseline;
+            break-inside: avoid;
         }
         .toc-item .page-number {
             font-weight: 600;
@@ -297,6 +300,14 @@
                     <span style="font-size: 18pt; color: #8B0000;">Allergenfreies</span><br>
                     <span class="cover-sans" style="font-size: 24pt; font-weight: bold;">Rezeptbuch</span><br>
                     <span class="cover-sans" style="font-size: 14pt; font-style: italic;">von {{ $book->patient->name ?? 'Unbekannt' }}</span>
+                    @php
+                        $analysis = $book->patient ? \App\Models\Analysis::where('patient_id', $book->patient->id)->latest()->first() : null;
+                    @endphp
+                    @if($analysis)
+                        <p class="cover-sans" style="font-size: 12pt; font-weight: normal; margin-top: 24pt;">
+                            Basierend auf Analyse {{ $analysis->sample_code }} vom {{ $analysis->sample_date?->format('d.m.Y') }}
+                        </p>
+                    @endif
                 </div>
             </div>
             <div class="section impressum-section">
