@@ -49,7 +49,7 @@ class BookPdfController extends Controller
             ->format('a4')
             ->name('buch-' . $book->id . '-rezepte.pdf')
             ->withBrowsershot(function (Browsershot $browsershot) {
-                $browsershot->noSandbox(); // Fügt --no-sandbox hinzu
+                $browsershot->noSandbox()->addChromiumArguments(['--outline']);
             })
             ->download();
     }

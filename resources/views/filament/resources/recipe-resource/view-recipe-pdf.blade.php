@@ -296,7 +296,15 @@
         $course = $data['course'] ?? $data->course ?? null;
         $categories = is_string($data['category'] ?? null) ? collect(json_decode($data['category'] ?? '[]', true))->filter() : (is_array($data['category'] ?? null) ? collect($data['category'])->filter() : collect());
         $diets = is_string($data['diets'] ?? null) ? json_decode($data['diets'] ?? '[]', true) : (is_array($data['diets'] ?? null) ? $data['diets'] : []);
-        $presentDiets = !empty($diets) ? collect($diets)->filter(fn($diet) => $diet['value'] ?? false)->pluck('diet')->all() : [];
+        $presentDiets = !empty($diets)
+            ? collect($diets)
+                ->filter(function($diet) use ($course) {
+                    if (!($diet['value'] ?? false)) return false;
+                    if (($course ?? null) === 'dessert' && in_array(strtolower($diet['diet'] ?? ''), ['ohne fleisch', 'ohne fisch'])) return false;
+                    return true;
+                })
+                ->pluck('diet')->all()
+            : [];
         $country = $data['country'] ?? $data->country ?? null;
         $media = is_string($data['media'] ?? null) ? json_decode($data['media'] ?? '[]', true) : (is_array($data['media'] ?? null) ? $data['media'] : []);
         $previewImageUrl = !empty($media['preview_no_wm']) ? $media['preview_no_wm'][0] : (!empty($media['preview']) ? $media['preview'][0] : null);
@@ -375,7 +383,7 @@
     @endphp
     <div class="recipe-header">
         <div class="recipe-header-left">
-            <div class="recipe-title">{{ $data['title'] ?? $data->title ?? 'Unbekannt' }}</div>
+            <h2 class="recipe-title">{{ $data['title'] ?? $data->title ?? 'Unbekannt' }}</h2>
             <div class="recipe-tags">
                 @php
                     $showCourse = $course && isset($courseMap[$course]);
