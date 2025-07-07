@@ -144,29 +144,29 @@ class AssignRecipesJob implements ShouldQueue
                 if (empty($patientRecipeIds)) {
                     Log::warning('Keine Rezepte für Patient abgerufen', ['patient_id' => $patient->id]);
                     continue;
-                }
+            }
                 // Fetch recipe details for this patient only
                 $recipeDetails = $service->fetchRecipeDetailsBatch($patientRecipeIds);
-                if (empty($recipeDetails)) {
+            if (empty($recipeDetails)) {
                     Log::error('Keine Rezeptdetails abgerufen', ['patient_id' => $patient->id, 'rezept_ids' => $patientRecipeIds]);
                     continue;
-                }
+            }
                 // Assign only this patient's recipes to their book
-                $this->assignRecipesToPatient($patient, $recipeDetails);
-                // Collect recipe IDs to pass to CreateBookJob
-                $recipeIds = [];
-                foreach ($recipeDetails as $recipeDetail) {
-                    $recipe = \App\Models\Recipe::where('id_external', $recipeDetail['id'])->first();
-                    if ($recipe) {
-                        $recipeIds[] = $recipe->id_recipe;
+                    $this->assignRecipesToPatient($patient, $recipeDetails);
+                    // Collect recipe IDs to pass to CreateBookJob
+                    $recipeIds = [];
+                    foreach ($recipeDetails as $recipeDetail) {
+                        $recipe = \App\Models\Recipe::where('id_external', $recipeDetail['id'])->first();
+                        if ($recipe) {
+                            $recipeIds[] = $recipe->id_recipe;
+                        }
                     }
-                }
-                CreateBookJob::dispatch($patient, $recipeIds)->onQueue('default');
-                Log::info('CreateBookJob für Patient gestartet', [
-                    'patient_id' => $patient->id,
+                    CreateBookJob::dispatch($patient, $recipeIds)->onQueue('default');
+                    Log::info('CreateBookJob für Patient gestartet', [
+                        'patient_id' => $patient->id,
                     'rezept_anzahl' => count($recipeIds),
-                    'recipe_ids' => $recipeIds,
-                ]);
+                        'recipe_ids' => $recipeIds,
+                    ]);
             }
 
             Log::info('AssignRecipesJob abgeschlossen', ['patient_anzahl' => $patients->count()]);

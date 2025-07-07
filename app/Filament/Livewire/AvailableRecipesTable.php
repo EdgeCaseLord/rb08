@@ -50,6 +50,7 @@ class AvailableRecipesTable extends Component
         'applyFilters' => 'applyFilters',
         'saveFilters' => 'saveFilters',
         'bookUpdated' => 'onBookUpdated',
+        'bookRecreatedAndSent' => 'onBookRecreatedAndSent',
     ];
 
     public function mount($bookId, CookButlerService $cookButlerService)
@@ -771,16 +772,13 @@ class AvailableRecipesTable extends Component
                 $filters = $this->getFilters();
                 $patient = $this->getBookPatient();
                 \App\Jobs\CreateBookJob::dispatch($patient, null, $this->bookId, $filters);
-                // Only dispatch bookUpdated event once
+                // Start polling for book status in the browser
+                $this->dispatch('startBookPolling');
                 $this->updateBookWithFilters = false;
-                $this->dispatch('bookUpdated', $this->bookId);
             }
-            // Do NOT call resetAndReload here; wait for bookUpdated event
-            return true;
+            return;
         }
-        // If not updating the book, reload recipes as usual
         $this->resetAndReload();
-        return true;
     }
 
     public function saveFilters()
@@ -824,9 +822,23 @@ class AvailableRecipesTable extends Component
 
     public function onBookUpdated()
     {
-        // Only refresh recipes once when the book is updated
-        $this->refreshRecipes();
-        // Prevent any additional reloads or loadMore calls here
+        $book = \App\Models\Book::find($this->bookId);
+        if (!$book) return;
+        // Only refresh recipes if the book is still editable
+        if (!in_array($book->status, ['Warten auf Versand', 'Versendet'])) {
+            $this->refreshRecipes();
+        }
+    }
+
+    public function onBookRecreatedAndSent($bookId)
+    {
+        if ($bookId == $this->bookId) {
+            \Filament\Notifications\Notification::make()
+                ->title(__('Das Buch wurde neu erstellt und wird jetzt versendet. Die Seite wird neu geladen.') . ' / ' . __('The book has been recreated and will now be sent. The page will reload.'))
+                ->success()
+                ->send();
+            $this->dispatch('reloadPage');
+        }
     }
 
     // Utility function for hardening json_decode for all recipe fields
@@ -931,5 +943,11 @@ class AvailableRecipesTable extends Component
             'url' => $arr['url'] ?? null,
         ];
         return $arr;
+    }
+
+    public function getBookStatus()
+    {
+        $book = \App\Models\Book::find($this->bookId);
+        return $book ? $book->status : null;
     }
 }

@@ -1,6 +1,27 @@
 <div
-    x-data="{ refresh: 0 }"
+    x-data="{
+        refresh: 0,
+        polling: false,
+        pollInterval: null,
+        checkBookStatus() {
+            $wire.getBookStatus().then(status => {
+                if (['Warten auf Versand', 'Versendet'].includes(status)) {
+                    window.dispatchEvent(new CustomEvent('book-sent'));
+                    clearInterval(this.pollInterval);
+                    this.polling = false;
+                }
+            });
+        }
+    }"
     x-on:availableRecipesUpdated.window="refresh++"
+    x-on:reloadPage.window="window.location.reload()"
+    x-on:startBookPolling.window="
+        if (!polling) {
+            polling = true;
+            pollInterval = setInterval(() => checkBookStatus(), 3000);
+        }
+    "
+    x-init="window.addEventListener('bookRecreatedAndSent', () => { window.dispatchEvent(new Event('startBookPolling')); }); window.addEventListener('book-sent', () => { if (window.Filament && window.Filament.notifications) { let reloadTriggered = false; window.Filament.notifications.push({ type: 'success', title: 'Buch wird versendet', body: 'Das Buch wurde neu erstellt und wird jetzt versendet. Die Seite wird neu geladen. / The book has been recreated and will now be sent. The page will reload.\n\nBITTE DIE SEITE NEU LADEN', persistent: true }); setTimeout(() => { const notif = document.querySelector('[role=\'alert\']'); if (notif) { const observer = new MutationObserver((mutations) => { if (!document.body.contains(notif) && !reloadTriggered) { reloadTriggered = true; window.location.reload(); } }); observer.observe(document.body, { childList: true, subtree: true }); setTimeout(() => { if (!reloadTriggered) { reloadTriggered = true; window.location.reload(); } }, 5000); } else { setTimeout(() => { if (!reloadTriggered) { reloadTriggered = true; window.location.reload(); } }, 1500); } }, 100); } else { alert('Das Buch wurde neu erstellt und wird jetzt versendet. Die Seite wird neu geladen. / The book has been recreated and will now be sent. The page will reload.'); window.location.reload(); } });"
 >
     @php
         if (!isset($showRecipeModal)) $showRecipeModal = false;
@@ -314,7 +335,7 @@
             <div class="col-span-full flex items-center gap-2 mt-2">
                 <input type="checkbox" id="updateBookWithFilters" wire:model="updateBookWithFilters">
                 <label for="updateBookWithFilters" class="mb-0">
-                    {{ isset($context) && $context === 'edit-patient' ? __('Letztes Buch mit aktuellem Filter-Set aktualisieren') : __('Buch mit aktuellem Filter-Set aktualisieren') }}
+                    {{ isset($context) && $context === 'edit-patient' ? __('Letztes Buch mit aktuellem Filter-Set aktualisieren') : __('Buch mit aktuellem Filter-Set aktualisieren (Experimentell, sehr langsam)') }}
                 </label>
             </div>
             <div class="col-span-full flex justify-between mt-2 gap-2">
@@ -448,3 +469,35 @@
         </div>
     @endif
 </div>
+
+<script>
+    window.addEventListener('book-sent', function() {
+        let reloadTriggered = false;
+        if (window.Filament && window.Filament.notifications) {
+            window.Filament.notifications.push({
+                type: 'success',
+                title: 'Buch wird versendet',
+                body: 'Das Buch wurde neu erstellt und wird jetzt versendet. Die Seite wird neu geladen. / The book has been recreated and will now be sent. The page will reload.\n\nBITTE DIE SEITE NEU LADEN',
+                persistent: true
+            });
+            setTimeout(() => {
+                const notif = document.querySelector('[role=\'alert\']');
+                if (notif) {
+                    const observer = new MutationObserver((mutations) => {
+                        if (!document.body.contains(notif) && !reloadTriggered) {
+                            reloadTriggered = true;
+                            window.location.reload();
+                        }
+                    });
+                    observer.observe(document.body, { childList: true, subtree: true });
+                    setTimeout(() => { if (!reloadTriggered) { reloadTriggered = true; window.location.reload(); } }, 5000);
+                } else {
+                    setTimeout(() => { if (!reloadTriggered) { reloadTriggered = true; window.location.reload(); } }, 1500);
+                }
+            }, 100);
+        } else {
+            alert('Das Buch wurde neu erstellt und wird jetzt versendet. Die Seite wird neu geladen. / The book has been recreated and will now be sent. The page will reload.');
+            window.location.reload();
+        }
+    });
+</script>

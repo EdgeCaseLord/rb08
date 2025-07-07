@@ -205,12 +205,20 @@ class CreateBookJob implements ShouldQueue
             } elseif ($this->bookId) {
                 \Filament\Notifications\Notification::make()
                     ->title('Rezeptbuch aktualisiert')
-                    ->body("Das Rezeptbuch wurde mit neuen Rezepten basierend auf dem aktuellen Filter-Set aktualisiert.")
+                    ->body("Das Rezeptbuch wurde mit neuen Rezepten basierend auf dem aktuellen Filter-Set aktualisiert.\n\n<br>BITTE DIE SEITE NEU LADEN")
                     ->success()
+                    ->persistent()
                     ->send();
                 // Emit Livewire event for UI refresh
                 if (method_exists(\Livewire\Livewire::class, 'emit')) {
                     \Livewire\Livewire::emit('bookUpdated', $book->id);
+                }
+            }
+
+            // Emit custom event if triggered by recreate book (filters set)
+            if ($this->filters !== null) {
+                if (method_exists(\Livewire\Livewire::class, 'emit')) {
+                    \Livewire\Livewire::emit('bookRecreatedAndSent', $book->id);
                 }
             }
 
