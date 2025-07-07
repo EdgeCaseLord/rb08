@@ -155,16 +155,20 @@ class CreateBookJob implements ShouldQueue
                         'recipe_ids' => $recipeIds,
                         'limit' => $limit,
                     ]);
-                    foreach ($recipeIds as $recipeId) {
-                        try {
-                            $book->addRecipe($recipeId);
-                        } catch (\Exception $e) {
-                            Log::error('Failed to add recipe to book', [
-                                'book_id' => $book->id,
-                                'patient_id' => $patient->id,
-                                'recipe_id' => $recipeId,
-                                'error' => $e->getMessage(),
-                            ]);
+                    // Fetch all recipe details in one batch call
+                    if (!empty($recipeIds)) {
+                        $service->fetchRecipeDetailsBatch($recipeIds, $patient);
+                        foreach ($recipeIds as $recipeId) {
+                            try {
+                                $book->addRecipe($recipeId);
+                            } catch (\Exception $e) {
+                                Log::error('Failed to add recipe to book', [
+                                    'book_id' => $book->id,
+                                    'patient_id' => $patient->id,
+                                    'recipe_id' => $recipeId,
+                                    'error' => $e->getMessage(),
+                                ]);
+                            }
                         }
                     }
                     $selectedRecipes = array_merge($selectedRecipes, $recipeIds);

@@ -13,6 +13,8 @@ class BookRecipesTable extends Component
     public $bookId;
     public $recipes = [];
     public $showActions = true;
+    public $currentCourse = 'starter';
+    public $courseOrder = ['starter', 'main_course', 'dessert'];
 
     protected $listeners = [
         'recipeAddedToBook' => 'refreshRecipes',
@@ -141,12 +143,37 @@ class BookRecipesTable extends Component
         return $asObject ? (object)$result : $result;
     }
 
+    public function switchCourse($course)
+    {
+        if (in_array($course, $this->courseOrder)) {
+            $this->currentCourse = $course;
+        }
+    }
+
+    public function nextCourse()
+    {
+        $idx = array_search($this->currentCourse, $this->courseOrder);
+        if ($idx !== false && $idx < count($this->courseOrder) - 1) {
+            $this->currentCourse = $this->courseOrder[$idx + 1];
+        }
+    }
+
+    public function prevCourse()
+    {
+        $idx = array_search($this->currentCourse, $this->courseOrder);
+        if ($idx !== false && $idx > 0) {
+            $this->currentCourse = $this->courseOrder[$idx - 1];
+        }
+    }
+
     public function render()
     {
         return view('livewire.book-recipes-table', [
             'recipes' => $this->recipes,
             'showActions' => $this->showActions,
             'bookId' => $this->bookId,
+            'currentCourse' => $this->currentCourse,
+            'courseOrder' => $this->courseOrder,
         ]);
     }
 }

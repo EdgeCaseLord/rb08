@@ -764,20 +764,22 @@ class AvailableRecipesTable extends Component
 
     public function applyFilters()
     {
-        $this->resetAndReload();
-        // Also update the book if the checkbox is checked
+        // If updating the book, do not reload recipes immediately; wait for bookUpdated event
         if ($this->updateBookWithFilters) {
             $book = Book::find($this->bookId);
             if ($book) {
                 $filters = $this->getFilters();
                 $patient = $this->getBookPatient();
                 \App\Jobs\CreateBookJob::dispatch($patient, null, $this->bookId, $filters);
-                // Remove local notification here; rely on job notification
-                // Listen for bookUpdated event to refresh UI
+                // Only dispatch bookUpdated event once
                 $this->updateBookWithFilters = false;
                 $this->dispatch('bookUpdated', $this->bookId);
             }
+            // Do NOT call resetAndReload here; wait for bookUpdated event
+            return true;
         }
+        // If not updating the book, reload recipes as usual
+        $this->resetAndReload();
         return true;
     }
 
@@ -822,7 +824,9 @@ class AvailableRecipesTable extends Component
 
     public function onBookUpdated()
     {
+        // Only refresh recipes once when the book is updated
         $this->refreshRecipes();
+        // Prevent any additional reloads or loadMore calls here
     }
 
     // Utility function for hardening json_decode for all recipe fields
