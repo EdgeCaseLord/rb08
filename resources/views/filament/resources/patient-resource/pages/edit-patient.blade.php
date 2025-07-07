@@ -5,7 +5,7 @@
     {{-- Render the default Filament resource form --}}
     {{ $this->form }}
 
-    {{-- Render the Livewire filter form below the main form --}}
+    {{-- Render the unified Livewire available recipes table below the main form --}}
     @php
         $latestBook = \App\Models\Book::where('patient_id', $record->id)->latest()->first();
         $latestBookId = $latestBook ? $latestBook->id : null;
