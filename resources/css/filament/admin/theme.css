@@ -130,6 +130,11 @@ thead {
     color: #ED6B22 !important;
 }
 
+/* Tailwind dark mode for table headers */
+thead, th {
+    @apply bg-[#FEF0E8] text-[#ED6B22] dark:bg-gray-700 dark:text-gray-200;
+}
+
 .fi-tables-table th {
     @apply bg-gray-100 text-gray-700;
 }
@@ -163,5 +168,26 @@ thead {
 /* Remove custom background image from multi-selects */
 .filament-input[multiple] {
     background-image: none !important;
+}
+
+.dark .fi-page .filament-dashboard .fi-wi-stat-card .fi-section,
+.dark .fi-page .filament-dashboard .fi-wi-handbuch .fi-section,
+.dark .fi-page .filament-dashboard .fi-wi-links .fi-section,
+.dark .fi-page .filament-dashboard .fi-wi-table .fi-ta-ctn {
+    background-color: #23272f !important;
+    border: 1px solid #2d323c !important;
+    color: #f3f4f6 !important;
+}
+
+.dark .fi-page .filament-dashboard .fi-wi-stat-card .text-gray-800,
+.dark .fi-page .filament-dashboard .fi-wi-stat-card .text-gray-600 {
+    color: #f3f4f6 !important;
+}
+
+input, select, textarea {
+    @apply bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100;
+}
+input[type="checkbox"], input[type="radio"] {
+    @apply bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700;
 }
 

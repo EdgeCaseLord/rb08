@@ -133,7 +133,7 @@
     $dietsText = !empty($dietList) ? implode(', ', $dietList) : __('Keine');
 @endphp
 
-<div class="bg-white rounded-lg shadow-md overflow-hidden relative">
+<div class="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden relative">
     <!-- Image -->
     <div class="aspect-w-16 aspect-h-9">
         @if ($previewImageUrl)
@@ -141,17 +141,17 @@
                  alt="{{ $title }}"
                  class="w-full h-48 object-cover object-center">
         @else
-            <div class="w-full h-48 bg-gray-200 flex items-center justify-center">
-                <span class="text-gray-500 text-sm">{{ __('Kein Bild') }}</span>
+            <div class="w-full h-48 bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                <span class="text-gray-500 dark:text-gray-300 text-sm">{{ __('Kein Bild') }}</span>
             </div>
         @endif
     </div>
 
     <!-- Content -->
     <div class="p-4">
-        <h3 class="text-lg font-semibold text-gray-800 mb-2">{{ $title }}</h3>
+        <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">{{ $title }}</h3>
 
-        <div class="space-y-2 text-sm text-gray-600">
+        <div class="space-y-2 text-sm text-gray-600 dark:text-gray-300">
             <p><strong>{{ __('Kategorie') }}:</strong> {{ $categoryText }}</p>
             <p><strong>{{ __('Allergene') }}:</strong> {{ $allergensText }}</p>
             <p><strong>{{ __('Ernährungsweise') }}:</strong> {{ $dietsText }}</p>

@@ -27,8 +27,8 @@
         if (!isset($showRecipeModal)) $showRecipeModal = false;
         if (!isset($modalRecipe)) $modalRecipe = null;
     @endphp
-    <div class="mb-2 p-2 bg-[#FEF0E8] rounded text-xs flex justify-end">
-        <div class="text-right w-full text-[#FF6100] font-bold">
+    <div class="mb-2 p-2 bg-orange-100 dark:bg-orange-900 rounded text-xs flex justify-end">
+        <div class="text-right w-full text-orange-700 dark:text-orange-200 font-bold">
         @php
             $book = \App\Models\Book::find($bookId);
             $patient = $book ? $book->patient : null;
@@ -342,7 +342,7 @@
                     <button type="button"
                         :disabled="filteringSave"
                         @click="filteringSave = true; $nextTick(() => { $wire.saveFilters().then(() => filteringSave = false); })"
-                        class="px-4 py-2 bg-primary-100 text-primary-800 rounded hover:bg-primary-200 flex items-center gap-2"
+                        class="px-4 py-2 bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-200 rounded hover:bg-orange-200 flex items-center gap-2"
                         title="Das aktuelle Filter-Set wird im Benutzerprofil gespeichert und beim nächsten Buch automatisch verwendet.">
                         <span>{{ __('Filter speichern') }}</span>
                         <template x-if="filteringSave">

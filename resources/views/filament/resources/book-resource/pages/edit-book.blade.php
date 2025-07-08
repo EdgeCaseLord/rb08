@@ -15,7 +15,7 @@
     @endphp
     <div class="space-y-8">
         <div class="mb-6">
-            <div class="bg-white border border-gray-200 rounded-lg shadow p-6 flex flex-col md:flex-row md:items-center md:gap-8 gap-4">
+            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow p-6 flex flex-col md:flex-row md:items-center md:gap-8 gap-4">
                 <div class="flex-1">
                     <form method="POST" action="{{ $isEdit ? route('book.update', ['book' => $book->id]) : BookResource::getUrl('create') }}">
                         @csrf
@@ -24,12 +24,12 @@
                         @endif
                         <div class="flex flex-col md:flex-row md:items-center gap-4">
                             <div class="flex-1 min-w-0">
-                                <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Titel') }}</label>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">{{ __('Titel') }}</label>
                                 <input type="text" name="title" value="{{ old('title', $book->title ?? '') }}" class="filament-input w-full rounded-lg text-lg py-3" required />
                             </div>
                             <div class="flex flex-row flex-shrink-0 gap-4 items-end justify-end">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Patient') }}</label>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">{{ __('Patient') }}</label>
                                 @if($isEdit)
                                     @if($patient)
                                         <a href="{{ route('filament.admin.resources.patients.edit', $patient->id) }}" class="text-primary-600 underline" target="_blank">{{ $patient->name }}</a>
@@ -46,7 +46,7 @@
                                 @endif
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Analyse') }}</label>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">{{ __('Analyse') }}</label>
                                 @php $bookAnalysis = $book && $book->analysis ? $book->analysis : $analysis; @endphp
                                 @if($bookAnalysis)
                                     <a href="{{ route('filament.admin.resources.analyses.edit', $bookAnalysis->id) }}" class="text-primary-600 underline" target="_blank">
@@ -59,7 +59,7 @@
                             <div x-data="{ status: @js($book->status ?? 'Warten auf Versand') }"
                                  x-init="window.addEventListener('bookStatusUpdated', e => { if (e.detail.id == @js($book->id)) status = e.detail.status });
                                           window.addEventListener('bookRecipesChanged', () => { $wire.$refresh() });">
-                                <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Status') }}</label>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">{{ __('Status') }}</label>
                                 @php
                                     $statusColors = [
                                         'Versendet' => 'bg-green-100 text-green-800',
@@ -68,10 +68,10 @@
                                     ];
                                 @endphp
                                 <span :class="{
-                                    'bg-green-100 text-green-800': status === 'Versendet',
-                                    'bg-blue-100 text-blue-800': status === 'Warten auf Versand',
-                                    'bg-yellow-100 text-yellow-800': status === 'Geändert nach Versand',
-                                    'bg-gray-100 text-gray-800': !['Versendet','Warten auf Versand','Geändert nach Versand'].includes(status)
+                                    'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200': status === 'Versendet',
+                                    'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200': status === 'Warten auf Versand',
+                                    'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200': status === 'Geändert nach Versand',
+                                    'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200': !['Versendet','Warten auf Versand','Geändert nach Versand'].includes(status)
                                 }" class="inline-block px-3 py-1 rounded-full text-xs font-semibold" x-text="status"></span>
                                 </div>
                             </div>
