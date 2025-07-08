@@ -37,6 +37,8 @@ class AvailableRecipesTable extends Component
     public $filterOffset = 0;
     public $filterRandomizeOffset = false;
     public $refreshKey = 0;
+    public $updateBookWithFilters = false;
+    public $filterSubstances = [];
     protected $cookButlerService;
 
     protected $listeners = [
@@ -47,6 +49,8 @@ class AvailableRecipesTable extends Component
         'prependAvailableRecipe' => 'prependAvailableRecipe',
         'applyFilters' => 'applyFilters',
         'saveFilters' => 'saveFilters',
+        'bookUpdated' => 'onBookUpdated',
+        'bookRecreatedAndSent' => 'onBookRecreatedAndSent',
     ];
 
     public function mount($bookId, CookButlerService $cookButlerService)
@@ -64,7 +68,7 @@ class AvailableRecipesTable extends Component
         if ($patient && !empty($patient['settings']['recipe_filter_set'])) {
             $prefs = $patient['settings']['recipe_filter_set'];
             foreach ([
-                'filterTitle', 'filterIngredients', 'filterAllergen', 'filterCategory', 'filterCountry', 'filterCourse', 'filterDiets', 'filterDifficulty', 'filterMaxTime'
+                'filterTitle', 'filterIngredients', 'filterAllergen', 'filterCategory', 'filterCountry', 'filterCourse', 'filterDiets', 'filterDifficulty', 'filterMaxTime', 'filterSubstances'
             ] as $key) {
                 if (array_key_exists($key, $prefs)) {
                     // If the filter is an array of values, convert to associative array for Livewire checkboxes
@@ -73,10 +77,32 @@ class AvailableRecipesTable extends Component
                     } else {
                         $this->$key = $prefs[$key];
                     }
+                    // SAFEGUARD: Remove any non-string keys or values from filter arrays
+                    if (in_array($key, ['filterAllergen','filterCategory','filterCountry','filterCourse','filterDiets','filterDifficulty','filterMaxTime']) && is_array($this->$key)) {
+                        $cleaned = [];
+                        foreach ($this->$key as $k => $v) {
+                            if (is_string($k)) {
+                                $cleaned[$k] = (bool)$v;
+                            }
+                        }
+                        $this->$key = $cleaned;
+                    }
                 }
             }
         }
         $this->loadMore();
+
+        // Set default operator and value for each substance if not already set
+        foreach ([
+            'fructose', 'vitamin_b', 'ballaststoffe', 'proteine'
+        ] as $substance) {
+            if (!isset($this->filterSubstances[$substance]['op']) || $this->filterSubstances[$substance]['op'] === null || $this->filterSubstances[$substance]['op'] === '') {
+                $this->filterSubstances[$substance]['op'] = 'lte';
+            }
+            if (!isset($this->filterSubstances[$substance]['val1']) || $this->filterSubstances[$substance]['val1'] === null || $this->filterSubstances[$substance]['val1'] === '') {
+                $this->filterSubstances[$substance]['val1'] = 0;
+            }
+        }
     }
 
     public function refreshRecipes()
@@ -485,7 +511,41 @@ class AvailableRecipesTable extends Component
 
     protected function getFilters()
     {
-        // Only return the selected form filters, raw, as set by the user
+        // Map UI keys to CookButler API keys
+        $substanceApiKeyMap = [
+            'fructose' => 'fructose',
+            'vitamin_b' => 'vitamin_b',
+            'ballaststoffe' => 'ballaststoffe',
+            'proteine' => 'protein',
+        ];
+        $substances = [];
+        if (is_array($this->filterSubstances)) {
+            foreach ($this->filterSubstances as $key => $data) {
+                if (!empty($data['enabled']) && !empty($data['op']) && isset($data['val1']) && $data['val1'] !== '') {
+                    $apiKey = $substanceApiKeyMap[$key] ?? $key;
+                    $apiKeyWithTotal = $apiKey . ',total';
+                    if (in_array($data['op'], ['bw', 'bwe']) && isset($data['val2']) && $data['val2'] !== '') {
+                        $substances[$apiKeyWithTotal] = $data['op'] . '_' . $data['val1'] . '_' . $data['val2'];
+                    } else {
+                        $substances[$apiKeyWithTotal] = $data['op'] . '_' . $data['val1'];
+                    }
+                }
+            }
+        }
+        // Remove empty/invalid entries
+        $substances = array_filter($substances, function($v) { return is_string($v) && $v !== ''; });
+
+        // Map UI diet keys to CookButler API keys
+        $dietApiKeyMap = [
+            'eifrei' => 'egg-free',
+            'glutenfrei' => 'gluten-free',
+            'laktosefrei' => 'lactose-free',
+        ];
+        $diets = array_keys(array_filter($this->filterDiets));
+        $diets = array_map(function($diet) use ($dietApiKeyMap) {
+            return $dietApiKeyMap[$diet] ?? $diet;
+        }, $diets);
+
         return [
             'filterTitle' => $this->filterTitle,
             'filterIngredients' => $this->filterIngredients,
@@ -493,7 +553,8 @@ class AvailableRecipesTable extends Component
             'filterCategory' => array_keys(array_filter($this->filterCategory)),
             'filterCountry' => array_keys(array_filter($this->filterCountry)),
             'filterCourse' => array_keys(array_filter($this->filterCourse)),
-            'filterDiets' => array_keys(array_filter($this->filterDiets)),
+            'filterDiets' => $diets,
+            'filterSubstances' => $substances,
             'filterDifficulty' => array_keys(array_filter($this->filterDifficulty)),
             'filterMaxTime' => array_keys(array_filter($this->filterMaxTime)),
             'offset' => (int) $this->filterOffset,
@@ -704,8 +765,20 @@ class AvailableRecipesTable extends Component
 
     public function applyFilters()
     {
+        // If updating the book, do not reload recipes immediately; wait for bookUpdated event
+        if ($this->updateBookWithFilters) {
+            $book = Book::find($this->bookId);
+            if ($book) {
+                $filters = $this->getFilters();
+                $patient = $this->getBookPatient();
+                \App\Jobs\CreateBookJob::dispatch($patient, null, $this->bookId, $filters);
+                // Start polling for book status in the browser
+                $this->dispatch('startBookPolling');
+                $this->updateBookWithFilters = false;
+            }
+            return;
+        }
         $this->resetAndReload();
-        return true;
     }
 
     public function saveFilters()
@@ -723,6 +796,7 @@ class AvailableRecipesTable extends Component
             'filterDiets' => $this->filterDiets ?? [],
             'filterDifficulty' => $this->filterDifficulty ?? [],
             'filterMaxTime' => $this->filterMaxTime ?? [],
+            'filterSubstances' => $this->filterSubstances ?? [],
         ];
         $user['settings'] = $settings;
         $user->save();
@@ -731,6 +805,40 @@ class AvailableRecipesTable extends Component
             ->body(__('Das aktuelle Filter-Set wurde im Benutzerprofil gespeichert.'))
             ->success()
             ->send();
+        // Also update the book if the checkbox is checked
+        if ($this->updateBookWithFilters) {
+            $book = Book::find($this->bookId);
+            if ($book) {
+                $filters = $this->getFilters();
+                $patient = $this->getBookPatient();
+                \App\Jobs\CreateBookJob::dispatch($patient, null, $this->bookId, $filters);
+                // Remove local notification here; rely on job notification
+                // Listen for bookUpdated event to refresh UI
+                $this->updateBookWithFilters = false;
+                $this->dispatch('bookUpdated', $this->bookId);
+            }
+        }
+    }
+
+    public function onBookUpdated()
+    {
+        $book = \App\Models\Book::find($this->bookId);
+        if (!$book) return;
+        // Only refresh recipes if the book is still editable
+        if (!in_array($book->status, ['Warten auf Versand', 'Versendet'])) {
+            $this->refreshRecipes();
+        }
+    }
+
+    public function onBookRecreatedAndSent($bookId)
+    {
+        if ($bookId == $this->bookId) {
+            \Filament\Notifications\Notification::make()
+                ->title(__('Das Buch wurde neu erstellt und wird jetzt versendet. Die Seite wird neu geladen.') . ' / ' . __('The book has been recreated and will now be sent. The page will reload.'))
+                ->success()
+                ->send();
+            $this->dispatch('reloadPage');
+        }
     }
 
     // Utility function for hardening json_decode for all recipe fields
@@ -835,5 +943,11 @@ class AvailableRecipesTable extends Component
             'url' => $arr['url'] ?? null,
         ];
         return $arr;
+    }
+
+    public function getBookStatus()
+    {
+        $book = \App\Models\Book::find($this->bookId);
+        return $book ? $book->status : null;
     }
 }

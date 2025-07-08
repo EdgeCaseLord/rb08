@@ -45,6 +45,9 @@
 
     @if(count($grouped))
         @foreach($grouped as $course => $recipesInCourse)
+            @if($course === 'main_course' || $course === 'dessert')
+                <hr class="mt-8 mb-4 border-orange-200 bg-orange-200" style="border-width:1px">
+            @endif
             <div class="mb-2">
                 <div class="bg-orange-200 text-orange-900 font-bold px-4 py-2 rounded mb-2 inline-block">
                     {{ $courseLabels[$course] ?? ucfirst($course) }}
@@ -64,9 +67,6 @@
                     </div>
                 @endforeach
             </div>
-            @if(!$loop->last)
-                <hr class="my-6 border-orange-200">
-            @endif
         @endforeach
     @else
         <div class="text-gray-400 py-2">Keine Rezepte im Buch.</div>

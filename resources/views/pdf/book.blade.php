@@ -113,19 +113,26 @@
         .toc-list {
             list-style: none;
             padding-left: 0;
-            width: 66.67%;
+            width: 100%;
             margin: 0 auto;
             background: #f9fafb;
             border-radius: 8pt;
             padding: 6pt;
+            column-count: 2;
+            column-gap: 40pt;
         }
         .toc-item {
             margin-bottom: 2pt;
-            font-size: 8pt;
-            line-height: 1.2;
+            font-size: 9pt;
+            line-height: 1.4;
             display: flex;
             justify-content: space-between;
             align-items: baseline;
+            break-inside: avoid;
+            background: transparent !important;
+        }
+        .toc-item:hover {
+            background: transparent !important;
         }
         .toc-item .page-number {
             font-weight: 600;
@@ -154,7 +161,7 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start;
             flex: 1 1 auto;
         }
         .impressum-title {
@@ -192,6 +199,22 @@
         }
         .masstabelle tr:nth-child(odd) td {
             background: #fafbfc;
+        }
+        .toc-link {
+            color: #000;
+            text-decoration: none;
+            transition: background 0.2s, color 0.2s;
+        }
+        .toc-link:hover {
+            background: #FFEDD5 !important; /* orange-100 from Tailwind, matches bar */
+            color: #FF6100 !important; /* primary orange */
+            text-decoration: underline;
+        }
+        h1.chapter-heading {
+            font-size: 32pt;
+            font-weight: bold;
+            font-family: 'Roboto-Regular', Helvetica, sans-serif !important;
+            margin: 0 0 10mm 0;
         }
     </style>
 </head>
@@ -248,6 +271,9 @@
     $impressumTemplate = $impressumTemplate ?? null;
     $erlaeuterungTemplate = $erlaeuterungTemplate ?? null;
     $bookLocale = $bookLocale ?? (isset($book->patient->settings['language']) ? $book->patient->settings['language'] : 'de');
+    $imageSize = $book->patient->settings['image_size']
+        ?? ($book->patient->lab->settings['image_size'] ?? null)
+        ?? 'print';
 @endphp
 @if ($recipes->isEmpty())
     <div class="debug">No recipes available in template</div>
@@ -286,8 +312,8 @@
 
     </div>
     <div class="page-body">
-        <div class="titel-impressum">
-            <div class="impressum-title-block">
+        <div class="titel-impressum" style="width: 100%; display: flex; flex-direction: column; align-items: center;">
+            <div class="impressum-title-block" style="display: flex; flex-direction: column; align-items: center; justify-content: flex-start;">
                 @if ($randomImage)
                     <img src="{{ $randomImage }}" alt="Impressum Bild" class="impressum-image">
                 @else
@@ -297,6 +323,14 @@
                     <span style="font-size: 18pt; color: #8B0000;">Allergenfreies</span><br>
                     <span class="cover-sans" style="font-size: 24pt; font-weight: bold;">Rezeptbuch</span><br>
                     <span class="cover-sans" style="font-size: 14pt; font-style: italic;">von {{ $book->patient->name ?? 'Unbekannt' }}</span>
+                    @php
+                        $analysis = $book->patient ? \App\Models\Analysis::where('patient_id', $book->patient->id)->latest()->first() : null;
+                    @endphp
+                    @if($analysis)
+                        <p class="cover-sans" style="font-size: 12pt; font-weight: normal; margin-top: 24pt;">
+                            Basierend auf Analyse {{ $analysis->sample_code }} vom {{ $analysis->sample_date?->format('d.m.Y') }}
+                        </p>
+                    @endif
                 </div>
             </div>
             <div class="section impressum-section">
@@ -342,11 +376,11 @@
         @endif
     </div>
     <div class="page-body">
-        <div class="section">
+        <div class="section" style="height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;">
             @if ($recipes->isEmpty())
                 <p>Keine Rezepte verfügbar</p>
             @else
-                <ul class="toc-list">
+                <ul class="toc-list" @if(count($recipes) < 30) style="column-count: 1;" @else style="column-count: 2;" @endif>
                     @foreach($categories as $cat)
                         @php
                             $catRecipes = $grouped->get($cat, collect());
@@ -354,11 +388,11 @@
                             $catPlural = ['Vorspeise' => 'Vorspeisen', 'Hauptgericht' => 'Hauptgerichte', 'Dessert' => 'Desserts'][$cat] ?? $cat;
                         @endphp
                         <li class="toc-chapter">
-                            <span class="recipe-name">{{ $catPlural }}</span>
+                            <a href="#chapter-{{ Str::slug($catPlural) }}" class="recipe-name toc-link" @if(count($recipes) < 30) style="font-size: 16pt;" @endif>{{ $catPlural }}</a>
                         </li>
                         @foreach($catRecipes as $recipe)
                             <li class="toc-item">
-                                <span class="recipe-name">{{ $recipe->title ?? 'Unbekannt' }}</span>
+                                <a href="#{{ Str::slug($recipe->title ?? 'recipe') }}" class="recipe-name toc-link" @if(count($recipes) < 30) style="font-size: 12pt;" @endif>{{ $recipe->title ?? 'Unbekannt' }}</a>
                             </li>
                         @endforeach
                     @endforeach
@@ -481,13 +515,29 @@
 
     <!-- Chapter Intro Page -->
     @php $currentPage++; @endphp
+        <div id="chapter-{{ Str::slug($catPlural) }}"></div>
     <div class="cover" style="page-break-after: always;">
-        @if ($randomImage)
-            <img src="{{ $randomImage }}" alt="Chapter Image">
+        @if ($imageSize === 'full')
+            @if ($randomImage)
+                <img src="{{ $randomImage }}" alt="Chapter Image">
+            @endif
+            <div class="cover-box">
+                <h1 class="cover-sans chapter-heading">{{ $catPlural }}</h1>
+            </div>
+        @else
+            <div class="page-body">
+                <div class="titel-impressum" style="width: 100%; display: flex; flex-direction: column; align-items: center;">
+                    <div class="impressum-title-block" style="display: flex; flex-direction: column; align-items: center; justify-content: flex-start;">
+                        @if ($randomImage)
+                            <img src="{{ $randomImage }}" alt="Chapter Image" class="impressum-image" style="position: relative !important; margin-bottom: 16mm;">
+                        @endif
+                        <div class="cover-box">
+                            <h1 class="cover-sans chapter-heading">{{ $catPlural }}</h1>
+                        </div>
+                    </div>
+                </div>
+            </div>
         @endif
-        <div class="cover-box">
-            <span class="cover-sans" style="font-size: 32pt; font-weight: bold;"><em>{{ $catPlural }}</em></span>
-        </div>
     </div>
 
     <!-- Recipes for this category -->
@@ -515,6 +565,7 @@
                 @endif
             </div>
             <div class="page-body">
+                <div id="{{ Str::slug($recipe->title ?? 'recipe') }}"></div>
                 @include('filament.resources.recipe-resource.view-recipe-pdf', ['recipe' => $recipe, 'book' => $book])
             </div>
             <div class="footer {{ $currentPage % 2 == 0 ? 'footer-left' : 'footer-right' }}">

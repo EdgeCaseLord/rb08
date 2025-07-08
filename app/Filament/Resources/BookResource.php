@@ -182,12 +182,12 @@ class BookResource extends Resource
                                             ->columnSpanFull(),
                                         Forms\Components\Placeholder::make('analysis')
                                             ->label('Analyse')
-                                            ->content(function ($record, $get) {
+                                            ->content(function ($record) {
                                                 if ($record) {
                                                     return static::getAnalysisLink($record->analysis_id);
                                                 }
 
-                                                $patientId = $get('patient_id');
+                                                $patientId = request()->get('patient_id');
                                                 if ($patientId) {
                                                     $latestAnalysis = \App\Models\Analysis::where('patient_id', $patientId)
                                                         ->latest()
@@ -199,9 +199,9 @@ class BookResource extends Resource
 
                                                 return 'Keine Analyse ausgewählt';
                                             })
-                                            ->live()
                                             ->inlineLabel()
-                                            ->columnSpanFull(),
+                                            ->columnSpanFull()
+                                            ->extraAttributes(['class' => 'prose']),
                                         Forms\Components\Actions::make([
                                             Forms\Components\Actions\Action::make('save')
                                                 ->label('Speichern')
@@ -214,24 +214,28 @@ class BookResource extends Resource
                             ])
                             ->columns(2),
                     ]),
+                // Only show recipe sections when editing an existing book
                 Forms\Components\Section::make(__('Rezepte im Buch'))
                     ->collapsible()
                     ->extraAttributes(['class' => 'max-h-[60vh] overflow-y-auto'])
                     ->schema([
                         Forms\Components\View::make('livewire.book-recipes-table')->viewData(['bookId' => $bookId]),
-                    ]),
+                    ])
+                    ->visible(fn () => $record !== null), // Only show when editing
                 Forms\Components\Section::make(__('Favoriten'))
                     ->collapsible()
                     ->extraAttributes(['class' => 'max-h-[60vh] overflow-y-auto'])
                     ->schema([
                         Forms\Components\View::make('livewire.favorite-recipes-table')->viewData(['bookId' => $bookId]),
-                    ]),
+                    ])
+                    ->visible(fn () => $record !== null), // Only show when editing
                 Forms\Components\Section::make(__('Verfügbare Rezepte'))
                     ->collapsible()
                     ->extraAttributes(['class' => 'max-h-[60vh] overflow-y-auto'])
                     ->schema([
                         Forms\Components\View::make('livewire.available-recipes-table')->viewData(['bookId' => $bookId]),
-                    ]),
+                    ])
+                    ->visible(fn () => $record !== null), // Only show when editing
             ]);
     }
 

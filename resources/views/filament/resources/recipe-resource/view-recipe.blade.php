@@ -315,7 +315,13 @@
     $categories = is_array($data['category'] ?? null) ? collect($data['category'])->filter() : collect();
     $diets = is_array($data['diets'] ?? null) ? $data['diets'] : [];
     $presentDiets = !empty($diets)
-        ? collect($diets)->filter(fn($diet) => is_array($diet) ? ($diet['value'] ?? false) : false)->pluck('diet')->all()
+        ? collect($diets)
+            ->filter(function($diet) use ($course) {
+                if (!is_array($diet) || !($diet['value'] ?? false)) return false;
+                if (($course ?? null) === 'dessert' && in_array(strtolower($diet['diet'] ?? ''), ['ohne fleisch', 'ohne fisch'])) return false;
+                return true;
+            })
+            ->pluck('diet')->all()
         : [];
     $country = $data['country'] ?? null;
     $media = is_array($data['media'] ?? null) ? $data['media'] : [];

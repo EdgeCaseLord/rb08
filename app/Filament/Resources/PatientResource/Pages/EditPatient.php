@@ -5,6 +5,9 @@ namespace App\Filament\Resources\PatientResource\Pages;
 use App\Filament\Resources\PatientResource;
 use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
+use App\Jobs\CreateBookJob;
+use App\Models\Book;
+use Filament\Notifications\Notification;
 
 class EditPatient extends EditRecord
 {
@@ -15,14 +18,5 @@ class EditPatient extends EditRecord
         return [
             Actions\DeleteAction::make(),
         ];
-    }
-
-    public function getFilterPreferences(): array
-    {
-        $record = $this->getRecord();
-        if ($record && isset($record->settings['recipe_filter_set'])) {
-            return $record->settings['recipe_filter_set'];
-        }
-        return [];
     }
 }

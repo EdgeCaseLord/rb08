@@ -570,7 +570,16 @@ class EditBook extends EditRecord
                             ->send();
                         return;
                     }
-                    $pdfPath = "books/book-{$this->record->id}-rezepte.pdf";
+
+                    // Find the sample code more robustly
+                    $analysis = $this->record->analysis;
+                    if (!$analysis && $this->record->patient) {
+                        $analysis = \App\Models\Analysis::where('patient_id', $this->record->patient->id)->latest()->first();
+                    }
+                    $sampleCode = $analysis?->sample_code;
+                    $pdfFileName = $sampleCode ? ($sampleCode . '_RB.pdf') : "book-{$this->record->id}-rezepte.pdf";
+                    $pdfPath = "books/" . $pdfFileName;
+
                     $pdfDir = dirname($pdfPath);
                     $storagePath = \Illuminate\Support\Facades\Storage::path($pdfDir);
                     if (!file_exists($storagePath)) {
@@ -581,7 +590,7 @@ class EditBook extends EditRecord
                         'recipes' => $this->record->recipes()->get()
                     ])
                     ->format('a4')
-                    ->name("buch-{$this->record->id}-rezepte.pdf")
+                    ->name($pdfFileName)
                     ->withBrowsershot(function (\Spatie\Browsershot\Browsershot $browsershot) {
                         $browsershot->noSandbox();
                     })
@@ -626,13 +635,13 @@ class EditBook extends EditRecord
                     if ($body instanceof \Illuminate\Support\HtmlString) {
                         $body = $body->toHtml();
                     }
-                    \Illuminate\Support\Facades\Mail::send([], [], function ($message) use ($email, $name, $subject, $body) {
+                    \Illuminate\Support\Facades\Mail::send([], [], function ($message) use ($email, $name, $subject, $body, $pdfPath, $pdfFileName) {
                         $message->to($email, $name)
                             ->from('no-reply@rezept-butler.com', 'Rezept-Butler')
                             ->subject($subject)
                             ->html($body)
-                            ->attach(\Illuminate\Support\Facades\Storage::path("books/book-{$this->record->id}-rezepte.pdf"), [
-                                'as' => "buch-{$this->record->id}-rezepte.pdf",
+                            ->attach(\Illuminate\Support\Facades\Storage::path($pdfPath), [
+                                'as' => $pdfFileName,
                                 'mime' => 'application/pdf',
                             ]);
                     });

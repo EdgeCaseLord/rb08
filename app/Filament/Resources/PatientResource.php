@@ -104,114 +104,9 @@ class PatientResource extends Resource
                     ->required(),
                 Forms\Components\Hidden::make('role')
                     ->default('patient'),
-                Forms\Components\Section::make(__('Filter-Präferenzen'))
-                    ->description(__('Die aktuellen Filter-Präferenzen des Patienten für Rezeptvorschläge.'))
-                    ->collapsible()
-                    ->collapsed()
+                Forms\Components\Section::make('Rezepte Filter')
                     ->schema([
-                        Forms\Components\TextInput::make('settings.recipe_filter_set.filterTitle')
-                            ->label(__('Titel'))
-                            ->nullable(),
-                        Forms\Components\TextInput::make('settings.recipe_filter_set.filterIngredients')
-                            ->label(__('Zutaten'))
-                            ->helperText(__('Suchlogik: UND (Leerzeichen), ODER (/), NICHT (-). Beispiel: paprika / nudeln -aprikosen'))
-                            ->nullable(),
-                        Forms\Components\CheckboxList::make('settings.recipe_filter_set.filterAllergen')
-                            ->label(__('Allergene'))
-                            ->options([
-                                'peanuts' => __('Erdnüsse'),
-                                'fish' => __('Fisch'),
-                                'gluten' => __('Glutenhaltiges Getreide'),
-                                'egg' => __('Hühnerei'),
-                                'crustaceans' => __('Krebstiere'),
-                                'lupin' => __('Lupinen'),
-                                'milk' => __('Milch'),
-                                'nuts' => __('Schalenfrüchte'),
-                                'sulphure' => __('Schwefeldioxid und Sulfit'),
-                                'celery' => __('Sellerie'),
-                                'mustard' => __('Senf'),
-                                'sesame' => __('Sesamsamen'),
-                                'soybeans' => __('Soja'),
-                                'molluscs' => __('Weichtiere'),
-                            ])
-                            ->columns(2)
-                            ->nullable()
-                            ->default([]),
-                        Forms\Components\CheckboxList::make('settings.recipe_filter_set.filterCategory')
-                            ->label(__('Kategorie'))
-                            ->options([
-                                'side_dish' => __('Beilage'),
-                                'fingerfood' => __('Fingerfood'),
-                                'fish' => __('Fisch & Meeresfrüchte'),
-                                'meat' => __('Fleisch'),
-                                'vegetables' => __('Gemüse'),
-                                'drink' => __('Getränk'),
-                                'cake' => __('Kuchen'),
-                                'salad' => __('Salat'),
-                                'soup' => __('Suppe'),
-                            ])
-                            ->columns(2)
-                            ->nullable()
-                            ->default([]),
-                        Forms\Components\Select::make('settings.recipe_filter_set.filterCountry')
-                            ->label(__('Länderküche'))
-                            ->options([
-                                'ar' => __('Argentinien'), 'au' => __('Australien'), 'be' => __('Belgien'), 'ba' => __('Bosnien-Herzegowina'), 'br' => __('Brasilien'), 'bg' => __('Bulgarien'), 'cl' => __('Chile'), 'cn' => __('China'), 'de' => __('Deutschland'), 'dk' => __('Dänemark'), 'fi' => __('Finnland'), 'fr' => __('Frankreich'), 'gr' => __('Griechenland'), 'gb' => __('Großbritannien'), 'in' => __('Indien'), 'id' => __('Indonesien'), 'ie' => __('Irland'), 'il' => __('Israel'), 'it' => __('Italien'), 'jp' => __('Japan'), 'ca' => __('Kanada'), 'hr' => __('Kroatien'), 'lv' => __('Lettland'), 'lt' => __('Litauen'), 'ma' => __('Marokko'), 'mx' => __('Mexiko'), 'mn' => __('Mongolei'), 'nz' => __('Neuseeland'), 'nl' => __('Niederlande'), 'no' => __('Norwegen'), 'pe' => __('Peru'), 'ph' => __('Philippinen'), 'pt' => __('Portugal'), 'ro' => __('Rumänien'), 'ru' => __('Russland'), 'se' => __('Schweden'), 'ch' => __('Schweiz'), 'rs' => __('Serbien'), 'sc' => __('Seychellen'), 'sg' => __('Singapur'), 'sk' => __('Slowakei'), 'si' => __('Slowenien'), 'es' => __('Spanien'), 'th' => __('Thailand'), 'cz' => __('Tschechische Republik'), 'tn' => __('Tunesien'), 'tr' => __('Türkei'), 'us' => __('USA'), 'ua' => __('Ukraine'), 'hu' => __('Ungarn'), 'vn' => __('Vietnam'), 'cy' => __('Zypern'), 'at' => __('Österreich')
-                            ])
-                            ->multiple()
-                            ->nullable()
-                            ->default([]),
-                        Forms\Components\CheckboxList::make('settings.recipe_filter_set.filterCourse')
-                            ->label(__('Gang'))
-                            ->options([
-                                'starter' => __('Vorspeise'),
-                                'main_course' => __('Hauptgericht'),
-                                'dessert' => __('Dessert'),
-                            ])
-                            ->nullable()
-                            ->default([]),
-                        Forms\Components\CheckboxList::make('settings.recipe_filter_set.filterDiets')
-                            ->label(__('Ernährungsweise'))
-                            ->options([
-                                'biologisch' => __('Biologisch'),
-                                'eifrei' => __('Eifrei'),
-                                'glutenfrei' => __('Glutenfrei'),
-                                'histamin-free' => __('Histaminfrei'),
-                                'laktosefrei' => __('Laktosefrei'),
-                                'ohne Fisch' => __('Ohne Fisch'),
-                                'ohne Fleisch' => __('Ohne Fleisch'),
-                                'sojafrei' => __('Sojafrei'),
-                                'vegan' => __('Vegan'),
-                                'vegetarisch' => __('Vegetarisch'),
-                                'weizenfrei' => __('Weizenfrei'),
-                                'fruktose' => __('ohne Fruktose'),
-                                'alcohol-free' => __('ohne Alkohol'),
-                                'vitamin_b' => __('Vitamin B'),
-                                'ballaststoffe' => __('Ballaststoffe'),
-                                'proteine' => __('Proteine'),
-                            ])
-                            ->columns(2)
-                            ->nullable()
-                            ->default([]),
-                        Forms\Components\CheckboxList::make('settings.recipe_filter_set.filterDifficulty')
-                            ->label(__('Schwierigkeitsgrad'))
-                            ->options([
-                                'easy' => __('einfach'),
-                                'medium' => __('mittel'),
-                                'difficult' => __('schwierig'),
-                            ])
-                            ->nullable()
-                            ->default([]),
-                        Forms\Components\CheckboxList::make('settings.recipe_filter_set.filterMaxTime')
-                            ->label(__('Maximale Gesamtzeit'))
-                            ->options([
-                                'lte_30' => __('Bis 30 Minuten'),
-                                'lte_60' => __('Bis 60 Minuten'),
-                                'lte_120' => __('Bis 2 Stunden'),
-                                'gte_120' => __('Mehr als 2 Stunden'),
-                            ])
-                            ->nullable()
-                            ->default([]),
+                        Forms\Components\View::make('components.recipe-filter-form'),
                     ]),
             ]);
     }
@@ -335,6 +230,7 @@ class PatientResource extends Resource
             'index' => Pages\ListPatients::route('/'),
             'create' => Pages\CreatePatient::route('/create'),
             'edit' => Pages\EditPatient::route('/{record}/edit'),
+            'view' => Pages\ViewPatient::route('/{record}'),
         ];
     }
 }

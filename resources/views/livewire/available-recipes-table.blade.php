@@ -1,6 +1,27 @@
 <div
-    x-data="{ refresh: 0 }"
+    x-data="{
+        refresh: 0,
+        polling: false,
+        pollInterval: null,
+        checkBookStatus() {
+            $wire.getBookStatus().then(status => {
+                if (['Warten auf Versand', 'Versendet'].includes(status)) {
+                    window.dispatchEvent(new CustomEvent('book-sent'));
+                    clearInterval(this.pollInterval);
+                    this.polling = false;
+                }
+            });
+        }
+    }"
     x-on:availableRecipesUpdated.window="refresh++"
+    x-on:reloadPage.window="window.location.reload()"
+    x-on:startBookPolling.window="
+        if (!polling) {
+            polling = true;
+            pollInterval = setInterval(() => checkBookStatus(), 3000);
+        }
+    "
+    x-init="window.addEventListener('bookRecreatedAndSent', () => { window.dispatchEvent(new Event('startBookPolling')); }); window.addEventListener('book-sent', () => { if (window.Filament && window.Filament.notifications) { let reloadTriggered = false; window.Filament.notifications.push({ type: 'success', title: 'Buch wird versendet', body: 'Das Buch wurde neu erstellt und wird jetzt versendet. Die Seite wird neu geladen. / The book has been recreated and will now be sent. The page will reload.\n\nBITTE DIE SEITE NEU LADEN', persistent: true }); setTimeout(() => { const notif = document.querySelector('[role=\'alert\']'); if (notif) { const observer = new MutationObserver((mutations) => { if (!document.body.contains(notif) && !reloadTriggered) { reloadTriggered = true; window.location.reload(); } }); observer.observe(document.body, { childList: true, subtree: true }); setTimeout(() => { if (!reloadTriggered) { reloadTriggered = true; window.location.reload(); } }, 5000); } else { setTimeout(() => { if (!reloadTriggered) { reloadTriggered = true; window.location.reload(); } }, 1500); } }, 100); } else { alert('Das Buch wurde neu erstellt und wird jetzt versendet. Die Seite wird neu geladen. / The book has been recreated and will now be sent. The page will reload.'); window.location.reload(); } });"
 >
     @php
         if (!isset($showRecipeModal)) $showRecipeModal = false;
@@ -54,6 +75,7 @@
                         $valueMap = [];
                         if ($key === 'filterAllergen') $valueMap = [
                             'peanuts' => __('Erdnüsse'), 'fish' => __('Fisch'), 'gluten' => __('Glutenhaltiges Getreide'), 'egg' => __('Hühnerei'), 'crustaceans' => __('Krebstiere'), 'lupin' => __('Lupinen'), 'milk' => __('Milch'), 'nuts' => __('Schalenfrüchte'), 'sulphure' => __('Schwefeldioxid und Sulfit'), 'celery' => __('Sellerie'), 'mustard' => __('Senf'), 'sesame' => __('Sesamsamen'), 'soybeans' => __('Soja'), 'molluscs' => __('Weichtiere'),
+                            'fructose' => __('ohne Fruktose'),
                         ];
                         if ($key === 'filterCategory') $valueMap = [
                             'side_dish' => __('Beilage'), 'fingerfood' => __('Fingerfood'), 'fish' => __('Fisch & Meeresfrüchte'), 'meat' => __('Fleisch'), 'vegetables' => __('Gemüse'), 'drink' => __('Getränk'), 'cake' => __('Kuchen'), 'salad' => __('Salat'), 'soup' => __('Suppe'),
@@ -65,7 +87,18 @@
                             'starter' => __('Vorspeise'), 'main_course' => __('Hauptgericht'), 'dessert' => __('Dessert'),
                         ];
                         if ($key === 'filterDiets') $valueMap = [
-                            'biologisch' => __('Biologisch'), 'eifrei' => __('Eifrei'), 'glutenfrei' => __('Glutenfrei'), 'histamin-free' => __('Histaminfrei'), 'laktosefrei' => __('Laktosefrei'), 'ohne Fisch' => __('Ohne Fisch'), 'ohne Fleisch' => __('Ohne Fleisch'), 'sojafrei' => __('Sojafrei'), 'vegan' => __('Vegan'), 'vegetarisch' => __('Vegetarisch'), 'weizenfrei' => __('Weizenfrei'), 'fruktose' => __('ohne Fruktose'), 'alcohol-free' => __('ohne Alkohol'),
+                            'eifrei' => __('Eifrei'),
+                            'glutenfrei' => __('Glutenfrei'),
+                            'laktosefrei' => __('Laktosefrei'),
+                            'fish-free' => __('Ohne Fisch'),
+                            'meat-free' => __('Ohne Fleisch'),
+                            'soy-free' => __('Sojafrei'),
+                            'vegan' => __('Vegan'),
+                            'vegetarian' => __('Vegetarisch'),
+                            'wheat-free' => __('Weizenfrei'),
+                            'alcohol-free' => __('ohne Alkohol'),
+                            'organic' => __('Biologisch'),
+                            'histamine-free' => __('Histaminfrei'),
                         ];
                         if ($key === 'filterDifficulty') $valueMap = [
                             'easy' => __('einfach'), 'medium' => __('mittel'), 'difficult' => __('schwierig'),
@@ -213,22 +246,18 @@
                     </button>
                     <div x-show="open" x-transition class="flex flex-wrap gap-2 mt-2">
                         @foreach([
-                            'biologisch' => __('Biologisch'),
                             'eifrei' => __('Eifrei'),
                             'glutenfrei' => __('Glutenfrei'),
-                            'histamin-free' => __('Histaminfrei'),
                             'laktosefrei' => __('Laktosefrei'),
-                            'ohne Fisch' => __('Ohne Fisch'),
-                            'ohne Fleisch' => __('Ohne Fleisch'),
-                            'sojafrei' => __('Sojafrei'),
+                            'fish-free' => __('Ohne Fisch'),
+                            'meat-free' => __('Ohne Fleisch'),
+                            'soy-free' => __('Sojafrei'),
                             'vegan' => __('Vegan'),
-                            'vegetarisch' => __('Vegetarisch'),
-                            'weizenfrei' => __('Weizenfrei'),
-                            'fruktose' => __('ohne Fruktose'),
+                            'vegetarian' => __('Vegetarisch'),
+                            'wheat-free' => __('Weizenfrei'),
                             'alcohol-free' => __('ohne Alkohol'),
-                            'vitamin_b' => __('Vitamin B'),
-                            'ballaststoffe' => __('Ballaststoffe'),
-                            'proteine' => __('Proteine'),
+                            'organic' => __('Biologisch'),
+                            'histamine-free' => __('Histaminfrei'),
                         ] as $key => $label)
                             <label class="flex items-center space-x-2">
                                 <input type="checkbox" wire:model="filterDiets.{{ $key }}" value="{{ $key }}" class="form-checkbox">
@@ -274,6 +303,40 @@
                         @endforeach
                     </div>
                 </div>
+                <div x-data="{ open: false }" class="mb-2">
+                    <button type="button" @click="open = !open" class="w-full flex justify-between items-center py-2">
+                        <span>{{ __('Substanzen') }}</span>
+                        <svg :class="{ 'rotate-180': open }" class="h-4 w-4 transition-transform" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                    </button>
+                    <div x-show="open" x-transition class="flex flex-col gap-2 mt-2">
+                        @foreach([
+                            'fructose' => __('ohne Fruktose'),
+                            'vitamin_b' => __('Vitamin B'),
+                            'ballaststoffe' => __('Ballaststoffe'),
+                            'proteine' => __('Proteine'),
+                        ] as $key => $label)
+                            <div class="flex items-center space-x-2">
+                                <input type="checkbox" wire:model="filterSubstances.{{ $key }}.enabled" value="1" class="form-checkbox">
+                                <span>{{ $label }}</span>
+                                <select wire:model="filterSubstances.{{ $key }}.op" class="form-select w-auto">
+                                    <option value="">-</option>
+                                    <option value="lt">&lt; ({{ __('weniger als') }})</option>
+                                    <option value="lte" @if(empty(old('filterSubstances.' . $key . '.op'))) selected @endif>&le; ({{ __('weniger/gleich') }})</option>
+                                    <option value="gt">&gt; ({{ __('mehr als') }})</option>
+                                    <option value="gte">&ge; ({{ __('mehr/gleich') }})</option>
+                                </select>
+                                <input type="number" wire:model.lazy="filterSubstances.{{ $key }}.val1" class="w-28 text-lg filament-input rounded-lg" value="0" placeholder="0" @if(empty(old('filterSubstances.' . $key . '.val1'))) value="0" @endif>
+                                <input type="number" wire:model.lazy="filterSubstances.{{ $key }}.val2" class="w-28 text-lg filament-input rounded-lg" placeholder="Max" @if(!in_array($key, ['bw','bwe'])) style="display:none" @endif>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+            <div class="col-span-full flex items-center gap-2 mt-2">
+                <input type="checkbox" id="updateBookWithFilters" wire:model="updateBookWithFilters">
+                <label for="updateBookWithFilters" class="mb-0">
+                    {{ isset($context) && $context === 'edit-patient' ? __('Letztes Buch mit aktuellem Filter-Set aktualisieren') : __('Buch mit aktuellem Filter-Set aktualisieren (Experimentell, sehr langsam)') }}
+                </label>
             </div>
             <div class="col-span-full flex justify-between mt-2 gap-2">
                 <div class="flex gap-2">
@@ -406,3 +469,35 @@
         </div>
     @endif
 </div>
+
+<script>
+    window.addEventListener('book-sent', function() {
+        let reloadTriggered = false;
+        if (window.Filament && window.Filament.notifications) {
+            window.Filament.notifications.push({
+                type: 'success',
+                title: 'Buch wird versendet',
+                body: 'Das Buch wurde neu erstellt und wird jetzt versendet. Die Seite wird neu geladen. / The book has been recreated and will now be sent. The page will reload.\n\nBITTE DIE SEITE NEU LADEN',
+                persistent: true
+            });
+            setTimeout(() => {
+                const notif = document.querySelector('[role=\'alert\']');
+                if (notif) {
+                    const observer = new MutationObserver((mutations) => {
+                        if (!document.body.contains(notif) && !reloadTriggered) {
+                            reloadTriggered = true;
+                            window.location.reload();
+                        }
+                    });
+                    observer.observe(document.body, { childList: true, subtree: true });
+                    setTimeout(() => { if (!reloadTriggered) { reloadTriggered = true; window.location.reload(); } }, 5000);
+                } else {
+                    setTimeout(() => { if (!reloadTriggered) { reloadTriggered = true; window.location.reload(); } }, 1500);
+                }
+            }, 100);
+        } else {
+            alert('Das Buch wurde neu erstellt und wird jetzt versendet. Die Seite wird neu geladen. / The book has been recreated and will now be sent. The page will reload.');
+            window.location.reload();
+        }
+    });
+</script>

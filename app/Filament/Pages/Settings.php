@@ -7,6 +7,7 @@ use Filament\Forms;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\HtmlString;
+use Illuminate\Support\Facades\Log;
 
 class Settings extends Page
 {
@@ -38,6 +39,7 @@ class Settings extends Page
 
     protected function getFormSchema(): array
     {
+        $user = auth()->user();
         $schema = [
             Forms\Components\Radio::make('language')
                 ->label(fn () => App::getLocale() === 'de' ? 'Language' : 'Sprache')
@@ -58,12 +60,22 @@ class Settings extends Page
                         )
                     ]);
                     App::setLocale($state); // Set locale immediately
-                    \Log::info('Settings: Language updated', ['language' => $state, 'locale' => App::getLocale()]);
+                    Log::info('Settings: Language updated', ['language' => $state, 'locale' => App::getLocale()]);
                     $this->dispatch('language-changed', language: $state);
                 }),
+            Forms\Components\Radio::make('settings.image_size')
+                ->label(__('Bildgröße für Rezepte und Bücher'))
+                ->options([
+                    'full' => __('Vollformat (schöner)'),
+                    'print' => __('kleinere Bilder (spart Tinte)')
+                ])
+                ->default('print')
+                ->inline()
+                ->inlineLabel(false)
+                ->helperText(__('Wählen Sie die Bildgröße für Kapitelzwischenbilder in Rezeptbüchern.')),
         ];
 
-        if (auth()->user()->canEditLabSettings()) {
+        if ($user->canEditLabSettings()) {
             $schema[] = Forms\Components\TextInput::make('threshold')
                 ->label(__('threshold'))
                 ->numeric()
@@ -71,10 +83,10 @@ class Settings extends Page
                 ->minValue(0)
                 ->step(0.01)
                 ->helperText(__('Set the threshold for allergen positivity.'))
-                ->visible(fn () => auth()->user()->isLab());
+                ->visible(fn () => $user->isLab());
         }
 
-        if (auth()->user()->isLab() || auth()->user()->isDoctor()) {
+        if ($user->isLab() || $user->isDoctor()) {
             $schema[] = Forms\Components\Section::make(__('Recipes Per Course'))
                 ->description(__('Set the number of recipes to fetch per course for recipe books.'))
                 ->schema([
@@ -110,6 +122,7 @@ class Settings extends Page
             'language' => $user->settings['language'] ?? 'de',
             'threshold' => $user->isLab() ? $user->threshold : null,
             'settings' => [
+                'image_size' => $user->settings['image_size'] ?? 'print',
                 'recipes_per_course' => [
                     'starter' => $user->settings['recipes_per_course']['starter'] ?? null,
                     'main_course' => $user->settings['recipes_per_course']['main_course'] ?? null,
@@ -134,6 +147,7 @@ class Settings extends Page
                     $user->settings ?? [],
                     [
                         'language' => $state['language'], // Ensure language is updated
+                        'image_size' => $state['settings']['image_size'] ?? 'print',
                         'recipes_per_course' => $state['settings']['recipes_per_course'],
                     ]
                 )
