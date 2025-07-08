@@ -1,6 +1,6 @@
 <div>
-    <div class="mb-2 p-2 bg-[#FEF0E8] rounded text-xs flex justify-end">
-        <div class="text-right w-full text-[#FF6100] font-bold">
+    <div class="mb-2 p-2 bg-orange-100 dark:bg-orange-900 rounded text-xs flex justify-end">
+        <div class="text-right w-full text-orange-700 dark:text-orange-200 font-bold">
         @php
             use App\Filament\Livewire\AvailableRecipesTable;
             $book = \App\Models\Book::find($bookId);
@@ -56,9 +56,7 @@
     @if(count($grouped))
         @foreach($grouped as $course => $recipesInCourse)
             <div class="mb-2">
-                <div class="bg-orange-200 text-orange-900 font-bold px-4 py-2 rounded mb-2 inline-block">
-                    {{ $courseLabels[$course] ?? ucfirst($course) }}
-                </div>
+                <h3 class="text-lg font-bold mb-2 text-orange-700 dark:text-orange-200 bg-orange-200 dark:bg-orange-900 px-4 py-2 rounded inline-block">{{ $courseLabels[$course] ?? ucfirst($course) }}</h3>
             </div>
             <div class="columns-1 sm:columns-2 xl:columns-3 2xl:columns-4 gap-4">
                 @foreach($recipesInCourse as $recipe)
@@ -75,7 +73,7 @@
                 @endforeach
             </div>
             @if(!$loop->last)
-                <hr class="my-6 border-orange-200">
+                <hr class="my-6 border-orange-200 dark:border-orange-900">
             @endif
         @endforeach
     @else

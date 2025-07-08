@@ -203,9 +203,27 @@ class CreateBookJob implements ShouldQueue
                     ->success()
                     ->send();
             } elseif ($this->bookId) {
+                $request = request();
+                $onBookEditPage = false;
+                if ($request) {
+                    $route = $request->route();
+                    if ($route) {
+                        $routeName = $route->getName();
+                        $uri = $route->uri();
+                        if ((is_string($routeName) && str_contains($routeName, 'book')) || (is_string($uri) && str_contains($uri, 'book'))) {
+                            $onBookEditPage = true;
+                        }
+                    } elseif (str_contains($request->path(), 'book')) {
+                        $onBookEditPage = true;
+                    }
+                }
+                $body = "Das Rezeptbuch wurde mit neuen Rezepten basierend auf dem aktuellen Filter-Set aktualisiert.";
+                if ($onBookEditPage) {
+                    $body .= "\n\n<br>BITTE DIE SEITE NEU LADEN";
+                }
                 \Filament\Notifications\Notification::make()
                     ->title('Rezeptbuch aktualisiert')
-                    ->body("Das Rezeptbuch wurde mit neuen Rezepten basierend auf dem aktuellen Filter-Set aktualisiert.\n\n<br>BITTE DIE SEITE NEU LADEN")
+                    ->body($body)
                     ->success()
                     ->persistent()
                     ->send();

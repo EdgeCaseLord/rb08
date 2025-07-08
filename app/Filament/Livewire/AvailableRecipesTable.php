@@ -94,7 +94,7 @@ class AvailableRecipesTable extends Component
 
         // Set default operator and value for each substance if not already set
         foreach ([
-            'fructose', 'vitamin_b', 'ballaststoffe', 'proteine'
+            'fructose', 'vitamin_B1(thiamin)', 'carbohydrates', 'protein'
         ] as $substance) {
             if (!isset($this->filterSubstances[$substance]['op']) || $this->filterSubstances[$substance]['op'] === null || $this->filterSubstances[$substance]['op'] === '') {
                 $this->filterSubstances[$substance]['op'] = 'lte';
@@ -514,21 +514,20 @@ class AvailableRecipesTable extends Component
         // Map UI keys to CookButler API keys
         $substanceApiKeyMap = [
             'fructose' => 'fructose',
-            'vitamin_b' => 'vitamin_b',
-            'ballaststoffe' => 'ballaststoffe',
-            'proteine' => 'protein',
+            'vitamin_B1(thiamin)' => 'vitamin_B1(thiamin)',
+            'carbohydrates' => 'carbohydrates,available',
+            'protein' => 'protein',
         ];
         $substances = [];
         if (is_array($this->filterSubstances)) {
             foreach ($this->filterSubstances as $key => $data) {
-                if (!empty($data['enabled']) && !empty($data['op']) && isset($data['val1']) && $data['val1'] !== '') {
+                if (!empty($data['enabled']) && !empty($data['op'])) {
                     $apiKey = $substanceApiKeyMap[$key] ?? $key;
-                    $apiKeyWithTotal = $apiKey . ',total';
-                    if (in_array($data['op'], ['bw', 'bwe']) && isset($data['val2']) && $data['val2'] !== '') {
-                        $substances[$apiKeyWithTotal] = $data['op'] . '_' . $data['val1'] . '_' . $data['val2'];
-                    } else {
-                        $substances[$apiKeyWithTotal] = $data['op'] . '_' . $data['val1'];
+                    $val = $data['op'] . '_' . $data['val1'];
+                    if (!empty($data['val2'])) {
+                        $val .= '_' . $data['val2'];
                     }
+                    $substances[$apiKey] = $val;
                 }
             }
         }
@@ -540,6 +539,8 @@ class AvailableRecipesTable extends Component
             'eifrei' => 'egg-free',
             'glutenfrei' => 'gluten-free',
             'laktosefrei' => 'lactose-free',
+            'biological' => 'biological',
+            'histamin-free' => 'histamin-free',
         ];
         $diets = array_keys(array_filter($this->filterDiets));
         $diets = array_map(function($diet) use ($dietApiKeyMap) {

@@ -27,8 +27,8 @@
         if (!isset($showRecipeModal)) $showRecipeModal = false;
         if (!isset($modalRecipe)) $modalRecipe = null;
     @endphp
-    <div class="mb-2 p-2 bg-[#FEF0E8] rounded text-xs flex justify-end">
-        <div class="text-right w-full text-[#FF6100] font-bold">
+    <div class="mb-2 p-2 bg-orange-100 dark:bg-orange-900 rounded text-xs flex justify-end">
+        <div class="text-right w-full text-orange-700 dark:text-orange-200 font-bold">
         @php
             $book = \App\Models\Book::find($bookId);
             $patient = $book ? $book->patient : null;
@@ -75,7 +75,7 @@
                         $valueMap = [];
                         if ($key === 'filterAllergen') $valueMap = [
                             'peanuts' => __('Erdnüsse'), 'fish' => __('Fisch'), 'gluten' => __('Glutenhaltiges Getreide'), 'egg' => __('Hühnerei'), 'crustaceans' => __('Krebstiere'), 'lupin' => __('Lupinen'), 'milk' => __('Milch'), 'nuts' => __('Schalenfrüchte'), 'sulphure' => __('Schwefeldioxid und Sulfit'), 'celery' => __('Sellerie'), 'mustard' => __('Senf'), 'sesame' => __('Sesamsamen'), 'soybeans' => __('Soja'), 'molluscs' => __('Weichtiere'),
-                            'fructose' => __('ohne Fruktose'),
+                            'fructose' => __('Fruktose'),
                         ];
                         if ($key === 'filterCategory') $valueMap = [
                             'side_dish' => __('Beilage'), 'fingerfood' => __('Fingerfood'), 'fish' => __('Fisch & Meeresfrüchte'), 'meat' => __('Fleisch'), 'vegetables' => __('Gemüse'), 'drink' => __('Getränk'), 'cake' => __('Kuchen'), 'salad' => __('Salat'), 'soup' => __('Suppe'),
@@ -96,9 +96,9 @@
                             'vegan' => __('Vegan'),
                             'vegetarian' => __('Vegetarisch'),
                             'wheat-free' => __('Weizenfrei'),
-                            'alcohol-free' => __('ohne Alkohol'),
-                            'organic' => __('Biologisch'),
-                            'histamine-free' => __('Histaminfrei'),
+                            'alcohol-free' => __('Ohne Alkohol'),
+                            //'biological' => __('Biologisch'),
+                            'histamin-free' => __('Histaminfrei'),
                         ];
                         if ($key === 'filterDifficulty') $valueMap = [
                             'easy' => __('einfach'), 'medium' => __('mittel'), 'difficult' => __('schwierig'),
@@ -255,9 +255,8 @@
                             'vegan' => __('Vegan'),
                             'vegetarian' => __('Vegetarisch'),
                             'wheat-free' => __('Weizenfrei'),
-                            'alcohol-free' => __('ohne Alkohol'),
-                            'organic' => __('Biologisch'),
-                            'histamine-free' => __('Histaminfrei'),
+                            'alcohol-free' => __('Ohne Alkohol'),
+                            'histamin-free' => __('Histaminfrei'),
                         ] as $key => $label)
                             <label class="flex items-center space-x-2">
                                 <input type="checkbox" wire:model="filterDiets.{{ $key }}" value="{{ $key }}" class="form-checkbox">
@@ -310,10 +309,10 @@
                     </button>
                     <div x-show="open" x-transition class="flex flex-col gap-2 mt-2">
                         @foreach([
-                            'fructose' => __('ohne Fruktose'),
-                            'vitamin_b' => __('Vitamin B'),
-                            'ballaststoffe' => __('Ballaststoffe'),
-                            'proteine' => __('Proteine'),
+                            'fructose' => __('Fruktose'),
+                            'vitamin_B1(thiamin)' => __('Vitamin B1 (thiamin)'),
+                            'carbohydrates' => __('Kohlenhydrate'),
+                            'protein' => __('Protein'),
                         ] as $key => $label)
                             <div class="flex items-center space-x-2">
                                 <input type="checkbox" wire:model="filterSubstances.{{ $key }}.enabled" value="1" class="form-checkbox">
@@ -343,7 +342,7 @@
                     <button type="button"
                         :disabled="filteringSave"
                         @click="filteringSave = true; $nextTick(() => { $wire.saveFilters().then(() => filteringSave = false); })"
-                        class="px-4 py-2 bg-primary-100 text-primary-800 rounded hover:bg-primary-200 flex items-center gap-2"
+                        class="px-4 py-2 bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-200 rounded hover:bg-orange-200 flex items-center gap-2"
                         title="Das aktuelle Filter-Set wird im Benutzerprofil gespeichert und beim nächsten Buch automatisch verwendet.">
                         <span>{{ __('Filter speichern') }}</span>
                         <template x-if="filteringSave">

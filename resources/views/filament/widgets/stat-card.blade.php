@@ -13,7 +13,7 @@
     @if($resourceUrl)
         <a href="{{ $resourceUrl }}" class="block group transition rounded-xl">
     @endif
-    <div class="bg-white p-6 rounded-xl shadow transition-shadow group-hover:shadow-lg group-hover:shadow-primary-500/40">
+    <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow transition-shadow group-hover:shadow-lg group-hover:shadow-primary-500/40">
         <div class="flex items-center space-x-4">
             <div class="flex-shrink-0">
                 <x-filament::icon
@@ -23,8 +23,8 @@
                 />
             </div>
             <div>
-                <div class="text-2xl font-bold text-gray-800">{{ $data['value'] }}</div>
-                <div class="text-md text-gray-600">{{ $data['label'] }}</div>
+                <div class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{ $data['value'] }}</div>
+                <div class="text-md text-gray-600 dark:text-gray-400">{{ $data['label'] }}</div>
             </div>
         </div>
     </div>

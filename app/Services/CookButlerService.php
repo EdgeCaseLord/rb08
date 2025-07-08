@@ -727,6 +727,25 @@ class CookButlerService
             $prefs['filterDiets'] = $filters['filterDiets'];
         }
 
+        // Remove any object-style substance filters from both prefs and filters
+        $cleanSubstances = function($arr) {
+            if (!is_array($arr)) return $arr;
+            $result = [];
+            foreach ($arr as $k => $v) {
+                // Only keep string values (the correct pattern)
+                if (is_string($v)) {
+                    $result[$k] = $v;
+                }
+            }
+            return $result;
+        };
+        if (isset($prefs['filterSubstances'])) {
+            $prefs['filterSubstances'] = $cleanSubstances($prefs['filterSubstances']);
+        }
+        if (isset($filters['filterSubstances'])) {
+            $filters['filterSubstances'] = $cleanSubstances($filters['filterSubstances']);
+        }
+
         // Use a recursive merge for all other filters
         return array_merge_recursive($prefs, $filters);
     }

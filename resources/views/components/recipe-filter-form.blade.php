@@ -1,7 +1,14 @@
+@php
+    // Support Filament's viewData closure for filterSet
+    if (is_callable($filterSet ?? null)) {
+        $contextRecord = $record ?? ($this->record ?? null);
+        $filterSet = $filterSet($contextRecord);
+    }
+@endphp
 <div class="mt-4">
-    <form class="mb-4 grid grid-cols-1 md:grid-cols-5 gap-2 items-end">
+    <div class="mb-4 grid grid-cols-1 md:grid-cols-5 gap-2 items-end">
         <div class="col-span-full grid grid-cols-2 gap-4">
-            <input type="text" placeholder="{{ __('Titel') }}" class="filament-input w-full rounded-lg" name="filterTitle">
+            <input type="text" placeholder="{{ __('Titel') }}" class="filament-input w-full rounded-lg" name="filterTitle" value="{{ old('filterTitle', $filterSet['filterTitle'] ?? '') }}">
             <div class="relative flex items-center">
                 <span class="mr-2 cursor-pointer group relative align-middle">
                     <svg class="h-4 w-4 text-gray-400 inline-block" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
@@ -16,16 +23,16 @@
                         <span class="text-gray-500 block mt-1">{{ __('Alle Suchlogiken (UND, ODER, NICHT) können beliebig kombiniert werden.') }}</span>
                     </div>
                 </span>
-                <input type="text" placeholder="{{ __('Zutaten (Bsp.: paprika, nudeln -aprikosen)') }}" class="filament-input w-full rounded-lg" name="filterIngredients">
+                <input type="text" placeholder="{{ __('Zutaten (Bsp.: paprika, nudeln -aprikosen)') }}" class="filament-input w-full rounded-lg" name="filterIngredients" value="{{ old('filterIngredients', $filterSet['filterIngredients'] ?? '') }}">
             </div>
         </div>
         <div class="col-span-full grid grid-cols-2 gap-4">
             <div class="flex items-center gap-2">
                 <label for="offset" class="mb-0">{{ __('Startwert') }}</label>
-                <input type="number" id="offset" min="0" class="filament-input w-24 rounded-lg" name="filterOffset">
+                <input type="number" id="offset" min="0" class="filament-input w-24 rounded-lg" name="filterOffset" value="{{ old('filterOffset', $filterSet['filterOffset'] ?? 0) }}">
             </div>
             <div class="flex items-center gap-2">
-                <input type="checkbox" id="randomizeOffset" name="filterRandomizeOffset">
+                <input type="checkbox" id="randomizeOffset" name="filterRandomizeOffset" @if(old('filterRandomizeOffset', $filterSet['filterRandomizeOffset'] ?? false)) checked @endif>
                 <label for="randomizeOffset" class="mb-0">{{ __('Startwert zufällig wählen') }}</label>
             </div>
         </div>
@@ -52,7 +59,7 @@
                         'molluscs' => __('Weichtiere'),
                     ] as $key => $label)
                         <label class="flex items-center space-x-2">
-                            <input type="checkbox" name="filterAllergen[]" value="{{ $key }}" class="form-checkbox">
+                            <input type="checkbox" name="filterAllergen[]" value="{{ $key }}" class="form-checkbox" @if(collect(old('filterAllergen', $filterSet['filterAllergen'] ?? []))->contains($key)) checked @endif>
                             <span>{{ $label }}</span>
                         </label>
                     @endforeach
@@ -75,7 +82,7 @@
                         'soup' => __('Suppe'),
                     ] as $key => $label)
                         <label class="flex items-center space-x-2">
-                            <input type="checkbox" name="filterCategory[]" value="{{ $key }}" class="form-checkbox">
+                            <input type="checkbox" name="filterCategory[]" value="{{ $key }}" class="form-checkbox" @if(collect(old('filterCategory', $filterSet['filterCategory'] ?? []))->contains($key)) checked @endif>
                             <span>{{ $label }}</span>
                         </label>
                     @endforeach
@@ -91,7 +98,7 @@
                             @foreach([
                                 'ar' => __('Argentinien'), 'au' => __('Australien'), 'be' => __('Belgien'), 'ba' => __('Bosnien-Herzegowina'), 'br' => __('Brasilien'), 'bg' => __('Bulgarien'), 'cl' => __('Chile'), 'cn' => __('China'), 'de' => __('Deutschland'), 'dk' => __('Dänemark'), 'fi' => __('Finnland'), 'fr' => __('Frankreich'), 'gr' => __('Griechenland'), 'gb' => __('Großbritannien'), 'in' => __('Indien'), 'id' => __('Indonesien'), 'ie' => __('Irland'), 'il' => __('Israel'), 'it' => __('Italien'), 'jp' => __('Japan'), 'ca' => __('Kanada'), 'hr' => __('Kroatien'), 'lv' => __('Lettland'), 'lt' => __('Litauen'), 'ma' => __('Marokko'), 'mx' => __('Mexiko'), 'mn' => __('Mongolei'), 'nz' => __('Neuseeland'), 'nl' => __('Niederlande'), 'no' => __('Norwegen'), 'pe' => __('Peru'), 'ph' => __('Philippinen'), 'pt' => __('Portugal'), 'ro' => __('Rumänien'), 'ru' => __('Russland'), 'se' => __('Schweden'), 'ch' => __('Schweiz'), 'rs' => __('Serbien'), 'sc' => __('Seychellen'), 'sg' => __('Singapur'), 'sk' => __('Slowakei'), 'si' => __('Slowenien'), 'es' => __('Spanien'), 'th' => __('Thailand'), 'cz' => __('Tschechische Republik'), 'tn' => __('Tunesien'), 'tr' => __('Türkei'), 'us' => __('USA'), 'ua' => __('Ukraine'), 'hu' => __('Ungarn'), 'vn' => __('Vietnam'), 'cy' => __('Zypern'), 'at' => __('Österreich')
                             ] as $key => $label)
-                                <option value="{{ $key }}">{{ $label }}</option>
+                                <option value="{{ $key }}" @if(collect(old('filterCountry', $filterSet['filterCountry'] ?? []))->contains($key)) selected @endif>{{ $label }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -108,7 +115,7 @@
                         'dessert' => __('Dessert'),
                     ] as $key => $label)
                         <label class="flex items-center space-x-2">
-                            <input type="checkbox" name="filterCourse[]" value="{{ $key }}" class="form-checkbox">
+                            <input type="checkbox" name="filterCourse[]" value="{{ $key }}" class="form-checkbox" @if(collect(old('filterCourse', $filterSet['filterCourse'] ?? []))->contains($key)) checked @endif>
                             <span>{{ $label }}</span>
                         </label>
                     @endforeach
@@ -129,12 +136,12 @@
                         'vegan' => __('Vegan'),
                         'vegetarian' => __('Vegetarisch'),
                         'wheat-free' => __('Weizenfrei'),
-                        'alcohol-free' => __('ohne Alkohol'),
-                        'organic' => __('Biologisch'),
-                        'histamine-free' => __('Histaminfrei'),
+                        'alcohol-free' => __('Ohne Alkohol'),
+                        //'biological' => __('Biologisch'),
+                        'histamin-free' => __('Histaminfrei'),
                     ] as $key => $label)
                         <label class="flex items-center space-x-2">
-                            <input type="checkbox" name="filterDiets[]" value="{{ $key }}" class="form-checkbox">
+                            <input type="checkbox" name="filterDiets[]" value="{{ $key }}" class="form-checkbox" @if(collect(old('filterDiets', $filterSet['filterDiets'] ?? []))->contains($key)) checked @endif>
                             <span>{{ $label }}</span>
                         </label>
                     @endforeach
@@ -151,7 +158,7 @@
                         'difficult' => __('schwierig'),
                     ] as $key => $label)
                         <label class="flex items-center space-x-2">
-                            <input type="checkbox" name="filterDifficulty[]" value="{{ $key }}" class="form-checkbox">
+                            <input type="checkbox" name="filterDifficulty[]" value="{{ $key }}" class="form-checkbox" @if(collect(old('filterDifficulty', $filterSet['filterDifficulty'] ?? []))->contains($key)) checked @endif>
                             <span>{{ $label }}</span>
                         </label>
                     @endforeach
@@ -169,7 +176,7 @@
                         'gte_120' => __('Mehr als 2 Stunden'),
                     ] as $key => $label)
                         <label class="flex items-center space-x-2">
-                            <input type="checkbox" name="filterMaxTime[]" value="{{ $key }}" class="form-checkbox">
+                            <input type="checkbox" name="filterMaxTime[]" value="{{ $key }}" class="form-checkbox" @if(collect(old('filterMaxTime', $filterSet['filterMaxTime'] ?? []))->contains($key)) checked @endif>
                             <span>{{ $label }}</span>
                         </label>
                     @endforeach
@@ -181,33 +188,27 @@
                 </button>
                 <div class="flex flex-col gap-2 mt-2">
                     @foreach([
-                        'fructose' => __('ohne Fruktose'),
-                        'vitamin_b' => __('Vitamin B'),
-                        'ballaststoffe' => __('Ballaststoffe'),
-                        'proteine' => __('Proteine'),
+                        'fructose' => __('Fruktose'),
+                        'vitamin_B1(thiamin)' => __('Vitamin B1 (thiamin)'),
+                        'carbohydrates' => __('Kohlenhydrate'),
+                        'protein' => __('Protein'),
                     ] as $key => $label)
                         <div class="flex items-center space-x-2">
-                            <input type="checkbox" name="filterSubstances[{{ $key }}][enabled]" value="1" class="form-checkbox">
+                            <input type="checkbox" name="filterSubstances[{{ $key }}][enabled]" value="1" class="form-checkbox" @if(old('filterSubstances.' . $key . '.enabled', $filterSet['filterSubstances'][$key]['enabled'] ?? false)) checked @endif>
                             <span>{{ $label }}</span>
                             <select name="filterSubstances[{{ $key }}][op]" class="form-select w-auto">
                                 <option value="">-</option>
-                                <option value="lt">&lt; ({{ __('weniger als') }})</option>
-                                <option value="lte">&le; ({{ __('weniger/gleich') }})</option>
-                                <option value="gt">&gt; ({{ __('mehr als') }})</option>
-                                <option value="gte">&ge; ({{ __('mehr/gleich') }})</option>
+                                <option value="lt" @if(old('filterSubstances.' . $key . '.op', $filterSet['filterSubstances'][$key]['op'] ?? '') == 'lt') selected @endif>&lt; ({{ __('weniger als') }})</option>
+                                <option value="lte" @if(old('filterSubstances.' . $key . '.op', $filterSet['filterSubstances'][$key]['op'] ?? '') == 'lte') selected @endif>&le; ({{ __('weniger/gleich') }})</option>
+                                <option value="gt" @if(old('filterSubstances.' . $key . '.op', $filterSet['filterSubstances'][$key]['op'] ?? '') == 'gt') selected @endif>&gt; ({{ __('mehr als') }})</option>
+                                <option value="gte" @if(old('filterSubstances.' . $key . '.op', $filterSet['filterSubstances'][$key]['op'] ?? '') == 'gte') selected @endif>&ge; ({{ __('mehr/gleich') }})</option>
                             </select>
-                            <input type="number" name="filterSubstances[{{ $key }}][val1]" class="w-28 text-lg filament-input rounded-lg" value="0" placeholder="0">
-                            <input type="number" name="filterSubstances[{{ $key }}][val2]" class="w-28 text-lg filament-input rounded-lg" placeholder="Max">
+                            <input type="number" name="filterSubstances[{{ $key }}][val1]" class="w-28 text-lg filament-input rounded-lg" value="{{ old('filterSubstances.' . $key . '.val1', $filterSet['filterSubstances'][$key]['val1'] ?? 0) }}" placeholder="0">
+                            <input type="number" name="filterSubstances[{{ $key }}][val2]" class="w-28 text-lg filament-input rounded-lg" placeholder="Max" value="{{ old('filterSubstances.' . $key . '.val2', $filterSet['filterSubstances'][$key]['val2'] ?? '') }}">
                         </div>
                     @endforeach
                 </div>
             </div>
         </div>
-        <div class="col-span-full flex items-center gap-2 mt-2">
-            <input type="checkbox" id="updateBookWithFilters" name="updateBookWithFilters">
-            <label for="updateBookWithFilters" class="mb-0">
-                {{ __('Letztes Buch mit aktuellem Filter-Set aktualisieren') }}
-            </label>
-        </div>
-    </form>
+    </div>
 </div>
