@@ -75,7 +75,7 @@
                         $valueMap = [];
                         if ($key === 'filterAllergen') $valueMap = [
                             'peanuts' => __('Erdnüsse'), 'fish' => __('Fisch'), 'gluten' => __('Glutenhaltiges Getreide'), 'egg' => __('Hühnerei'), 'crustaceans' => __('Krebstiere'), 'lupin' => __('Lupinen'), 'milk' => __('Milch'), 'nuts' => __('Schalenfrüchte'), 'sulphure' => __('Schwefeldioxid und Sulfit'), 'celery' => __('Sellerie'), 'mustard' => __('Senf'), 'sesame' => __('Sesamsamen'), 'soybeans' => __('Soja'), 'molluscs' => __('Weichtiere'),
-                            'fructose' => __('ohne Fruktose'),
+                            'fructose' => __('Fruktose'),
                         ];
                         if ($key === 'filterCategory') $valueMap = [
                             'side_dish' => __('Beilage'), 'fingerfood' => __('Fingerfood'), 'fish' => __('Fisch & Meeresfrüchte'), 'meat' => __('Fleisch'), 'vegetables' => __('Gemüse'), 'drink' => __('Getränk'), 'cake' => __('Kuchen'), 'salad' => __('Salat'), 'soup' => __('Suppe'),
@@ -96,9 +96,9 @@
                             'vegan' => __('Vegan'),
                             'vegetarian' => __('Vegetarisch'),
                             'wheat-free' => __('Weizenfrei'),
-                            'alcohol-free' => __('ohne Alkohol'),
-                            'organic' => __('Biologisch'),
-                            'histamine-free' => __('Histaminfrei'),
+                            'alcohol-free' => __('Ohne Alkohol'),
+                            //'biological' => __('Biologisch'),
+                            'histamin-free' => __('Histaminfrei'),
                         ];
                         if ($key === 'filterDifficulty') $valueMap = [
                             'easy' => __('einfach'), 'medium' => __('mittel'), 'difficult' => __('schwierig'),
@@ -255,9 +255,8 @@
                             'vegan' => __('Vegan'),
                             'vegetarian' => __('Vegetarisch'),
                             'wheat-free' => __('Weizenfrei'),
-                            'alcohol-free' => __('ohne Alkohol'),
-                            'organic' => __('Biologisch'),
-                            'histamine-free' => __('Histaminfrei'),
+                            'alcohol-free' => __('Ohne Alkohol'),
+                            'histamin-free' => __('Histaminfrei'),
                         ] as $key => $label)
                             <label class="flex items-center space-x-2">
                                 <input type="checkbox" wire:model="filterDiets.{{ $key }}" value="{{ $key }}" class="form-checkbox">
@@ -310,10 +309,10 @@
                     </button>
                     <div x-show="open" x-transition class="flex flex-col gap-2 mt-2">
                         @foreach([
-                            'fructose' => __('ohne Fruktose'),
-                            'vitamin_b' => __('Vitamin B'),
-                            'ballaststoffe' => __('Ballaststoffe'),
-                            'proteine' => __('Proteine'),
+                            'fructose' => __('Fruktose'),
+                            'vitamin_B1(thiamin)' => __('Vitamin B1 (thiamin)'),
+                            'carbohydrates' => __('Kohlenhydrate'),
+                            'protein' => __('Protein'),
                         ] as $key => $label)
                             <div class="flex items-center space-x-2">
                                 <input type="checkbox" wire:model="filterSubstances.{{ $key }}.enabled" value="1" class="form-checkbox">

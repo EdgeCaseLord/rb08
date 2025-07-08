@@ -105,8 +105,174 @@ class PatientResource extends Resource
                 Forms\Components\Hidden::make('role')
                     ->default('patient'),
                 Forms\Components\Section::make('Rezepte Filter')
+                    ->collapsible()
                     ->schema([
-                        Forms\Components\View::make('components.recipe-filter-form'),
+                        Forms\Components\Fieldset::make('Allergene')
+                            ->schema([
+                                Forms\Components\CheckboxList::make('settings.recipe_filter_set.filterAllergens')
+                                    // ->label('Allergene')
+                            ->options([
+                                        'peanuts' => 'Erdnüsse',
+                                        'fish' => 'Fisch',
+                                        'gluten' => 'Glutenhaltiges Getreide',
+                                        'egg' => 'Hühnerei',
+                                        'crustaceans' => 'Krebstiere',
+                                        'lupin' => 'Lupinen',
+                                        'milk' => 'Milch',
+                                        'nuts' => 'Schalenfrüchte',
+                                        'sulphure' => 'Schwefeldioxid und Sulfit',
+                                        'celery' => 'Sellerie',
+                                        'mustard' => 'Senf',
+                                        'sesame' => 'Sesamsamen',
+                                        'soybeans' => 'Soja',
+                                        'molluscs' => 'Weichtiere',
+                                    ])
+                                    ->columns([
+                                        'default' => 1,
+                                        'md' => 2,
+                                        'xl' => 3
+                                    ]),
+                            ]),
+                        Forms\Components\Fieldset::make('Kategorie')
+                            ->schema([
+                                Forms\Components\CheckboxList::make('settings.recipe_filter_set.filterCategories')
+                                    ->label('Kategorie')
+                            ->options([
+                                        'side_dish' => 'Beilage',
+                                        'fingerfood' => 'Fingerfood',
+                                        'fish' => 'Fisch & Meeresfrüchte',
+                                        'meat' => 'Fleisch',
+                                        'vegetables' => 'Gemüse',
+                                        'drink' => 'Getränk',
+                                        'cake' => 'Kuchen',
+                                        'salad' => 'Salat',
+                                        'soup' => 'Suppe',
+                            ])
+                                    ->columns([
+                                        'default' => 1,
+                                        'md' => 2,
+                                        'xl' => 3
+                                    ]),
+                            ]),
+                        Forms\Components\Fieldset::make('Diäten')
+                            ->schema([
+                                Forms\Components\CheckboxList::make('settings.recipe_filter_set.filterDiets')
+                                    ->label('Diäten')
+                            ->options([
+                                        'egg-free' => 'Eifrei',
+                                        'gluten-free' => 'Glutenfrei',
+                                        'laktose-free' => 'Laktosefrei',
+                                        'fish-free' => 'Ohne Fisch',
+                                        'meat-free' => 'Ohne Fleisch',
+                                        'soy-free' => 'Sojafrei',
+                                        'vegan' => 'Vegan',
+                                        'vegetarian' => 'Vegetarisch',
+                                        'wheat-free' => 'Weizenfrei',
+                                        'alcohol-free' => 'Ohne Alkohol',
+                                        'histamin-free' => 'Histaminfrei',
+                                    ])
+                                    ->columns([
+                                        'default' => 1,
+                                        'md' => 2,
+                                        'xl' => 3
+                                    ]),
+                            ]),
+                        Forms\Components\Grid::make(2)
+                            ->schema([
+                                Forms\Components\CheckboxList::make('settings.recipe_filter_set.filterDifficulty')
+                                    ->label('Schwierigkeitsgrad')
+                                    ->options([
+                                        'easy' => 'Einfach',
+                                        'medium' => 'Mittel',
+                                        'hard' => 'Schwierig',
+                                    ]),
+                                Forms\Components\CheckboxList::make('settings.recipe_filter_set.filterMaxTime')
+                                    ->label('Maximale Gesamtzeit')
+                                    ->options([
+                                        'lte_30' => 'Bis 30 Minuten',
+                                        'lte_60' => 'Bis 60 Minuten',
+                                        'lte_120' => 'Bis 2 Stunden',
+                                        'gte_120' => 'Mehr als 2 Stunden',
+                                    ]),
+                            ]),
+                        Forms\Components\Select::make('settings.recipe_filter_set.filterCountry')
+                            ->label('Länderküche')
+                            ->multiple()
+                            ->options([
+                                'ar' => 'Argentinien', 'au' => 'Australien', 'be' => 'Belgien', 'ba' => 'Bosnien-Herzegowina', 'br' => 'Brasilien', 'bg' => 'Bulgarien', 'cl' => 'Chile', 'cn' => 'China', 'de' => 'Deutschland', 'dk' => 'Dänemark', 'fi' => 'Finnland', 'fr' => 'Frankreich', 'gr' => 'Griechenland', 'gb' => 'Großbritannien', 'in' => 'Indien', 'id' => 'Indonesien', 'ie' => 'Irland', 'il' => 'Israel', 'it' => 'Italien', 'jp' => 'Japan', 'ca' => 'Kanada', 'hr' => 'Kroatien', 'lv' => 'Lettland', 'lt' => 'Litauen', 'ma' => 'Marokko', 'mx' => 'Mexiko', 'mn' => 'Mongolei', 'nz' => 'Neuseeland', 'nl' => 'Niederlande', 'no' => 'Norwegen', 'pe' => 'Peru', 'ph' => 'Philippinen', 'pt' => 'Portugal', 'ro' => 'Rumänien', 'ru' => 'Russland', 'se' => 'Schweden', 'ch' => 'Schweiz', 'rs' => 'Serbien', 'sc' => 'Seychellen', 'sg' => 'Singapur', 'sk' => 'Slowakei', 'si' => 'Slowenien', 'es' => 'Spanien', 'th' => 'Thailand', 'cz' => 'Tschechische Republik', 'tn' => 'Tunesien', 'tr' => 'Türkei', 'us' => 'USA', 'ua' => 'Ukraine', 'hu' => 'Ungarn', 'vn' => 'Vietnam', 'cy' => 'Zypern', 'at' => 'Österreich'
+                            ]),
+                        Forms\Components\Fieldset::make('Substanzen')
+                            ->columns(1)
+                            ->schema([
+                                Forms\Components\Grid::make(3)
+                                    ->schema([
+                                        Forms\Components\Checkbox::make('settings.recipe_filter_set.filterSubstances.fructose.enabled')->label('Fruktose'),
+                                        Forms\Components\Select::make('settings.recipe_filter_set.filterSubstances.fructose.op')
+                                            ->options(['lt'=>'<','lte'=>'≤','gt'=>'>','gte'=>'≥'])
+                                            ->default('lte')
+                                            ->label(false),
+                                        Forms\Components\TextInput::make('settings.recipe_filter_set.filterSubstances.fructose.val1')
+                                            ->numeric()
+                                            ->default(0)
+                                            ->label(false),
+                                    ])
+                                    ->columns([
+                                        'default' => 1,
+                                        'md' => 2,
+                                        'xl' => 3
+                                    ]),
+                                Forms\Components\Grid::make(3)
+                                    ->schema([
+                                        Forms\Components\Checkbox::make('settings.recipe_filter_set.filterSubstances.vitamin_B1(thiamin).enabled')->label('Vitamin B1 (thiamin)'),
+                                        Forms\Components\Select::make('settings.recipe_filter_set.filterSubstances.vitamin_B1(thiamin).op')
+                                            ->options(['lt'=>'<','lte'=>'≤','gt'=>'>','gte'=>'≥'])
+                                            ->default('lte')
+                                            ->label(false),
+                                        Forms\Components\TextInput::make('settings.recipe_filter_set.filterSubstances.vitamin_B1(thiamin).val1')
+                                            ->numeric()
+                                            ->default(0)
+                                            ->label(false),
+                                    ])
+                                    ->columns([
+                                        'default' => 1,
+                                        'md' => 2,
+                                        'xl' => 3
+                                    ]),
+                                Forms\Components\Grid::make(3)
+                                    ->schema([
+                                        Forms\Components\Checkbox::make('settings.recipe_filter_set.filterSubstances.carbohydrates.enabled')->label('Kohlenhydrate'),
+                                        Forms\Components\Select::make('settings.recipe_filter_set.filterSubstances.carbohydrates.op')
+                                            ->options(['lt'=>'<','lte'=>'≤','gt'=>'>','gte'=>'≥'])
+                                            ->default('lte')
+                                            ->label(false),
+                                        Forms\Components\TextInput::make('settings.recipe_filter_set.filterSubstances.carbohydrates.val1')
+                                            ->numeric()
+                                            ->default(0)
+                                            ->label(false),
+                                    ])
+                                    ->columns([
+                                        'default' => 1,
+                                        'md' => 2,
+                                        'xl' => 3
+                                    ]),
+                                Forms\Components\Grid::make(3)
+                                    ->schema([
+                                        Forms\Components\Checkbox::make('settings.recipe_filter_set.filterSubstances.protein.enabled')->label('Protein'),
+                                        Forms\Components\Select::make('settings.recipe_filter_set.filterSubstances.protein.op')
+                                            ->options(['lt'=>'<','lte'=>'≤','gt'=>'>','gte'=>'≥'])
+                                            ->default('lte')
+                                            ->label(false),
+                                        Forms\Components\TextInput::make('settings.recipe_filter_set.filterSubstances.protein.val1')
+                                            ->numeric()
+                                            ->default(0)
+                                            ->label(false),
+                                    ])
+                                    ->columns([
+                                        'default' => 1,
+                                        'md' => 2,
+                                        'xl' => 3
+                                    ]),
+                            ]),
                     ]),
             ]);
     }
