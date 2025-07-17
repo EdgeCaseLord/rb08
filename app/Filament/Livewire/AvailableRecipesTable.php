@@ -94,7 +94,7 @@ class AvailableRecipesTable extends Component
 
         // Set default operator and value for each substance if not already set
         foreach ([
-            'fructose', 'vitamin_B1(thiamin)', 'carbohydrates', 'protein'
+            'fructose', 'vitamin B1(thiamin)', 'carbohydrates', 'protein'
         ] as $substance) {
             if (!isset($this->filterSubstances[$substance]['op']) || $this->filterSubstances[$substance]['op'] === null || $this->filterSubstances[$substance]['op'] === '') {
                 $this->filterSubstances[$substance]['op'] = 'lte';
@@ -514,7 +514,7 @@ class AvailableRecipesTable extends Component
         // Map UI keys to CookButler API keys
         $substanceApiKeyMap = [
             'fructose' => 'fructose',
-            'vitamin_B1(thiamin)' => 'vitamin_B1(thiamin)',
+            'vitamin B1(thiamin)' => 'vitamin B1(thiamin)',
             'carbohydrates' => 'carbohydrates,available',
             'protein' => 'protein',
         ];
@@ -532,7 +532,11 @@ class AvailableRecipesTable extends Component
             }
         }
         // Remove empty/invalid entries
-        $substances = array_filter($substances, function($v) { return is_string($v) && $v !== ''; });
+        $substances = array_filter($substances, function($v) { return is_string($v) && $v !== '' && preg_match('/^(lt|lte|gt|gte|bw|bwe)_/', $v); });
+        // Only include substances if it's a non-empty associative array
+        if (empty($substances) || array_values($substances) === $substances) {
+            $substances = [];
+        }
 
         // Map UI diet keys to CookButler API keys
         $dietApiKeyMap = [
@@ -547,13 +551,26 @@ class AvailableRecipesTable extends Component
             return $dietApiKeyMap[$diet] ?? $diet;
         }, $diets);
 
+        // Map UI course keys to CookButler API keys
+        $courseApiKeyMap = [
+            'starter' => 'starter',
+            'main_course' => 'main_course',
+            'dessert' => 'dessert',
+        ];
+        $courses = array_keys(array_filter($this->filterCourse));
+        $courses = array_values(array_filter(array_map(function($course) use ($courseApiKeyMap) {
+            return $courseApiKeyMap[$course] ?? null;
+        }, $courses), function($v) {
+            return in_array($v, ['starter','main_course','dessert']);
+        }));
+
         return [
             'filterTitle' => $this->filterTitle,
             'filterIngredients' => $this->filterIngredients,
             'filterAllergen' => array_keys(array_filter($this->filterAllergen)),
             'filterCategory' => array_keys(array_filter($this->filterCategory)),
             'filterCountry' => array_keys(array_filter($this->filterCountry)),
-            'filterCourse' => array_keys(array_filter($this->filterCourse)),
+            'filterCourse' => $courses,
             'filterDiets' => $diets,
             'filterSubstances' => $substances,
             'filterDifficulty' => array_keys(array_filter($this->filterDifficulty)),

@@ -463,6 +463,14 @@ class CookButlerService
             $apiReadyFilters['allergen'] = $apiReadyFilters['allergen'];
         }
 
+        // SAFEGUARD: Ensure 'courses' is always an array of valid course strings
+        if (!empty($apiReadyFilters['courses'])) {
+            $validCourses = ['starter', 'main_course', 'dessert'];
+            $apiReadyFilters['courses'] = array_values(array_filter($apiReadyFilters['courses'], function($v) use ($validCourses) {
+                return in_array($v, $validCourses, true);
+            }));
+        }
+
         // Handle offset and randomize_offset separately
         $apiOffset = isset($filters['offset']) ? (int) $filters['offset'] : 0;
         $randomizeOffset = isset($filters['randomize_offset']) ? (bool) $filters['randomize_offset'] : false;
