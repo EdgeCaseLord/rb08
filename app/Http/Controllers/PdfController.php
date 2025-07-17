@@ -11,26 +11,38 @@ class PdfController extends Controller
 {
     public function downloadBook(Book $book)
     {
-        if ($book->recipes()->count() === 0) {
-            abort(404, 'Cannot generate a PDF for a book with no recipes.');
-        }
+        try {
+            if ($book->recipes()->count() === 0) {
+                \Log::warning('PDF generierung abgebrochen: Das Buch enthält keine Rezepte', ['book_id' => $book->id]);
+                abort(404, 'Kann kein Buch ohne Rezepte generieren.');
+            }
 
-        // Find the sample code more robustly
-        $analysis = $book->analysis;
-        if (!$analysis && $book->patient) {
-            $analysis = Analysis::where('patient_id', $book->patient->id)->latest()->first();
-        }
-        $sampleCode = $analysis?->sample_code;
-        $pdfFileName = $sampleCode ? ($sampleCode . '_RB.pdf') : "book-{$book->id}-rezepte.pdf";
+            $analysis = $book->analysis;
+            if (!$analysis && $book->patient) {
+                $analysis = Analysis::where('patient_id', $book->patient->id)->latest()->first();
+            }
+            $sampleCode = $analysis?->sample_code;
+            $pdfFileName = $sampleCode ? ($sampleCode . '_RB.pdf') : "book-{$book->id}-rezepte.pdf";
 
-        return Pdf::view('pdf.book', [
+            return Pdf::view('pdf.book', [
+                    'book' => $book,
+                    'recipes' => $book->recipes()->get()
+                ])
+                ->format('a4')
+                ->withBrowsershot(function (Browsershot $browsershot) {
+                    $browsershot->noSandbox();
+                })
+                ->download($pdfFileName);
+        } catch (\Throwable $e) {
+            \Log::error('PDF generation failed', [
+                'book_id' => $book->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return response()->view('errors.pdf-generation', [
+                'message' => 'PDF-Generierung fehlgeschlagen: ' . $e->getMessage(),
                 'book' => $book,
-                'recipes' => $book->recipes()->get()
-            ])
-            ->format('a4')
-            ->withBrowsershot(function (Browsershot $browsershot) {
-                $browsershot->noSandbox();
-            })
-            ->download($pdfFileName);
+            ], 500);
+        }
     }
 }

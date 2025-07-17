@@ -293,7 +293,7 @@
         <div class="no-image">No cover image available (URL: {{ $randomImage ?? 'None' }})</div>
     @endif
     <div class="cover-box">
-        <span style="font-size: 18pt; color: #8B0000;">Allergenfreies</span><br>
+        <span style="font-size: 18pt; color: #8B0000;">Persönliches</span><br>
         <span class="cover-sans" style="font-size: 24pt; font-weight: bold;">Rezeptbuch</span><br>
         <span class="cover-sans" style="font-size: 14pt; font-style: italic;">von {{ $book->patient->name ?? 'Unbekannt' }}</span>
     </div>
@@ -320,7 +320,7 @@
                     <div class="no-image">No back cover image available (URL: {{ $randomImage ?? 'None' }})</div>
                 @endif
                 <div class="impressum-title">
-                    <span style="font-size: 18pt; color: #8B0000;">Allergenfreies</span><br>
+                    <span style="font-size: 18pt; color: #8B0000;">Persönliches</span><br>
                     <span class="cover-sans" style="font-size: 24pt; font-weight: bold;">Rezeptbuch</span><br>
                     <span class="cover-sans" style="font-size: 14pt; font-style: italic;">von {{ $book->patient->name ?? 'Unbekannt' }}</span>
                     @php
