@@ -340,13 +340,14 @@ class CreateBookJob implements ShouldQueue
 
 <p>vielen Dank für Ihren Auftrag zur Typ-III-Allergiediagnostik.</p>
 
-<p>Sie können das individuell zusammengestellte Rezeptbuch für Ihre Patientin bzw. Ihren Patienten, abgestimmt auf die festgestellten Nahrungsmittelunverträglichkeiten, über den folgenden Link einsehen und bearbeiten:</p>
+<p>Sie können das individuell zusammengestellte Rezeptbuch für Ihre Patientin bzw. Ihren Patienten, abgestimmt auf die festgestellten Nahrungsmittelunverträglichkeiten, über den folgenden Link einsehen, bearbeiten und herunterladen:</p>
 
 <p><a href="{$editLink}">Rezeptbuch bearbeiten</a></p>
 
 <p>Bitte prüfen Sie die Angaben und Rezepte sorgfältig. Bei Fragen oder Änderungswünschen stehen wir Ihnen selbstverständlich jederzeit gerne zur Verfügung.</p>
 
 <p>Mit freundlichen Grüßen</p>
+<p><strong>Wichtiger Hinweis:</strong> Aus Sicherheitsgründen müssen Sie bei Ihrer ersten Anmeldung ein eigenes Passwort festlegen. Bitte folgen Sie den Anweisungen auf der Login-Seite. Sie erhalten dann eine Email mit einem Link, um das Passwort zu setzen und können danach erneut den oben genannten Link nutzen.</p>
 EOT;
     }
 

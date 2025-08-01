@@ -98,7 +98,7 @@ class Analysis extends Model
                         'first_name' => $analysis->doctor_first_name ?? null,
                         'name' => $analysis->approval_by,
                         'email' => strtolower(str_replace('dr', '.', $analysis->approval_by)) . '@rezept-butler.com',
-                        'password' => Hash::make('password'),
+                        'password' => null,
                         'role' => 'doctor',
                         'lab_id' => $analysis->lab_id,
                     ]);
@@ -127,7 +127,7 @@ class Analysis extends Model
                         'first_name' => $analysis->patient_first_name ?? null,
                         'name' => $analysis->patient_name ?? 'Unbekannter Patient',
                         'email' => strtolower(str_replace(' ', '.', $analysis->patient_name ?? 'unknown')) . '.' . ($analysis->patient_code ?? 'unknown') . '@rezept-butler.com',
-                        'password' => Hash::make('password'),
+                        'password' => null,
                         'role' => 'patient',
                         'patient_code' => $analysis->patient_code,
                         'birthdate' => $analysis->patient_date_of_birth,

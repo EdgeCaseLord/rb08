@@ -40,6 +40,15 @@ new #[Layout('components.layouts.auth')] class extends Component {
         RateLimiter::clear($this->throttleKey());
         Session::regenerate();
 
+        // Check if user must set password
+        $user = Auth::user();
+        if ($user && is_null($user->password)) {
+            Auth::logout();
+            // Redirect to reset-password page with email as parameter
+            $this->redirectRoute('password.request', ['email' => $this->email], navigate: true);
+            return;
+        }
+
         $this->redirectIntended(default: route('dashboard', absolute: false), navigate: true);
     }
 
