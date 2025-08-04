@@ -18,9 +18,14 @@ return new class extends Migration
             $table->unsignedInteger('total_rows');
             $table->unsignedInteger('successful_rows')->default(0);
             $table->string('status')->default('pending'); // pending, processing, completed, failed
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->unsignedBigInteger('user_id');
             $table->timestamps();
             $table->index('created_at');
+        });
+
+        // Add foreign key constraint with explicit name
+        Schema::table('exports', function (Blueprint $table) {
+            $table->foreign('user_id', 'fk_exports_user_id')->references('id')->on('users')->cascadeOnDelete();
         });
     }
 
