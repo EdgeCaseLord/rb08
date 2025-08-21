@@ -275,7 +275,7 @@ class CreateBookJob implements ShouldQueue
             $template = TextTemplate::where('type', 'book_send_email')->first();
         }
 
-        $editLink = url("https://rezept-butler.com/books/{$book->id}/edit");
+        $editLink = url("https://myintest-rezepte.de/books/{$book->id}/edit");
         $userName = $lab ? $lab->name : ($patient->name ?? 'Lab');
         $patientName = $patient->name;
 

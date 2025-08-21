@@ -22,3 +22,5 @@ public/fonts/
 public/fonts/
 users_export.csv
 public/build/
+
+mysql_import.sql
