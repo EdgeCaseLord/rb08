@@ -103,5 +103,9 @@
     "Create Text Template": "Textvorlage erstellen",
     "Edit Text Template": "Textvorlage bearbeiten",
     "Delete Text Template": "Textvorlage löschen",
-    "Ernährungsweise": "Ernährungsweise"
+    "Ernährungsweise": "Ernährungsweise",
+    "No Recipes Found": "Keine Rezepte gefunden",
+    "No recipes were found for :name due to their allergen combination. No book was created.": "Für :name wurden keine Rezepte aufgrund der Allergen-Kombination gefunden. Kein Buch wurde erstellt.",
+    "Recipe Book Updated": "Rezeptbuch aktualisiert",
+    "The recipe book has been updated with new recipes based on the current filter set.": "Das Rezeptbuch wurde mit neuen Rezepten basierend auf dem aktuellen Filter-Set aktualisiert."
 }

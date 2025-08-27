@@ -189,6 +189,22 @@ class CreateBookJob implements ShouldQueue
                 'recipe_ids' => $currentRecipes,
             ]);
 
+            // Check if any recipes were added
+            if (empty($currentRecipes)) {
+                \Filament\Notifications\Notification::make()
+                    ->title(__('No Recipes Found'))
+                    ->body(__('No recipes were found for :name due to their allergen combination. No book was created.', ['name' => $patient->name]))
+                    ->warning()
+                    ->persistent()
+                    ->send();
+
+                Log::warning('CreateBookJob: No recipes found for patient, no book created', [
+                    'patient_id' => $patient->id,
+                    'patient_name' => $patient->name,
+                ]);
+                return;
+            }
+
             // Send email to lab
             Log::debug('CreateBookJob: Sending email to lab', [
                 'book_id' => $book->id,
@@ -198,8 +214,8 @@ class CreateBookJob implements ShouldQueue
 
             if ($createdNewBook) {
                 \Filament\Notifications\Notification::make()
-                    ->title('Rezeptbuch erstellt')
-                    ->body("Ein personalisiertes Rezeptbuch wurde für {$patient->name} erstellt.")
+                    ->title(__('Recipe Book Created'))
+                    ->body(__('A personalized recipe book has been created for :name', ['name' => $patient->name]))
                     ->success()
                     ->send();
             } elseif ($this->bookId) {
@@ -217,12 +233,12 @@ class CreateBookJob implements ShouldQueue
                         $onBookEditPage = true;
                     }
                 }
-                $body = "Das Rezeptbuch wurde mit neuen Rezepten basierend auf dem aktuellen Filter-Set aktualisiert.";
+                $body = __('The recipe book has been updated with new recipes based on the current filter set.');
                 if ($onBookEditPage) {
                     $body .= "\n\n<br>BITTE DIE SEITE NEU LADEN";
                 }
                 \Filament\Notifications\Notification::make()
-                    ->title('Rezeptbuch aktualisiert')
+                    ->title(__('Recipe Book Updated'))
                     ->body($body)
                     ->success()
                     ->persistent()
