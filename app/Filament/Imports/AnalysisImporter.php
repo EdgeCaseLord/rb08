@@ -375,6 +375,30 @@ class AnalysisImporter extends Importer
         $value = (string) $value;
         Log::info('After string conversion', ['value' => $value]);
 
+        // Handle "less than" values (e.g., "< 5,00")
+        if (preg_match('/^<\s*([0-9,]+)$/', trim($value), $matches)) {
+            $numericValue = str_replace(',', '.', $matches[1]);
+            $finalValue = (float) $numericValue;
+            Log::info('Less than value detected', [
+                'original' => $value,
+                'extracted_value' => $numericValue,
+                'final_value' => $finalValue
+            ]);
+            return $finalValue;
+        }
+
+        // Handle "greater than" values (e.g., "> 5,00")
+        if (preg_match('/^>\s*([0-9,]+)$/', trim($value), $matches)) {
+            $numericValue = str_replace(',', '.', $matches[1]);
+            $finalValue = (float) $numericValue;
+            Log::info('Greater than value detected', [
+                'original' => $value,
+                'extracted_value' => $numericValue,
+                'final_value' => $finalValue
+            ]);
+            return $finalValue;
+        }
+
         // Accept comma or dot as decimal separator
         $value = str_replace(',', '.', $value);
 
@@ -389,7 +413,7 @@ class AnalysisImporter extends Importer
             $value = implode('.', $parts);
         }
 
-        // Remove any non-numeric characters except decimal point
+        // Remove any non-numeric characters except decimal point and minus sign
         $value = preg_replace('/[^0-9.\-]/', '', $value);
         Log::info('After removing non-numeric', ['value' => $value]);
 
