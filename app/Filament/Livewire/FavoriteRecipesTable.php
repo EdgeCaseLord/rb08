@@ -98,7 +98,7 @@ class FavoriteRecipesTable extends Component
             }
         } catch (\Exception $e) {
             \Filament\Notifications\Notification::make()
-                ->title('Nicht hinzugefügt')
+                ->title(__('Nicht hinzugefügt'))
                 ->body($e->getMessage())
                 ->danger()
                 ->send();

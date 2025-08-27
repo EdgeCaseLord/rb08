@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
+use Filament\Notifications\Notification;
 
 class AvailableRecipesTable extends Component
 {
@@ -349,8 +350,8 @@ class AvailableRecipesTable extends Component
                 $this->dispatch('bookStatusUpdated', id: $book->id, status: $book->status);
             }
         } catch (\Exception $e) {
-            \Filament\Notifications\Notification::make()
-                ->title('Nicht hinzugefügt')
+            Notification::make()
+                ->title(__('Nicht hinzugefügt'))
                 ->body($e->getMessage())
                 ->danger()
                 ->send();
@@ -818,7 +819,7 @@ class AvailableRecipesTable extends Component
         ];
         $user['settings'] = $settings;
         $user->save();
-        \Filament\Notifications\Notification::make()
+        Notification::make()
             ->title(__('Filter gespeichert'))
             ->body(__('Das aktuelle Filter-Set wurde im Benutzerprofil gespeichert.'))
             ->success()
@@ -851,7 +852,7 @@ class AvailableRecipesTable extends Component
     public function onBookRecreatedAndSent($bookId)
     {
         if ($bookId == $this->bookId) {
-            \Filament\Notifications\Notification::make()
+            Notification::make()
                 ->title(__('Das Buch wurde neu erstellt und wird jetzt versendet. Die Seite wird neu geladen.') . ' / ' . __('The book has been recreated and will now be sent. The page will reload.'))
                 ->success()
                 ->send();

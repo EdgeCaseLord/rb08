@@ -54,7 +54,7 @@ class EditBook extends EditRecord
 
             // Notify success
             \Filament\Notifications\Notification::make()
-                ->title('Rezept entfernt')
+                ->title(__('Rezept entfernt'))
                 ->body("Das Rezept '{$recipe->title}' wurde aus dem Buch entfernt.")
                 ->success()
                 ->send();
@@ -69,8 +69,8 @@ class EditBook extends EditRecord
 
             // Notify error
             \Filament\Notifications\Notification::make()
-                ->title('Fehler')
-                ->body('Das Rezept konnte nicht entfernt werden: ' . $e->getMessage())
+                ->title(__('Fehler'))
+                ->body($e->getMessage())
                 ->danger()
                 ->send();
         }
@@ -102,8 +102,8 @@ class EditBook extends EditRecord
             // Check if limit is reached BEFORE trying to add
             if ($currentCount >= ($recipeLimits[$course] ?? PHP_INT_MAX)) {
                 \Filament\Notifications\Notification::make()
-                    ->title('Rezeptlimit erreicht')
-                    ->body("Maximale Rezepteanzahl für Gang {$course} erreicht!")
+                    ->title(__('Rezeptlimit erreicht'))
+                    ->body(__('Maximale Rezepteanzahl für Gang :course erreicht!', ['course' => $course]))
                     ->warning()
                     ->send();
                 return;
@@ -114,7 +114,7 @@ class EditBook extends EditRecord
 
             // Notify success
             \Filament\Notifications\Notification::make()
-                ->title('Rezept hinzugefügt')
+                ->title(__('Rezept hinzugefügt'))
                 ->body("Das Rezept '{$recipe->title}' wurde zum Buch hinzugefügt.")
                 ->success()
                 ->send();
@@ -129,8 +129,8 @@ class EditBook extends EditRecord
 
             // Notify error
             \Filament\Notifications\Notification::make()
-                ->title('Fehler')
-                ->body('Das Rezept konnte nicht hinzugefügt werden: ' . $e->getMessage())
+                ->title(__('Fehler'))
+                ->body($e->getMessage())
                 ->danger()
                 ->send();
         }
@@ -155,7 +155,7 @@ class EditBook extends EditRecord
             }
 
             \Filament\Notifications\Notification::make()
-                ->title('Zu Favoriten hinzugefügt')
+                ->title(__('Zu Favoriten hinzugefügt'))
                 ->success()
                 ->send();
         } catch (\Exception $e) {
@@ -165,8 +165,8 @@ class EditBook extends EditRecord
             ]);
 
             \Filament\Notifications\Notification::make()
-                ->title('Fehler')
-                ->body('Das Rezept konnte nicht zu den Favoriten hinzugefügt werden: ' . $e->getMessage())
+                ->title(__('Fehler'))
+                ->body($e->getMessage())
                 ->danger()
                 ->send();
         }
@@ -189,7 +189,7 @@ class EditBook extends EditRecord
             $user->save();
 
             \Filament\Notifications\Notification::make()
-                ->title('Aus Favoriten entfernt')
+                ->title(__('Aus Favoriten entfernt'))
                 ->success()
                 ->send();
         } catch (\Exception $e) {
@@ -199,8 +199,8 @@ class EditBook extends EditRecord
             ]);
 
             \Filament\Notifications\Notification::make()
-                ->title('Fehler')
-                ->body('Das Rezept konnte nicht aus den Favoriten entfernt werden: ' . $e->getMessage())
+                ->title(__('Fehler'))
+                ->body($e->getMessage())
                 ->danger()
                 ->send();
         }
@@ -564,8 +564,8 @@ class EditBook extends EditRecord
                     }
                     if (!$email) {
                         \Filament\Notifications\Notification::make()
-                            ->title('Fehler')
-                            ->body('Keine gültige E-Mail-Adresse gefunden.')
+                            ->title(__('Fehler'))
+                            ->body(__('Keine gültige E-Mail-Adresse gefunden.'))
                             ->danger()
                             ->send();
                         return;
@@ -653,8 +653,8 @@ class EditBook extends EditRecord
                         $this->dispatch('bookStatusUpdated', id: $this->record->id, status: $this->record->status);
                     }
                     \Filament\Notifications\Notification::make()
-                        ->title('E-Mail gesendet')
-                        ->body("Das Rezeptbuch wurde an {$email} gesendet.")
+                        ->title(__('E-Mail gesendet'))
+                        ->body(__('Das Rezeptbuch wurde an :email gesendet.', ['email' => $email]))
                         ->success()
                         ->send();
                 }),

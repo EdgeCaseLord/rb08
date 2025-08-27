@@ -171,8 +171,8 @@ class AssignRecipesJob implements ShouldQueue
 
             Log::info('AssignRecipesJob abgeschlossen', ['patient_anzahl' => $patients->count()]);
             Notification::make()
-                ->title('Rezeptzuweisung abgeschlossen')
-                ->body('Sichere Rezepte wurden für ' . $patients->count() . ' Patienten zugewiesen.')
+                ->title(__('Rezeptzuweisung abgeschlossen'))
+                ->body(__('Sichere Rezepte wurden für :patient_count Patienten zugewiesen.', ['patient_count' => $patients->count()]))
                 ->success()
                 ->send();
 

@@ -154,7 +154,7 @@ class Settings extends Page
         }
 
         Notification::make()
-            ->title('Settings saved successfully!')
+            ->title(__('Settings saved successfully!'))
             ->success()
             ->send();
     }

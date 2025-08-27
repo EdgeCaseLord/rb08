@@ -27,9 +27,9 @@ class EditPatient extends EditRecord
                     $latestBook = \App\Models\Book::where('patient_id', $record->id)->latest()->first();
                     if ($latestBook) {
                         \App\Jobs\CreateBookJob::dispatch($record, null, $latestBook->id, $filterSet);
-                        \Filament\Notifications\Notification::make()->title('Buch wird aktualisiert')->success()->send();
+                        \Filament\Notifications\Notification::make()->title(__('Buch wird aktualisiert'))->success()->send();
                     } else {
-                        \Filament\Notifications\Notification::make()->title('Kein Buch gefunden')->warning()->send();
+                        \Filament\Notifications\Notification::make()->title(__('Kein Buch gefunden'))->warning()->send();
                     }
                 }),
         ];
@@ -75,7 +75,7 @@ class EditPatient extends EditRecord
                 CreateBookJob::dispatch($record, null, $latestBook->id, $filterSet);
             }
         }
-        Notification::make()->title('Filter gespeichert')->success()->send();
+        Notification::make()->title(__('Filter gespeichert'))->success()->send();
         redirect()->to(request()->url());
     }
 }

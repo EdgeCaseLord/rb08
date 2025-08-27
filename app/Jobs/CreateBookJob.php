@@ -374,8 +374,8 @@ EOT;
             'trace' => $exception->getTraceAsString(),
         ]);
         Notification::make()
-            ->title('Rezeptbuch-Erstellung fehlgeschlagen')
-            ->body('Das Rezeptbuch konnte nicht erstellt werden. Bitte überprüfen Sie die Protokolle für Details.')
+            ->title(__('Book Creation Failed'))
+            ->body(__('Failed to create recipe book. Check logs for details.'))
             ->danger()
             ->persistent()
             ->send();

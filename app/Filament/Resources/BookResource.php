@@ -343,9 +343,9 @@ class BookResource extends Resource
                         }
 
                         if (!$email) {
-                            \Filament\Notifications\Notification::make()
-                                ->title('Fehler')
-                                ->body('Keine gültige E-Mail-Adresse gefunden.')
+                            Notification::make()
+                                ->title(__('Fehler'))
+                                ->body(__('Keine gültige E-Mail-Adresse gefunden.'))
                                 ->danger()
                                 ->send();
                             return;
@@ -382,9 +382,9 @@ class BookResource extends Resource
                         $record->status = 'Versendet';
                         $record->save();
 
-                        \Filament\Notifications\Notification::make()
-                            ->title('E-Mail gesendet')
-                            ->body("Das Rezeptbuch wurde an {$email} gesendet.")
+                        Notification::make()
+                            ->title(__('E-Mail gesendet'))
+                            ->body(__('Das Rezeptbuch wurde an :email gesendet.', ['email' => $email]))
                             ->success()
                             ->send();
                     }),
@@ -483,9 +483,9 @@ class BookResource extends Resource
                     }
 
                     if (!$email) {
-                        \Filament\Notifications\Notification::make()
-                            ->title('Fehler')
-                            ->body('Keine gültige E-Mail-Adresse gefunden.')
+                        Notification::make()
+                            ->title(__('Fehler'))
+                            ->body(__('Keine gültige E-Mail-Adresse gefunden.'))
                             ->danger()
                             ->send();
                         return;
@@ -523,9 +523,9 @@ class BookResource extends Resource
                     $record->status = 'Versendet';
                     $record->save();
 
-                    \Filament\Notifications\Notification::make()
-                        ->title('E-Mail gesendet')
-                        ->body("Das Rezeptbuch wurde an {$email} gesendet.")
+                    Notification::make()
+                        ->title(__('E-Mail gesendet'))
+                        ->body(__('Das Rezeptbuch wurde an :email gesendet.', ['email' => $email]))
                         ->success()
                         ->send();
                 }),
