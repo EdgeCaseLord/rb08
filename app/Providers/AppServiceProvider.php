@@ -32,5 +32,9 @@ class AppServiceProvider extends ServiceProvider
         Livewire::component('book-recipes-table', \App\Filament\Livewire\BookRecipesTable::class);
         Livewire::component('favorite-recipes-table', \App\Filament\Livewire\FavoriteRecipesTable::class);
         Livewire::component('available-recipes-table', \App\Filament\Livewire\AvailableRecipesTable::class);
+
+         // Fix timestamp casting for job batches
+         \Illuminate\Support\Facades\Schema::defaultStringLength(191);
+
     }
 }
