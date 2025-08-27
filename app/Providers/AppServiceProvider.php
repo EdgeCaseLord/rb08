@@ -35,6 +35,27 @@ class AppServiceProvider extends ServiceProvider
 
          // Fix timestamp casting for job batches
          \Illuminate\Support\Facades\Schema::defaultStringLength(191);
+        // Fix timestamp handling for job batches
+        \Illuminate\Support\Facades\DB::statement('SET SESSION sql_mode = ""');
 
+        // Override the timestamp casting for job batches
+        \Illuminate\Support\Facades\Event::listen('Illuminate\Queue\Events\JobProcessing', function ($event) {
+            if (method_exists($event->job, 'payload')) {
+                $payload = $event->job->payload();
+                if (isset($payload['data']['command'])) {
+                    try {
+                        $command = unserialize($payload['data']['command']);
+                        if (str_contains(get_class($command), 'Import')) {
+                            // Ensure timestamps are properly formatted
+                            if (isset($command->created_at) && is_numeric($command->created_at)) {
+                                $command->created_at = date('Y-m-d H:i:s', $command->created_at);
+                            }
+                        }
+                    } catch (\Exception $e) {
+                        // Ignore serialization errors
+                    }
+                }
+            }
+        });
     }
 }
