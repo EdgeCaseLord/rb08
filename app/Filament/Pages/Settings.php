@@ -75,15 +75,14 @@ class Settings extends Page
                 ->helperText(__('Wählen Sie die Bildgröße für Kapitelzwischenbilder in Rezeptbüchern.')),
         ];
 
-        if ($user->canEditLabSettings()) {
+        if ($user->isLab()) {
             $schema[] = Forms\Components\TextInput::make('threshold')
                 ->label(__('threshold'))
                 ->numeric()
                 ->required()
                 ->minValue(0)
                 ->step(0.01)
-                ->helperText(__('Set the threshold for allergen positivity.'))
-                ->visible(fn () => $user->isLab());
+                ->helperText(__('Set the threshold for allergen positivity.'));
         }
 
         if ($user->isLab() || $user->isDoctor()) {

@@ -190,13 +190,30 @@ class AnalysisImporter extends Importer
         $record = $this->record;
         $data = $this->data;
 
-        // Set threshold based on user role
+        // Set threshold based on user role and hierarchy
         $user = \Filament\Facades\Filament::auth()->user();
+
         if ($user && $user->role === 'lab') {
-            $this->threshold = $user->settings['allergen_threshold'] ?? 10;
-        } elseif ($user instanceof \App\Models\User && $user->isAdmin()) {
+            // Lab users use their own threshold
+            $this->threshold = $user->threshold ?? 10.0;
+        } elseif ($user && $user->role === 'doctor') {
+            // Doctors inherit threshold from their lab
+            $lab = $user->lab;
+            $this->threshold = $lab ? ($lab->threshold ?? 10.0) : 10.0;
+        } elseif ($user && $user->role === 'patient') {
+            // Patients inherit threshold from their lab (via doctor or direct lab assignment)
+            $lab = $user->lab;
+            if (!$lab && $user->doctor) {
+                $lab = $user->doctor->lab;
+            }
+            $this->threshold = $lab ? ($lab->threshold ?? 10.0) : 10.0;
+        } elseif ($user && $user->role === 'admin') {
+            // Admins use the first available lab's threshold, or default
             $firstLab = User::labs()->first();
-            $this->threshold = $firstLab ? ($firstLab->settings['allergen_threshold'] ?? 10) : 10;
+            $this->threshold = $firstLab ? ($firstLab->threshold ?? 10.0) : 10.0;
+        } else {
+            // Default fallback
+            $this->threshold = 10.0;
         }
 
         Log::debug('After save called', [
