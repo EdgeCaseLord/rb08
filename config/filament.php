@@ -91,6 +91,8 @@ return [
         'imports' => [
             'batch_size' => 100,
             'timeout' => 300,
+            'use_job_batches' => false, // Add this line
+
         ],
     ],
 ];
