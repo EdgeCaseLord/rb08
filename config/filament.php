@@ -88,9 +88,9 @@ return [
 
     // trying to fix timestamp issue at analysis csv import in production mysql sys
     'actions' => [
-    'imports' => [
-        'batch_size' => 100,
-        'timeout' => 300,
+        'imports' => [
+            'batch_size' => 100,
+            'timeout' => 300,
+        ],
     ],
-
 ];
