@@ -490,10 +490,12 @@ class AnalysisImporter extends Importer
         $patients = User::whereIn('id', $patientIds)->where('role', 'patient')->get();
 
         if ($patients->isNotEmpty()) {
-            AssignRecipesJob::dispatch($patients->all())->onQueue('default');
+            $userId = $import->user_id;
+            AssignRecipesJob::dispatch($patients->all(), $import->id, $userId)->onQueue('default');
             $body .= ' ' . __('AssignRecipesJob started for :patient_count patients.', ['patient_count' => $patients->count()]);
             Log::info('AssignRecipesJob dispatched', [
                 'import_id' => $import->id,
+                'user_id' => $userId,
                 'patient_count' => $patients->count(),
                 'successful_rows' => $import->successful_rows,
                 'failed_rows' => $failedRowsCount,
@@ -516,5 +518,47 @@ class AnalysisImporter extends Importer
         self::$validationErrors = [];
 
         return $body;
+    }
+
+    /**
+     * Check for completed AssignRecipesJob results and show notification
+     */
+    public static function checkAndShowNotification($userId, $importId = null): bool
+    {
+        $results = AssignRecipesJob::getResultsForUser($userId, $importId);
+
+        if (!$results) {
+            return false;
+        }
+
+        $title = __('Rezeptzuweisung abgeschlossen');
+        $body = "**Zusammenfassung:**\n";
+        $body .= "• {$results['total_patients']} Patienten verarbeitet\n";
+        $body .= "• {$results['books_created']} Bücher erstellt\n";
+        $body .= "• {$results['total_recipes']} Rezepte zugewiesen\n\n";
+
+        $body .= "**Details pro Patient:**\n";
+        foreach ($results['patient_results'] as $result) {
+            $status = $result['book_created'] ? "✅ Buch erstellt" : "❌ Keine Rezepte";
+            $body .= "• {$result['patient_name']} ({$result['patient_code']}): {$status}";
+            if ($result['book_created']) {
+                $body .= " - {$result['recipe_count']} Rezepte";
+            }
+            $body .= "\n";
+        }
+
+        Notification::make()
+            ->title($title)
+            ->body($body)
+            ->success()
+            ->send();
+
+        Log::info('Notification shown for completed AssignRecipesJob', [
+            'user_id' => $userId,
+            'import_id' => $importId,
+            'results' => $results,
+        ]);
+
+        return true;
     }
 }
