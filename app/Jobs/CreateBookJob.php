@@ -72,7 +72,7 @@ class CreateBookJob implements ShouldQueue
         if ($this->recipeIds && !$this->bookId) {
             $existingBook = Book::where('patient_id', $patient->id)
                 ->whereHas('recipes', function($query) {
-                    $query->whereIn('recipes.id', $this->recipeIds);
+                    $query->whereIn('recipes.id_recipe', $this->recipeIds);
                 })
                 ->first();
 
