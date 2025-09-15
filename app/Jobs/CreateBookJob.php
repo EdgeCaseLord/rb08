@@ -328,8 +328,8 @@ class CreateBookJob implements ShouldQueue
         $subject = strtr($subject, $replacements);
         $body = strtr($body, $replacements);
 
-        // Log email content
-        Log::debug('Email content prepared', [
+        // Log email content to email channel
+        Log::channel('email')->debug('Email content prepared', [
             'book_id' => $book->id,
             'to' => $labEmail,
             'subject' => $subject,
@@ -345,25 +345,34 @@ class CreateBookJob implements ShouldQueue
         }
 
         try {
+            // Log mail configuration before sending to email channel
+            Log::channel('email')->debug('Mail configuration', [
+                'default_mailer' => config('mail.default'),
+                'log_channel' => config('mail.mailers.log.channel'),
+                'from_address' => config('mail.from.address'),
+                'from_name' => config('mail.from.name'),
+            ]);
+
             Mail::send([], [], function ($message) use ($subject, $body, $labEmail) {
                 $message->to($labEmail)
                     ->subject(mb_encode_mimeheader($subject, 'UTF-8'))
                     ->html($body);
             });
 
-            Log::info('Email sent to lab', [
+            Log::channel('email')->info('Email sent to lab', [
                 'book_id' => $book->id,
                 'lab_email' => $labEmail,
                 'patient_id' => $patient->id,
             ]);
         } catch (\Exception $e) {
-            Log::error('Failed to send email to lab', [
+            Log::channel('email')->error('Failed to send email to lab', [
                 'book_id' => $book->id,
                 'lab_email' => $labEmail,
                 'patient_id' => $patient->id,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
+            throw $e; // Re-throw to ensure job fails and can be retried
         }
     }
 
