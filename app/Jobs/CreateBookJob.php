@@ -68,6 +68,24 @@ class CreateBookJob implements ShouldQueue
         }
         Log::info('CreateBookJob: Patient validated', ['patient_id' => $patient->id]);
 
+        // Check if book already exists for this patient with these recipes (idempotency check)
+        if ($this->recipeIds && !$this->bookId) {
+            $existingBook = Book::where('patient_id', $patient->id)
+                ->whereHas('recipes', function($query) {
+                    $query->whereIn('recipes.id', $this->recipeIds);
+                })
+                ->first();
+
+            if ($existingBook) {
+                Log::info('CreateBookJob: Book already exists, skipping creation', [
+                    'patient_id' => $patient->id,
+                    'existing_book_id' => $existingBook->id,
+                    'recipe_ids' => $this->recipeIds
+                ]);
+                return;
+            }
+        }
+
         try {
             $latestAnalysis = \App\Models\Analysis::where('patient_id', $patient->id)->latest('created_at')->first();
             Log::debug('CreateBookJob: Latest analysis fetched', [
