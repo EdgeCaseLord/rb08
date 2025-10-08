@@ -242,6 +242,57 @@
 .nutrient-row-odd {
     background: #FFFFFF;
 }
+/* Dark mode overrides - ensure consistent styling regardless of theme */
+.dark .recipe-content,
+.dark .recipe-content * {
+    color: #000 !important;
+    background-color: transparent !important;
+}
+
+.dark .card {
+    background: white !important;
+    color: #000 !important;
+}
+
+.dark .nutrients-compact-table th,
+.dark .nutrients-compact-table td {
+    color: #000 !important;
+}
+
+.dark .nutrients-compact-table tr:nth-child(even) {
+    background: #FFF5ED !important;
+}
+
+.dark .nutrients-compact-table tr:nth-child(odd) {
+    background: #fff !important;
+}
+
+.dark .nutrient-row-even {
+    background: #FFF5ED !important;
+    color: #000 !important;
+}
+
+.dark .nutrient-row-odd {
+    background: #FFFFFF !important;
+    color: #000 !important;
+}
+
+.dark .ingredients-list li {
+    color: #000 !important;
+}
+
+.dark .times-table td {
+    color: #000 !important;
+}
+
+.dark .allergens-list li {
+    color: #000 !important;
+}
+
+.dark .steps-list li {
+    color: #000 !important;
+}
+
 @media print {
     .filament-panels, .filament-header, .filament-footer, .filament-sidebar {
         display: none !important;
