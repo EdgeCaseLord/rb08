@@ -488,7 +488,7 @@
                                 @php
                                         $unit = $nutrientList[$nutrient];
                                         $substance = $substances->first(function($s) use ($nutrient) {
-                                            return isset($s['substance']) && stripos($s['substance'], strtok($nutrient, ' (')) !== false;
+                                            return isset($s['substance']) && stripos($s['substance'], $nutrient) !== false;
                                         });
                                         $value = $substance['portion']['amount'] ?? $substance['value'] ?? null;
                                         $value = is_numeric($value) ? number_format($value, 1) : '–';
