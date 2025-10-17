@@ -215,11 +215,12 @@ class PatientResource extends Resource
                                             ->numeric()
                                             ->default(0)
                                             ->label(false)
-                                            ->suffix('mg/100g'),
+                                            ->suffix('mg/100g')
+                                            ->extraInputAttributes(['class' => '!mt-0']),
                                     ])
                                     ->columns([
                                         'default' => 1,
-                                        'md' => 2,
+                                        'md' => 1,
                                         'xl' => 3
                                     ]),
                                 Forms\Components\Grid::make(3)
@@ -233,11 +234,12 @@ class PatientResource extends Resource
                                             ->numeric()
                                             ->default(0)
                                             ->label(false)
-                                            ->suffix('mg/100g'),
+                                            ->suffix('mg/100g')
+                                            ->extraInputAttributes(['class' => '!mt-0']),
                                     ])
                                     ->columns([
                                         'default' => 1,
-                                        'md' => 2,
+                                        'md' => 1,
                                         'xl' => 3
                                     ]),
                                 Forms\Components\Grid::make(3)
@@ -251,11 +253,12 @@ class PatientResource extends Resource
                                             ->numeric()
                                             ->default(0)
                                             ->label(false)
-                                            ->suffix('g/100g'),
+                                            ->suffix('g/100g')
+                                            ->extraInputAttributes(['class' => '!mt-0']),
                                     ])
                                     ->columns([
                                         'default' => 1,
-                                        'md' => 2,
+                                        'md' => 1,
                                         'xl' => 3
                                     ]),
                                 Forms\Components\Grid::make(3)
@@ -269,11 +272,12 @@ class PatientResource extends Resource
                                             ->numeric()
                                             ->default(0)
                                             ->label(false)
-                                            ->suffix('g/100g'),
+                                            ->suffix('g/100g')
+                                            ->extraInputAttributes(['class' => '!mt-0']),
                                     ])
                                     ->columns([
                                         'default' => 1,
-                                        'md' => 2,
+                                        'md' => 1,
                                         'xl' => 3
                                     ]),
                             ]),
