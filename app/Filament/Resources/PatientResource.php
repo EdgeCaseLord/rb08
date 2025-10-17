@@ -210,13 +210,14 @@ class PatientResource extends Resource
                                         Forms\Components\Select::make('settings.recipe_filter_set.filterSubstances.fructose.op')
                                             ->options(['lt'=>'<','lte'=>'≤','gt'=>'>','gte'=>'≥'])
                                             ->default('lte')
-                                            ->label(false),
+                                            ->label(false)
+                                            ->extraInputAttributes(['class' => '!mt-0 !pt-0 !pb-0 !h-10']),
                                         Forms\Components\TextInput::make('settings.recipe_filter_set.filterSubstances.fructose.val1')
                                             ->numeric()
                                             ->default(0)
                                             ->label(false)
                                             ->suffix('mg/100g')
-                                            ->extraAttributes(['class' => '!mt-0 !self-start']),
+                                            ->extraInputAttributes(['class' => '!mt-0 !pt-0 !pb-0 !h-10']),
                                     ])
                                     ->columns([
                                         'default' => 1,
@@ -229,13 +230,14 @@ class PatientResource extends Resource
                                         Forms\Components\Select::make('settings.recipe_filter_set.filterSubstances.vitamin_B1(thiamin).op')
                                             ->options(['lt'=>'<','lte'=>'≤','gt'=>'>','gte'=>'≥'])
                                             ->default('lte')
-                                            ->label(false),
+                                            ->label(false)
+                                            ->extraInputAttributes(['class' => '!mt-0 !pt-0 !pb-0 !h-10']),
                                         Forms\Components\TextInput::make('settings.recipe_filter_set.filterSubstances.vitamin_B1(thiamin).val1')
                                             ->numeric()
                                             ->default(0)
                                             ->label(false)
                                             ->suffix('mg/100g')
-                                            ->extraAttributes(['class' => '!mt-0 !self-start']),
+                                            ->extraInputAttributes(['class' => '!mt-0 !pt-0 !pb-0 !h-10']),
                                     ])
                                     ->columns([
                                         'default' => 1,
@@ -248,13 +250,14 @@ class PatientResource extends Resource
                                         Forms\Components\Select::make('settings.recipe_filter_set.filterSubstances.carbohydrates.op')
                                             ->options(['lt'=>'<','lte'=>'≤','gt'=>'>','gte'=>'≥'])
                                             ->default('lte')
-                                            ->label(false),
+                                            ->label(false)
+                                            ->extraInputAttributes(['class' => '!mt-0 !pt-0 !pb-0 !h-10']),
                                         Forms\Components\TextInput::make('settings.recipe_filter_set.filterSubstances.carbohydrates.val1')
                                             ->numeric()
                                             ->default(0)
                                             ->label(false)
                                             ->suffix('g/100g')
-                                            ->extraAttributes(['class' => '!mt-0 !self-start']),
+                                            ->extraInputAttributes(['class' => '!mt-0 !pt-0 !pb-0 !h-10']),
                                     ])
                                     ->columns([
                                         'default' => 1,
@@ -267,13 +270,14 @@ class PatientResource extends Resource
                                         Forms\Components\Select::make('settings.recipe_filter_set.filterSubstances.protein.op')
                                             ->options(['lt'=>'<','lte'=>'≤','gt'=>'>','gte'=>'≥'])
                                             ->default('lte')
-                                            ->label(false),
+                                            ->label(false)
+                                            ->extraInputAttributes(['class' => '!mt-0 !pt-0 !pb-0 !h-10']),
                                         Forms\Components\TextInput::make('settings.recipe_filter_set.filterSubstances.protein.val1')
                                             ->numeric()
                                             ->default(0)
                                             ->label(false)
                                             ->suffix('g/100g')
-                                            ->extraAttributes(['class' => '!mt-0 !self-start']),
+                                            ->extraInputAttributes(['class' => '!mt-0 !pt-0 !pb-0 !h-10']),
                                     ])
                                     ->columns([
                                         'default' => 1,
