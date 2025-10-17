@@ -177,6 +177,8 @@
                         color="danger"
                         tooltip="{{ __('Remove from Favorites') }}"
                         x-on:click.prevent="if(confirm('Wirklich aus Favoriten entfernen?')) { $wire.removeFromFavorites({{ $id }}) }"
+                        wire:loading.attr="disabled"
+                        wire:target="removeFromFavorites({{ $id }})"
                     />
                 @else
                     <x-filament::icon-button
@@ -184,6 +186,8 @@
                         color="gray"
                         tooltip="{{ __('Add to Favorites') }}"
                         wire:click="addToFavorites({{ $id }})"
+                        wire:loading.attr="disabled"
+                        wire:target="addToFavorites({{ $id }})"
                     />
                 @endif
 
@@ -195,6 +199,7 @@
                         :tooltip="__('Aus Buch entfernen')"
                         wire:click="removeRecipe({{ $id }})"
                         wire:loading.attr="disabled"
+                        wire:target="removeRecipe({{ $id }})"
                     />
                 @endif
                 @if($context === 'available' || $context === 'favorites')
@@ -205,6 +210,7 @@
                         :tooltip="__('Zum Buch hinzufügen')"
                         wire:click.prevent="addToBook({{ $id }})"
                         wire:loading.attr="disabled"
+                        wire:target="addToBook({{ $id }})"
                     />
                 @endif
             </div>
