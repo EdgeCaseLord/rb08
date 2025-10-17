@@ -188,14 +188,14 @@
                 </button>
                 <div class="flex flex-col gap-2 mt-2">
                     @foreach([
-                        'fructose' => __('Fruktose'),
-                        'vitamin_B1(thiamin)' => __('Vitamin B1 (thiamin)'),
-                        'carbohydrates' => __('Kohlenhydrate'),
-                        'protein' => __('Protein'),
-                    ] as $key => $label)
+                        'fructose' => ['label' => __('Fruktose'), 'unit' => 'mg/100g'],
+                        'vitamin_B1(thiamin)' => ['label' => __('Vitamin B1 (thiamin)'), 'unit' => 'mg/100g'],
+                        'carbohydrates' => ['label' => __('Kohlenhydrate'), 'unit' => 'g/100g'],
+                        'protein' => ['label' => __('Protein'), 'unit' => 'g/100g'],
+                    ] as $key => $config)
                         <div class="flex items-center space-x-2">
                             <input type="checkbox" name="filterSubstances[{{ $key }}][enabled]" value="1" class="form-checkbox" @if(old('filterSubstances.' . $key . '.enabled', $filterSet['filterSubstances'][$key]['enabled'] ?? false)) checked @endif>
-                            <span>{{ $label }}</span>
+                            <span>{{ $config['label'] }}</span>
                             <select name="filterSubstances[{{ $key }}][op]" class="form-select w-auto">
                                 <option value="">-</option>
                                 <option value="lt" @if(old('filterSubstances.' . $key . '.op', $filterSet['filterSubstances'][$key]['op'] ?? '') == 'lt') selected @endif>&lt; ({{ __('weniger als') }})</option>
@@ -204,6 +204,7 @@
                                 <option value="gte" @if(old('filterSubstances.' . $key . '.op', $filterSet['filterSubstances'][$key]['op'] ?? '') == 'gte') selected @endif>&ge; ({{ __('mehr/gleich') }})</option>
                             </select>
                             <input type="number" name="filterSubstances[{{ $key }}][val1]" class="w-28 text-lg filament-input rounded-lg" value="{{ old('filterSubstances.' . $key . '.val1', $filterSet['filterSubstances'][$key]['val1'] ?? 0) }}" placeholder="0">
+                            <span class="text-sm text-gray-600">{{ $config['unit'] }}</span>
                             <input type="number" name="filterSubstances[{{ $key }}][val2]" class="w-28 text-lg filament-input rounded-lg" placeholder="Max" value="{{ old('filterSubstances.' . $key . '.val2', $filterSet['filterSubstances'][$key]['val2'] ?? '') }}">
                         </div>
                     @endforeach

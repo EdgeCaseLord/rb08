@@ -214,7 +214,8 @@ class PatientResource extends Resource
                                         Forms\Components\TextInput::make('settings.recipe_filter_set.filterSubstances.fructose.val1')
                                             ->numeric()
                                             ->default(0)
-                                            ->label(false),
+                                            ->label('mg/100g')
+                                            ->suffix('mg/100g'),
                                     ])
                                     ->columns([
                                         'default' => 1,

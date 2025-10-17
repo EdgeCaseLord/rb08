@@ -338,25 +338,26 @@
             ->pluck('allergen')
             ->all() : [];
         $steps = is_string($data['steps'] ?? null) ? json_decode($data['steps'] ?? '[]', true) : (is_array($data['steps'] ?? null) ? $data['steps'] : []);
-        // Nutrients
-        $nutrientList = [
-            'Ballaststoffe' => 'g',
-            'Calcium' => 'mg',
-            'Eisen' => 'mg',
-            'Eiweiß (Protein)' => 'g',
-            'Energie (Kilojoule)' => 'kJ',
-            'Energie (Kilokalorien)' => 'kcal',
-            'Fett' => 'g',
-            'Kohlenhydrate, resorbierbar' => 'g',
-            'Vitamin A Beta-Carotin' => 'µg',
-            'Vitamin B1 Thiamin' => 'mg',
-            'Vitamin B6 Pyridoxin' => 'mg',
-            'Vitamin B9 gesamte Folsäure' => 'µg',
-            'Vitamin C Ascorbinsäure' => 'mg',
-            'Vitamin D Calciferole' => 'µg',
-            'Zink' => 'mg',
-            'Zucker (gesamt)' => 'g',
-        ];
+    // Nutrients
+    $nutrientList = [
+        'Ballaststoffe' => 'g',
+        'Calcium' => 'mg',
+        'Eisen' => 'mg',
+        'Eiweiß (Protein)' => 'g',
+        'Energie (Kilojoule)' => 'kJ',
+        'Energie (Kilokalorien)' => 'kcal',
+        'Fett' => 'g',
+        'Fruktose' => 'mg',
+        'Kohlenhydrate, resorbierbar' => 'g',
+        'Vitamin A Beta-Carotin' => 'µg',
+        'Vitamin B1 Thiamin' => 'mg',
+        'Vitamin B6 Pyridoxin' => 'mg',
+        'Vitamin B9 gesamte Folsäure' => 'µg',
+        'Vitamin C Ascorbinsäure' => 'mg',
+        'Vitamin D Calciferole' => 'µg',
+        'Zink' => 'mg',
+        'Zucker (gesamt)' => 'g',
+    ];
         // Ordered times for table
         $timesCol = collect($times);
         $orderedTimes = collect();

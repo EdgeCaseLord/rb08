@@ -366,6 +366,7 @@
         'Energie (Kilojoule)' => 'kJ',
         'Energie (Kilokalorien)' => 'kcal',
         'Fett' => 'g',
+        'Fruktose' => 'mg',
         'Kohlenhydrate, resorbierbar' => 'g',
         'Vitamin A Beta-Carotin' => 'µg',
         'Vitamin B1 Thiamin' => 'mg',
