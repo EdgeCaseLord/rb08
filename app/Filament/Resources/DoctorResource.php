@@ -33,12 +33,12 @@ class DoctorResource extends Resource
 
     public static function getModelLabel(): string
     {
-        return 'Arzt';
+        return __('Doctor');
     }
 
     public static function getPluralModelLabel(): string
     {
-        return 'Ärzte';
+        return __('Ärzte');
     }
 
     protected static ?string $navigationIcon = 'heroicon-o-user-plus';
@@ -55,9 +55,9 @@ class DoctorResource extends Resource
         return $form
             ->schema([
                 Forms\Components\TextInput::make('title')
-                    ->label('Titel'),
+                    ->label(__('Titel')),
                 Forms\Components\TextInput::make('first_name')
-                    ->label('Vorname'),
+                    ->label(__('Vorname')),
                 Forms\Components\TextInput::make('name')
                     ->required()
                     ->maxLength(255),
@@ -128,11 +128,11 @@ class DoctorResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('title')
-                    ->label('Titel')
+                    ->label(__('Titel'))
                     ->searchable()
                     ->toggleable(isToggledHiddenByDefault: false),
                 Tables\Columns\TextColumn::make('first_name')
-                    ->label('Vorname')
+                    ->label(__('Vorname'))
                     ->searchable()
                     ->toggleable(isToggledHiddenByDefault: false),
                 Tables\Columns\TextColumn::make('name')

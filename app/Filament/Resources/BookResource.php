@@ -27,9 +27,14 @@ class BookResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-book-open';
     protected static ?int $navigationSort = 5;
 
-    public static function getModelLabel(): string { return 'Rezeptbuch'; }
-    public static function getPluralModelLabel(): string { return 'Bücher'; }
+    public static function getModelLabel(): string { return __('Recipe Book'); }
+    public static function getPluralModelLabel(): string { return __('Bücher'); }
     protected static ?string $navigationLabel = 'Rezeptbücher';
+
+    public static function getNavigationLabel(): string
+    {
+        return __('Rezeptbücher');
+    }
 
     public static function shouldRegisterNavigation(): bool
     {

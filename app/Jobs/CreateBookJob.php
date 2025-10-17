@@ -351,6 +351,16 @@ class CreateBookJob implements ShouldQueue
                 'log_channel' => config('mail.mailers.log.channel'),
                 'from_address' => config('mail.from.address'),
                 'from_name' => config('mail.from.name'),
+                'smtp_host' => config('mail.mailers.smtp.host'),
+                'smtp_port' => config('mail.mailers.smtp.port'),
+                'smtp_encryption' => config('mail.mailers.smtp.encryption'),
+            ]);
+
+            Log::channel('email')->info('Attempting to send email', [
+                'book_id' => $book->id,
+                'lab_email' => $labEmail,
+                'patient_id' => $patient->id,
+                'subject' => $subject,
             ]);
 
             Mail::send([], [], function ($message) use ($subject, $body, $labEmail) {
@@ -359,18 +369,23 @@ class CreateBookJob implements ShouldQueue
                     ->html($body);
             });
 
-            Log::channel('email')->info('Email sent to lab', [
+            Log::channel('email')->info('✅ EMAIL SENT SUCCESSFULLY', [
                 'book_id' => $book->id,
                 'lab_email' => $labEmail,
                 'patient_id' => $patient->id,
+                'subject' => $subject,
+                'timestamp' => now()->toISOString(),
             ]);
         } catch (\Exception $e) {
-            Log::channel('email')->error('Failed to send email to lab', [
+            Log::channel('email')->error('❌ EMAIL SENDING FAILED', [
                 'book_id' => $book->id,
                 'lab_email' => $labEmail,
                 'patient_id' => $patient->id,
+                'subject' => $subject,
                 'error' => $e->getMessage(),
+                'error_code' => $e->getCode(),
                 'trace' => $e->getTraceAsString(),
+                'timestamp' => now()->toISOString(),
             ]);
             throw $e; // Re-throw to ensure job fails and can be retried
         }

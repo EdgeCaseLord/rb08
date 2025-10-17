@@ -21,7 +21,7 @@ class AnalysesWidget extends Widget
         return [
             'icon' => 'heroicon-o-magnifying-glass',
             'value' => Analysis::count(),
-            'label' => 'Analysen',
+            'label' => __('Analysen'),
             'resourceName' => 'Analysis',
         ];
     }

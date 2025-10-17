@@ -17,6 +17,11 @@ class AnalysesRelationManager extends RelationManager
 
     protected static ?string $title = 'Analysen';
 
+    public static function getTitle(Model $ownerRecord, string $pageClass): string
+    {
+        return __('Analysen');
+    }
+
     public function table(Table $table): Table
     {
         return $table

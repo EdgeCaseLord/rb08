@@ -28,12 +28,12 @@ class AdminResource extends Resource
 
     public static function getModelLabel(): string
     {
-        return 'Administrator';
+        return __('Administrator');
     }
 
     public static function getPluralModelLabel(): string
     {
-        return 'Administratoren';
+        return __('Administratoren');
     }
 
     protected static ?string $navigationIcon = 'heroicon-o-key';
@@ -44,9 +44,9 @@ class AdminResource extends Resource
         return $form
             ->schema([
                 Forms\Components\TextInput::make('title')
-                    ->label('Titel'),
+                    ->label(__('Titel')),
                 Forms\Components\TextInput::make('first_name')
-                    ->label('Vorname'),
+                    ->label(__('Vorname')),
                 Forms\Components\TextInput::make('name')
                     ->required()
                     ->maxLength(255),
@@ -77,11 +77,11 @@ class AdminResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('title')
-                    ->label('Titel')
+                    ->label(__('Titel'))
                     ->searchable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('first_name')
-                    ->label('Vorname')
+                    ->label(__('Vorname'))
                     ->searchable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('name')

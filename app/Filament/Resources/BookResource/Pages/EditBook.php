@@ -242,8 +242,6 @@ class EditBook extends EditRecord
                         ->afterStateUpdated(function ($set, $get) {
                             $template = \App\Models\TextTemplate::find($get('template_id'));
                             $lang = $get('language') ?? 'de';
-                            $subject = $template ? ($template->subject[$lang] ?? '') : '';
-                            $body = $template ? ($template->body[$lang] ?? '') : '';
                             $book = $this->record;
                             $patient = $book->patient ?? null;
                             $lab = $patient && $patient->lab ? $patient->lab : null;
@@ -274,6 +272,8 @@ class EditBook extends EditRecord
                                     return $val;
                                 }, $text);
                             };
+                            $subject = $template ? $template->getSubjectForLocale($lang) : '';
+                            $body = $template ? $template->getBodyForLocale($lang, $vars) : '';
                             $set('subject', $replaceVars($subject));
                             $set('body', $replaceVars($body));
                         }),
@@ -310,8 +310,6 @@ class EditBook extends EditRecord
                         ->afterStateUpdated(function ($set, $get) {
                             $template = \App\Models\TextTemplate::find($get('template_id'));
                             $lang = $get('language') ?? 'de';
-                            $subject = $template ? ($template->subject[$lang] ?? '') : '';
-                            $body = $template ? ($template->body[$lang] ?? '') : '';
                             $book = $this->record;
                             $patient = $book->patient ?? null;
                             $lab = $patient && $patient->lab ? $patient->lab : null;
@@ -342,6 +340,8 @@ class EditBook extends EditRecord
                                     return $val;
                                 }, $text);
                             };
+                            $subject = $template ? $template->getSubjectForLocale($lang) : '';
+                            $body = $template ? $template->getBodyForLocale($lang, $vars) : '';
                             $set('subject', $replaceVars($subject));
                             $set('body', $replaceVars($body));
                         }),
@@ -375,8 +375,6 @@ class EditBook extends EditRecord
                         ->afterStateUpdated(function ($set, $get) {
                             $template = \App\Models\TextTemplate::find($get('template_id'));
                             $lang = $get('language') ?? 'de';
-                            $subject = $template ? ($template->subject[$lang] ?? '') : '';
-                            $body = $template ? ($template->body[$lang] ?? '') : '';
                             $book = $this->record;
                             $patient = $book->patient ?? null;
                             $lab = $patient && $patient->lab ? $patient->lab : null;
@@ -407,6 +405,8 @@ class EditBook extends EditRecord
                                     return $val;
                                 }, $text);
                             };
+                            $subject = $template ? $template->getSubjectForLocale($lang) : '';
+                            $body = $template ? $template->getBodyForLocale($lang, $vars) : '';
                             $set('subject', $replaceVars($subject));
                             $set('body', $replaceVars($body));
                         }),
@@ -504,8 +504,6 @@ class EditBook extends EditRecord
                     \Filament\Forms\Components\Placeholder::make('preview')
                         ->label('Vorschau')
                         ->content(function ($get) {
-                            $subject = $get('subject') ?? '';
-                            $body = $get('body') ?? '';
                             $book = $this->record;
                             $patient = $book->patient ?? null;
                             $lab = $patient && $patient->lab ? $patient->lab : null;
@@ -521,23 +519,12 @@ class EditBook extends EditRecord
                                 'name' => $patientName,
                                 'lab_name' => $labName,
                             ];
-                            $replaceVars = function ($text) use ($vars) {
-                                return preg_replace_callback('/\{\$?([a-zA-Z0-9_]+)(->\w+)*\}/', function ($matches) use ($vars) {
-                                    $expr = ltrim(trim($matches[0], '{}'), '$');
-                                    $parts = explode('->', $expr);
-                                    $val = $vars[$parts[0]] ?? null;
-                                    for ($i = 1; $i < count($parts); $i++) {
-                                        if (is_object($val) && isset($val->{$parts[$i]})) {
-                                            $val = $val->{$parts[$i]};
-                                        } else {
-                                            return $matches[0];
-                                        }
-                                    }
-                                    return $val;
-                                }, $text);
-                            };
-                            $subject = $replaceVars($subject);
-                            $body = $replaceVars($body);
+
+                            // Get template and language from form data
+                            $template = \App\Models\TextTemplate::find($get('template_id'));
+                            $lang = $get('language') ?? 'de';
+                            $subject = $template ? $template->getSubjectForLocale($lang) : '';
+                            $body = $template ? $template->getBodyForLocale($lang, $vars) : '';
                             return new \Illuminate\Support\HtmlString('<div><div><b>Betreff:</b> ' . e($subject) . '</div><div style="margin-top:10px;"><b>Text:</b><br>' . $body . '</div></div>');
                         })
                         ->columnSpanFull()
@@ -595,8 +582,6 @@ class EditBook extends EditRecord
                         $browsershot->noSandbox();
                     })
                     ->save(\Illuminate\Support\Facades\Storage::path($pdfPath));
-                    $subject = $data['subject'] ?? '';
-                    $body = $data['body'] ?? '';
                     $editLink = url("/filament/resources/books/{$this->record->id}/edit");
                     $patientName = $this->record->patient ? $this->record->patient->name : '';
                     $labName = $this->record->patient && $this->record->patient->lab ? $this->record->patient->lab->name : '';
@@ -610,23 +595,12 @@ class EditBook extends EditRecord
                         'name' => $patientName,
                         'lab_name' => $labName,
                     ];
-                    $replaceVars = function ($text) use ($vars) {
-                        return preg_replace_callback('/\\{\\$?([a-zA-Z0-9_]+)(->\\w+)*\\}/', function ($matches) use ($vars) {
-                            $expr = ltrim(trim($matches[0], '{}'), '$');
-                            $parts = explode('->', $expr);
-                            $val = $vars[$parts[0]] ?? null;
-                            for ($i = 1; $i < count($parts); $i++) {
-                                if (is_object($val) && isset($val->{$parts[$i]})) {
-                                    $val = $val->{$parts[$i]};
-                                } else {
-                                    return $matches[0];
-                                }
-                            }
-                            return $val;
-                        }, $text);
-                    };
-                    $subject = $replaceVars($subject);
-                    $body = $replaceVars($body);
+
+                    // Get template and language from form data
+                    $template = \App\Models\TextTemplate::find($data['template_id'] ?? null);
+                    $lang = $data['language'] ?? 'de';
+                    $subject = $template ? $template->getSubjectForLocale($lang) : '';
+                    $body = $template ? $template->getBodyForLocale($lang, $vars) : '';
                     // Remove all line breaks and extra spaces from subject, force string
                     $subject = preg_replace('/[\r\n]+/', ' ', (string)$subject);
                     $subject = trim(preg_replace('/\s+/', ' ', $subject));

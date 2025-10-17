@@ -67,9 +67,9 @@ class PatientResource extends Resource
         return $form
             ->schema([
                 Forms\Components\TextInput::make('title')
-                    ->label('Titel'),
+                    ->label(__('Titel')),
                 Forms\Components\TextInput::make('first_name')
-                    ->label('Vorname'),
+                    ->label(__('Vorname')),
                 Forms\Components\TextInput::make('name')
                     ->label(__('Name'))
                     ->required()
@@ -104,7 +104,7 @@ class PatientResource extends Resource
                     ->required(),
                 Forms\Components\Hidden::make('role')
                     ->default('patient'),
-                Forms\Components\Section::make('Rezepte Filter')
+                Forms\Components\Section::make(__('Rezepte Filter'))
                     ->collapsible()
                     ->schema([
                         Forms\Components\Fieldset::make('Allergene')
@@ -282,11 +282,11 @@ class PatientResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('title')
-                    ->label('Titel')
+                    ->label(__('Titel'))
                     ->searchable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('first_name')
-                    ->label('Vorname')
+                    ->label(__('Vorname'))
                     ->searchable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('name')

@@ -1,0 +1,99 @@
+# PHP Mailer Logs - Where to Find Them
+
+## Laravel Application Logs (Your App)
+- **Email-specific logs**: `storage/logs/email.log` (now with success/failure indicators)
+- **Main application logs**: `storage/logs/laravel.log`
+- **Queue job logs**: `storage/logs/laravel.log` (for CreateBookJob)
+
+## System-Level PHP Mailer Logs
+
+### 1. PHP Error Logs
+- **Location**: `/var/log/php_errors.log` or `/var/log/php/error.log`
+- **Command**: `tail -f /var/log/php_errors.log | grep -i mail`
+
+### 2. Web Server Logs
+- **Apache**: `/var/log/apache2/error.log` or `/var/log/httpd/error_log`
+- **Nginx**: `/var/log/nginx/error.log`
+- **Command**: `tail -f /var/log/apache2/error.log | grep -i mail`
+
+### 3. System Mail Logs
+- **Postfix**: `/var/log/mail.log` or `/var/log/maillog`
+- **Sendmail**: `/var/log/mail.log`
+- **Exim**: `/var/log/exim/mainlog`
+- **Command**: `tail -f /var/log/mail.log`
+
+### 4. Laravel Queue Logs
+- **Failed jobs**: `storage/logs/laravel.log` (look for "Failed to send email")
+- **Queue worker logs**: Check if you have a queue worker running
+
+## How to Check for Mail Issues
+
+### 1. Test Email Sending
+```bash
+php artisan test:email your-email@example.com
+```
+
+### 2. Check Email Log
+```bash
+tail -f storage/logs/email.log
+```
+
+### 3. Check System Mail Logs
+```bash
+# Check if mail server is receiving emails
+tail -f /var/log/mail.log
+
+# Check for PHP mail errors
+tail -f /var/log/php_errors.log | grep -i mail
+```
+
+### 4. Check Laravel Logs
+```bash
+tail -f storage/logs/laravel.log | grep -i "email\|mail\|CreateBookJob"
+```
+
+## Common Issues and Solutions
+
+### Issue: "Connection refused" or "Connection timeout"
+- **Check**: Network connectivity to mail server
+- **Solution**: Verify MAIL_HOST and MAIL_PORT settings
+
+### Issue: "Authentication failed"
+- **Check**: MAIL_USERNAME and MAIL_PASSWORD
+- **Solution**: Verify credentials with server admin
+
+### Issue: "SSL/TLS errors"
+- **Check**: MAIL_ENCRYPTION setting
+- **Solution**: Try `null`, `tls`, or `ssl`
+
+### Issue: "Port blocked"
+- **Check**: MAIL_PORT setting
+- **Solution**: Try ports 25, 587, or 465
+
+## Debugging Commands
+
+```bash
+# Test SMTP connection
+telnet ifmmvz.mail.protection.outlook.com 25
+
+# Check if port is open
+nc -zv ifmmvz.mail.protection.outlook.com 25
+
+# Check PHP mail configuration
+php -i | grep -i mail
+
+# Check Laravel mail configuration
+php artisan tinker
+>>> config('mail')
+```
+
+## What the New Logging Shows
+
+The improved logging now shows:
+- ✅ **SUCCESS**: When email is sent successfully
+- ❌ **FAILURE**: When email sending fails with detailed error info
+- 🧪 **TEST**: For test emails
+- **Configuration details**: SMTP settings, mail driver, etc.
+- **Timestamps**: ISO format for precise timing
+- **Error codes**: HTTP-style error codes for better debugging
+
