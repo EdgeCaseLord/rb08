@@ -216,7 +216,7 @@ class PatientResource extends Resource
                                             ->default(0)
                                             ->label(false)
                                             ->suffix('mg/100g')
-                                            ->extraInputAttributes(['class' => '!mt-0']),
+                                            ->extraAttributes(['class' => '!mt-0 !self-start']),
                                     ])
                                     ->columns([
                                         'default' => 1,
@@ -235,11 +235,11 @@ class PatientResource extends Resource
                                             ->default(0)
                                             ->label(false)
                                             ->suffix('mg/100g')
-                                            ->extraInputAttributes(['class' => '!mt-0']),
+                                            ->extraAttributes(['class' => '!mt-0 !self-start']),
                                     ])
                                     ->columns([
                                         'default' => 1,
-                                        'md' => 1,
+                                        'md' => 2,
                                         'xl' => 3
                                     ]),
                                 Forms\Components\Grid::make(3)
@@ -254,11 +254,11 @@ class PatientResource extends Resource
                                             ->default(0)
                                             ->label(false)
                                             ->suffix('g/100g')
-                                            ->extraInputAttributes(['class' => '!mt-0']),
+                                            ->extraAttributes(['class' => '!mt-0 !self-start']),
                                     ])
                                     ->columns([
                                         'default' => 1,
-                                        'md' => 1,
+                                        'md' => 2,
                                         'xl' => 3
                                     ]),
                                 Forms\Components\Grid::make(3)
@@ -273,11 +273,11 @@ class PatientResource extends Resource
                                             ->default(0)
                                             ->label(false)
                                             ->suffix('g/100g')
-                                            ->extraInputAttributes(['class' => '!mt-0']),
+                                            ->extraAttributes(['class' => '!mt-0 !self-start']),
                                     ])
                                     ->columns([
                                         'default' => 1,
-                                        'md' => 1,
+                                        'md' => 2,
                                         'xl' => 3
                                     ]),
                             ]),
