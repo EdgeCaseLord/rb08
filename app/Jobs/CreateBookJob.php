@@ -86,6 +86,20 @@ class CreateBookJob implements ShouldQueue
             }
         }
 
+        // Additional check: prevent duplicate book creation for same patient
+        // This handles race conditions where multiple CreateBookJob instances
+        // are dispatched for the same patient before the first one completes
+        $lockKey = "create_book_patient_{$patient->id}";
+        $lockAcquired = \Illuminate\Support\Facades\Cache::lock($lockKey, 120)->get();
+
+        if (!$lockAcquired) {
+            Log::info('CreateBookJob: Another book creation is in progress for this patient, skipping', [
+                'patient_id' => $patient->id,
+                'lock_key' => $lockKey
+            ]);
+            return;
+        }
+
         try {
             $latestAnalysis = \App\Models\Analysis::where('patient_id', $patient->id)->latest('created_at')->first();
             Log::debug('CreateBookJob: Latest analysis fetched', [
@@ -285,6 +299,13 @@ class CreateBookJob implements ShouldQueue
                 'trace' => $e->getTraceAsString(),
             ]);
             throw $e;
+        } finally {
+            // Release the lock
+            \Illuminate\Support\Facades\Cache::lock($lockKey)->release();
+            Log::debug('CreateBookJob: Lock released', [
+                'patient_id' => $patient->id,
+                'lock_key' => $lockKey
+            ]);
         }
     }
 
