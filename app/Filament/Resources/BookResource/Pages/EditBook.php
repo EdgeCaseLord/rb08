@@ -257,7 +257,7 @@ class EditBook extends EditRecord
                                 'name' => $patientName,
                                 'lab_name' => $labName,
                             ];
-                            $subject = $template ? $template->getSubjectForLocale($lang) : '';
+                            $subject = $template ? $template->getSubjectForLocaleWithVars($lang, $vars) : '';
                             $body = $template ? $template->getBodyForLocale($lang, $vars) : '';
                             $set('subject', $subject);
                             $set('body', $body);
@@ -275,6 +275,28 @@ class EditBook extends EditRecord
                             $options = [];
                             foreach ($templates as $template) {
                                 $label = $template->getSubjectForLocale('de') ?: 'Vorlage #' . $template->id;
+
+                                // Apply variable replacement to template label
+                                if ($label && $this->record) {
+                                    $book = $this->record;
+                                    $patient = $book->patient ?? null;
+                                    $lab = $patient && $patient->lab ? $patient->lab : null;
+                                    $editLink = url("/filament/resources/books/{$book->id}/edit");
+                                    $patientName = $patient ? $patient->name : '';
+                                    $labName = $lab ? $lab->name : '';
+                                    $vars = [
+                                        'book' => $book,
+                                        'patient' => $patient,
+                                        'lab' => $lab,
+                                        'edit_link' => $editLink,
+                                        'record' => $book,
+                                        'name' => $patientName,
+                                        'lab_name' => $labName,
+                                    ];
+
+                                    $label = $template->getSubjectForLocaleWithVars('de', $vars);
+                                }
+
                                 $options[$template->id] = $label;
                             }
                             return $options;
@@ -310,7 +332,7 @@ class EditBook extends EditRecord
                                 'name' => $patientName,
                                 'lab_name' => $labName,
                             ];
-                            $subject = $template ? $template->getSubjectForLocale($lang) : '';
+                            $subject = $template ? $template->getSubjectForLocaleWithVars($lang, $vars) : '';
                             $body = $template ? $template->getBodyForLocale($lang, $vars) : '';
                             $set('subject', $subject);
                             $set('body', $body);
@@ -360,7 +382,7 @@ class EditBook extends EditRecord
                                 'name' => $patientName,
                                 'lab_name' => $labName,
                             ];
-                            $subject = $template ? $template->getSubjectForLocale($lang) : '';
+                            $subject = $template ? $template->getSubjectForLocaleWithVars($lang, $vars) : '';
                             $body = $template ? $template->getBodyForLocale($lang, $vars) : '';
                             $set('subject', $subject);
                             $set('body', $body);
@@ -446,7 +468,7 @@ class EditBook extends EditRecord
                             // Get template and language from form data
                             $template = \App\Models\TextTemplate::find($get('template_id'));
                             $lang = $get('language') ?? 'de';
-                            $subject = $template ? $template->getSubjectForLocale($lang) : '';
+                            $subject = $template ? $template->getSubjectForLocaleWithVars($lang, $vars) : '';
                             $body = $template ? $template->getBodyForLocale($lang, $vars) : '';
                             return new \Illuminate\Support\HtmlString('<div><div><b>Betreff:</b> ' . e($subject) . '</div><div style="margin-top:10px;"><b>Text:</b><br>' . $body . '</div></div>');
                         })
