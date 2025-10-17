@@ -99,18 +99,10 @@ class EditBook extends EditRecord
                 })
                 ->count();
 
-            // Check if limit is reached BEFORE trying to add
-            if ($currentCount >= ($recipeLimits[$course] ?? PHP_INT_MAX)) {
-                \Filament\Notifications\Notification::make()
-                    ->title(__('Rezeptlimit erreicht'))
-                    ->body(__('Maximale Rezepteanzahl für Gang :course erreicht!', ['course' => $course]))
-                    ->warning()
-                    ->send();
+            // Add recipe with limit checking
+            if (!$book->addRecipeWithLimitCheck($recipeId)) {
                 return;
             }
-
-            // Only add the recipe if we haven't hit the limit
-            $book->addRecipe($recipeId);
 
             // Notify success
             \Filament\Notifications\Notification::make()

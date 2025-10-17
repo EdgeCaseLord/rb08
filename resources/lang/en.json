@@ -259,5 +259,8 @@
     "Doctor Titel": "Doctor Title",
     "Doctor Vorname": "Doctor First Name",
     "Neueste Analysen": "Latest Analyses",
-    "Users": "Users"
+    "Users": "Users",
+    "Rezept nicht gefunden": "Recipe not found",
+    "Maximale Rezepteanzahl für :course erreicht! Aktuell: :current von :limit": "Maximum recipe count for :course reached! Currently: :current of :limit",
+    "Konto upgraden": "Upgrade Account"
 }

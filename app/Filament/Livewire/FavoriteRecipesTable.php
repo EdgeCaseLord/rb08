@@ -88,21 +88,16 @@ class FavoriteRecipesTable extends Component
         // Accept either internal or external id
         $recipe = Recipe::where('id_recipe', $id)->orWhere('id_external', $id)->first();
         if (!$recipe) return;
-        try {
-            $book->addRecipe($recipe->id_recipe);
-            // Update status if not 'Warten auf Versand'
-            if ($book->status !== 'Warten auf Versand') {
-                $book->status = 'Geändert nach Versand';
-                $book->save();
-                $this->dispatch('bookStatusUpdated', id: $book->id, status: $book->status);
-            }
-        } catch (\Exception $e) {
-            \Filament\Notifications\Notification::make()
-                ->title(__('Nicht hinzugefügt'))
-                ->body($e->getMessage())
-                ->danger()
-                ->send();
+        // Add recipe with limit checking
+        if (!$book->addRecipeWithLimitCheck($recipe->id_recipe)) {
             return;
+        }
+
+        // Update status if not 'Warten auf Versand'
+        if ($book->status !== 'Warten auf Versand') {
+            $book->status = 'Geändert nach Versand';
+            $book->save();
+            $this->dispatch('bookStatusUpdated', id: $book->id, status: $book->status);
         }
         $this->dispatch('recipeAddedToBook', $recipe->id_external ?? $recipe->id_recipe);
         // Remove from favorites UI immediately

@@ -6,8 +6,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Exception;
 use Illuminate\Support\Facades\Log;
+use Exception;
 use Illuminate\Support\Facades\DB;
 
 class Book extends Model
@@ -123,6 +123,84 @@ class Book extends Model
             'main_course' => $patientSettings['main_course'] ?? $labSettings['main_course'] ?? $defaultRecipesPerCourse['main_course'],
             'dessert' => $patientSettings['dessert'] ?? $labSettings['dessert'] ?? $defaultRecipesPerCourse['dessert']
         ];
+    }
+
+    /**
+     * Check if a recipe can be added to the book without exceeding course limits
+     */
+    public function canAddRecipe($recipeId): array
+    {
+        $recipe = \App\Models\Recipe::find($recipeId);
+        if (!$recipe) {
+            return [
+                'can_add' => false,
+                'message' => __('Rezept nicht gefunden'),
+                'course' => null,
+                'current_count' => 0,
+                'limit' => 0
+            ];
+        }
+
+        // Get the recipe's course
+        $categories = [];
+        if (is_string($recipe->category ?? null)) {
+            $categories = json_decode($recipe->category, true) ?: [];
+        } elseif (is_array($recipe->category ?? null)) {
+            $categories = $recipe->category;
+        }
+        $primaryCategory = \App\Filament\Resources\BookResource::getPrimaryCategory($categories);
+        $course = \App\Filament\Resources\BookResource::mapCategoryToCourse($primaryCategory);
+
+        // Get recipe limits
+        $recipeLimits = $this->getRecipesPerCourse();
+
+        // Count current recipes in this course
+        $currentCount = $this->recipes()
+            ->where('course', $course)
+            ->count();
+
+        $limit = $recipeLimits[$course] ?? PHP_INT_MAX;
+        $canAdd = $currentCount < $limit;
+
+        return [
+            'can_add' => $canAdd,
+            'message' => $canAdd ? null : __('Maximale Rezepteanzahl für :course erreicht! Aktuell: :current von :limit', [
+                'course' => $course,
+                'current' => $currentCount,
+                'limit' => $limit
+            ]),
+            'course' => $course,
+            'current_count' => $currentCount,
+            'limit' => $limit
+        ];
+    }
+
+    /**
+     * Add a recipe to the book with limit checking and notification
+     */
+    public function addRecipeWithLimitCheck($recipeId): bool
+    {
+        $limitCheck = $this->canAddRecipe($recipeId);
+
+        if (!$limitCheck['can_add']) {
+            \Filament\Notifications\Notification::make()
+                ->title(__('Rezeptlimit erreicht'))
+                ->body($limitCheck['message'])
+                ->warning()
+                ->actions([
+                    \Filament\Notifications\Actions\Action::make('upgrade')
+                        ->label(__('Konto upgraden'))
+                        ->url('#')
+                        ->color('success')
+                        // ->visible(false) // Uncomment to hide upgrade button for now
+                ])
+                ->send();
+            return false;
+        }
+
+        // Add the recipe
+        $this->addRecipe($recipeId);
+        return true;
     }
 
     public function analysis(): BelongsTo
