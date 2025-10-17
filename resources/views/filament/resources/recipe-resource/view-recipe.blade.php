@@ -503,7 +503,19 @@
                                 @php
                                         $unit = $nutrientList[$nutrient];
                                         $substance = $substances->first(function($s) use ($nutrient) {
-                                            return isset($s['substance']) && stripos($s['substance'], $nutrient) !== false;
+                                            if (!isset($s['substance'])) return false;
+                                            // Try exact match first
+                                            if (strcasecmp($s['substance'], $nutrient) === 0) return true;
+                                            // Try partial match
+                                            if (stripos($s['substance'], $nutrient) !== false) return true;
+                                            // Special case for Fruktose - try different variations
+                                            if ($nutrient === 'Fruktose') {
+                                                $fructoseVariations = ['Fruktose', 'Fructose', 'fructose', 'fruktose'];
+                                                foreach ($fructoseVariations as $variation) {
+                                                    if (stripos($s['substance'], $variation) !== false) return true;
+                                                }
+                                            }
+                                            return false;
                                         });
                                         $value = $substance['portion']['amount'] ?? $substance['value'] ?? null;
                                         $value = is_numeric($value) ? number_format($value, 1) : '–';
