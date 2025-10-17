@@ -214,6 +214,7 @@ class PatientResource extends Resource
                                         Forms\Components\TextInput::make('settings.recipe_filter_set.filterSubstances.fructose.val1')
                                             ->numeric()
                                             ->default(0)
+                                            ->label(false)
                                             ->suffix('mg/100g'),
                                     ])
                                     ->columns([
@@ -231,6 +232,7 @@ class PatientResource extends Resource
                                         Forms\Components\TextInput::make('settings.recipe_filter_set.filterSubstances.vitamin_B1(thiamin).val1')
                                             ->numeric()
                                             ->default(0)
+                                            ->label(false)
                                             ->suffix('mg/100g'),
                                     ])
                                     ->columns([
@@ -248,6 +250,7 @@ class PatientResource extends Resource
                                         Forms\Components\TextInput::make('settings.recipe_filter_set.filterSubstances.carbohydrates.val1')
                                             ->numeric()
                                             ->default(0)
+                                            ->label(false)
                                             ->suffix('g/100g'),
                                     ])
                                     ->columns([
@@ -265,6 +268,7 @@ class PatientResource extends Resource
                                         Forms\Components\TextInput::make('settings.recipe_filter_set.filterSubstances.protein.val1')
                                             ->numeric()
                                             ->default(0)
+                                            ->label(false)
                                             ->suffix('g/100g'),
                                     ])
                                     ->columns([
