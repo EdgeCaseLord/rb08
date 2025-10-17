@@ -94,14 +94,28 @@ class AvailableRecipesTable extends Component
         $this->loadMore();
 
         // Set default operator and value for each substance if not already set
+        // Only set defaults if the substance filter doesn't exist at all
         foreach ([
             'fructose', 'vitamin B1(thiamin)', 'carbohydrates', 'protein'
         ] as $substance) {
-            if (!isset($this->filterSubstances[$substance]['op']) || $this->filterSubstances[$substance]['op'] === null || $this->filterSubstances[$substance]['op'] === '') {
-                $this->filterSubstances[$substance]['op'] = 'lte';
-            }
-            if (!isset($this->filterSubstances[$substance]['val1']) || $this->filterSubstances[$substance]['val1'] === null || $this->filterSubstances[$substance]['val1'] === '') {
-                $this->filterSubstances[$substance]['val1'] = 0;
+            if (!isset($this->filterSubstances[$substance])) {
+                $this->filterSubstances[$substance] = [
+                    'enabled' => false,
+                    'op' => 'lte',
+                    'val1' => 0
+                ];
+            } else {
+                // Only set defaults for missing fields, preserve existing values
+                if (!isset($this->filterSubstances[$substance]['op']) || $this->filterSubstances[$substance]['op'] === null || $this->filterSubstances[$substance]['op'] === '') {
+                    $this->filterSubstances[$substance]['op'] = 'lte';
+                }
+                if (!isset($this->filterSubstances[$substance]['val1']) || $this->filterSubstances[$substance]['val1'] === null || $this->filterSubstances[$substance]['val1'] === '') {
+                    $this->filterSubstances[$substance]['val1'] = 0;
+                }
+                // Ensure enabled flag exists
+                if (!isset($this->filterSubstances[$substance]['enabled'])) {
+                    $this->filterSubstances[$substance]['enabled'] = false;
+                }
             }
         }
     }
