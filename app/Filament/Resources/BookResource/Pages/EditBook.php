@@ -257,25 +257,10 @@ class EditBook extends EditRecord
                                 'name' => $patientName,
                                 'lab_name' => $labName,
                             ];
-                            $replaceVars = function ($text) use ($vars) {
-                                return preg_replace_callback('/\{\$?([a-zA-Z0-9_]+)(->\w+)*\}/', function ($matches) use ($vars) {
-                                    $expr = ltrim(trim($matches[0], '{}'), '$');
-                                    $parts = explode('->', $expr);
-                                    $val = $vars[$parts[0]] ?? null;
-                                    for ($i = 1; $i < count($parts); $i++) {
-                                        if (is_object($val) && isset($val->{$parts[$i]})) {
-                                            $val = $val->{$parts[$i]};
-                                        } else {
-                                            return $matches[0];
-                                        }
-                                    }
-                                    return $val;
-                                }, $text);
-                            };
                             $subject = $template ? $template->getSubjectForLocale($lang) : '';
                             $body = $template ? $template->getBodyForLocale($lang, $vars) : '';
-                            $set('subject', $replaceVars($subject));
-                            $set('body', $replaceVars($body));
+                            $set('subject', $subject);
+                            $set('body', $body);
                         }),
                     \Filament\Forms\Components\Select::make('template_id')
                         ->label('Textvorlage')
@@ -325,25 +310,10 @@ class EditBook extends EditRecord
                                 'name' => $patientName,
                                 'lab_name' => $labName,
                             ];
-                            $replaceVars = function ($text) use ($vars) {
-                                return preg_replace_callback('/\{\$?([a-zA-Z0-9_]+)(->\w+)*\}/', function ($matches) use ($vars) {
-                                    $expr = ltrim(trim($matches[0], '{}'), '$');
-                                    $parts = explode('->', $expr);
-                                    $val = $vars[$parts[0]] ?? null;
-                                    for ($i = 1; $i < count($parts); $i++) {
-                                        if (is_object($val) && isset($val->{$parts[$i]})) {
-                                            $val = $val->{$parts[$i]};
-                                        } else {
-                                            return $matches[0];
-                                        }
-                                    }
-                                    return $val;
-                                }, $text);
-                            };
                             $subject = $template ? $template->getSubjectForLocale($lang) : '';
                             $body = $template ? $template->getBodyForLocale($lang, $vars) : '';
-                            $set('subject', $replaceVars($subject));
-                            $set('body', $replaceVars($body));
+                            $set('subject', $subject);
+                            $set('body', $body);
                         }),
                     \Filament\Forms\Components\Select::make('language')
                         ->label('Sprache')
@@ -390,25 +360,10 @@ class EditBook extends EditRecord
                                 'name' => $patientName,
                                 'lab_name' => $labName,
                             ];
-                            $replaceVars = function ($text) use ($vars) {
-                                return preg_replace_callback('/\{\$?([a-zA-Z0-9_]+)(->\w+)*\}/', function ($matches) use ($vars) {
-                                    $expr = ltrim(trim($matches[0], '{}'), '$');
-                                    $parts = explode('->', $expr);
-                                    $val = $vars[$parts[0]] ?? null;
-                                    for ($i = 1; $i < count($parts); $i++) {
-                                        if (is_object($val) && isset($val->{$parts[$i]})) {
-                                            $val = $val->{$parts[$i]};
-                                        } else {
-                                            return $matches[0];
-                                        }
-                                    }
-                                    return $val;
-                                }, $text);
-                            };
                             $subject = $template ? $template->getSubjectForLocale($lang) : '';
                             $body = $template ? $template->getBodyForLocale($lang, $vars) : '';
-                            $set('subject', $replaceVars($subject));
-                            $set('body', $replaceVars($body));
+                            $set('subject', $subject);
+                            $set('body', $body);
                         }),
                     \Filament\Forms\Components\TextInput::make('subject')
                         ->label('Betreff')
@@ -436,22 +391,6 @@ class EditBook extends EditRecord
                                 'name' => $patientName,
                                 'lab_name' => $labName,
                             ];
-                            $replaceVars = function ($text) use ($vars) {
-                                return preg_replace_callback('/\{\$?([a-zA-Z0-9_]+)(->\w+)*\}/', function ($matches) use ($vars) {
-                                    $expr = ltrim(trim($matches[0], '{}'), '$');
-                                    $parts = explode('->', $expr);
-                                    $val = $vars[$parts[0]] ?? null;
-                                    for ($i = 1; $i < count($parts); $i++) {
-                                        if (is_object($val) && isset($val->{$parts[$i]})) {
-                                            $val = $val->{$parts[$i]};
-                                        } else {
-                                            return $matches[0];
-                                        }
-                                    }
-                                    return $val;
-                                }, $text);
-                            };
-                            $subject = $replaceVars($subject);
                             $set('subject', $subject);
                         })
                         ->visible(fn ($get) => filled($get('recipient'))),
@@ -481,22 +420,6 @@ class EditBook extends EditRecord
                                 'name' => $patientName,
                                 'lab_name' => $labName,
                             ];
-                            $replaceVars = function ($text) use ($vars) {
-                                return preg_replace_callback('/\{\$?([a-zA-Z0-9_]+)(->\w+)*\}/', function ($matches) use ($vars) {
-                                    $expr = ltrim(trim($matches[0], '{}'), '$');
-                                    $parts = explode('->', $expr);
-                                    $val = $vars[$parts[0]] ?? null;
-                                    for ($i = 1; $i < count($parts); $i++) {
-                                        if (is_object($val) && isset($val->{$parts[$i]})) {
-                                            $val = $val->{$parts[$i]};
-                                        } else {
-                                            return $matches[0];
-                                        }
-                                    }
-                                    return $val;
-                                }, $text);
-                            };
-                            $body = $replaceVars($body);
                             $set('body', $body);
                         })
                         ->visible(fn ($get) => filled($get('recipient'))),
