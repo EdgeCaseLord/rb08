@@ -99,6 +99,8 @@ class CookButlerService
             $ingredientQuery = preg_replace('/[\s,]+/', ' ', $ingredientQuery);
             $ingredientQuery = preg_replace('/\s*\/\s*/', ' || ', $ingredientQuery); // OR
             $ingredientQuery = preg_replace('/\s*-([\wäöüÄÖÜß]+)/u', ' -- $1', $ingredientQuery); // NOT
+            // Handle AND logic: space-separated terms should be AND
+            $ingredientQuery = preg_replace('/\s+/', ' && ', $ingredientQuery); // AND
             $ingredientQuery = trim($ingredientQuery);
         }
         if (!empty($ingredientQuery)) {

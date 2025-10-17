@@ -262,5 +262,6 @@
     "Users": "Users",
     "Rezept nicht gefunden": "Recipe not found",
     "Maximale Rezepteanzahl für :course erreicht! Aktuell: :current von :limit": "Maximum recipe count for :course reached! Currently: :current of :limit",
-    "Konto upgraden": "Upgrade Account"
+    "Konto upgraden": "Upgrade Account",
+    "Leerzeichen": "Space"
 }
