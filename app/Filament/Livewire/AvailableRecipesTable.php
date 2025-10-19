@@ -353,16 +353,8 @@ class AvailableRecipesTable extends Component
             ->success()
             ->send();
 
-        // Get user for background job
-        $user = $this->getBookPatient();
-        if (!$user) return;
-        if (!method_exists($user, 'save')) {
-            $user = \App\Models\User::find($user['id']);
-            if (!$user) return;
-        }
-
-        // Dispatch background job for database operations
-        \App\Jobs\ProcessRecipeOperation::dispatch('add_to_favorites', $externalId, null, $user->id);
+        // Dispatch background job for database operations (user ID will be resolved in job)
+        \App\Jobs\ProcessRecipeOperation::dispatch('add_to_favorites', $externalId, $this->bookId);
 
         // Dispatch UI event
         $this->dispatch('recipeAddedToFavorites', $externalId);
@@ -377,16 +369,8 @@ class AvailableRecipesTable extends Component
             ->success()
             ->send();
 
-        // Get user for background job
-        $user = $this->getBookPatient();
-        if (!$user) return;
-        if (!method_exists($user, 'save')) {
-            $user = \App\Models\User::find($user['id']);
-            if (!$user) return;
-        }
-
-        // Dispatch background job for database operations
-        \App\Jobs\ProcessRecipeOperation::dispatch('remove_from_favorites', $externalId, null, $user->id);
+        // Dispatch background job for database operations (user ID will be resolved in job)
+        \App\Jobs\ProcessRecipeOperation::dispatch('remove_from_favorites', $externalId, $this->bookId);
 
         // Dispatch UI event
         $this->dispatch('recipeRemovedFromFavorites', $externalId);

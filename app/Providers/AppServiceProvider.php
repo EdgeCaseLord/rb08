@@ -26,6 +26,9 @@ class AppServiceProvider extends ServiceProvider
 
         if (DB::connection()->getDriverName() === 'sqlite') {
             DB::statement('PRAGMA foreign_keys = ON;');
+        } else {
+            // Only run MySQL-specific statements on MySQL
+            \Illuminate\Support\Facades\DB::statement('SET SESSION sql_mode = ""');
         }
 
         Livewire::component('recipes-table', \App\Filament\Livewire\RecipesTable::class);
@@ -35,8 +38,6 @@ class AppServiceProvider extends ServiceProvider
 
          // Fix timestamp casting for job batches
          \Illuminate\Support\Facades\Schema::defaultStringLength(191);
-        // Fix timestamp handling for job batches
-        \Illuminate\Support\Facades\DB::statement('SET SESSION sql_mode = ""');
 
         // Override the timestamp casting for job batches
         \Illuminate\Support\Facades\Event::listen('Illuminate\Queue\Events\JobProcessing', function ($event) {

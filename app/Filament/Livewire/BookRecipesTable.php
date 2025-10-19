@@ -34,15 +34,8 @@ class BookRecipesTable extends Component
 
     public function refreshRecipes()
     {
-        $book = Book::find($this->bookId);
-        Log::info('BookRecipesTable: refreshRecipes', ['bookId' => $this->bookId, 'book' => $book]);
-        if (!$book) { $this->recipes = []; $this->dispatch('bookRecipesChanged'); return; }
-        $recipes = $book->recipes()->get();
-        $this->recipes = array_map(function($r) {
-            return \App\Filament\Livewire\AvailableRecipesTable::recipeModelToArray($r);
-        }, $recipes->all());
-        $idRecipes = array_map(function($r) { return $r['id_recipe'] ?? null; }, $this->recipes);
-        Log::info('BookRecipesTable: recipes: ' . implode(',', $idRecipes));
+        // Skip database queries for immediate UI response
+        // The UI will be updated by the background job
         $this->dispatch('bookRecipesChanged');
     }
 
@@ -92,9 +85,6 @@ class BookRecipesTable extends Component
 
     public function addToFavorites($id)
     {
-        $user = $this->getBookPatient();
-        if (!$user) return;
-
         // Show immediate feedback FIRST
         \Filament\Notifications\Notification::make()
             ->title(__('Zu Favoriten hinzugefügt'))
@@ -102,8 +92,8 @@ class BookRecipesTable extends Component
             ->success()
             ->send();
 
-        // Dispatch background job for database operations
-        \App\Jobs\ProcessRecipeOperation::dispatch('add_to_favorites', (string)$id, null, $user->id);
+        // Dispatch background job for database operations (user ID will be resolved in job)
+        \App\Jobs\ProcessRecipeOperation::dispatch('add_to_favorites', (string)$id, $this->bookId);
 
         // Dispatch UI event
         $this->dispatch('recipeAddedToFavorites', (string)$id);
@@ -111,9 +101,6 @@ class BookRecipesTable extends Component
 
     public function removeFromFavorites($id)
     {
-        $user = $this->getBookPatient();
-        if (!$user) return;
-
         // Show immediate feedback FIRST
         \Filament\Notifications\Notification::make()
             ->title(__('Aus Favoriten entfernt'))
@@ -121,8 +108,8 @@ class BookRecipesTable extends Component
             ->success()
             ->send();
 
-        // Dispatch background job for database operations
-        \App\Jobs\ProcessRecipeOperation::dispatch('remove_from_favorites', (string)$id, null, $user->id);
+        // Dispatch background job for database operations (user ID will be resolved in job)
+        \App\Jobs\ProcessRecipeOperation::dispatch('remove_from_favorites', (string)$id, $this->bookId);
 
         // Dispatch UI event
         $this->dispatch('recipeRemovedFromFavorites', (string)$id);
