@@ -75,6 +75,13 @@ class FavoriteRecipesTable extends Component
             return $r->id_recipe == $id || $r->id_external == $id;
         })->values();
 
+        // Show immediate feedback FIRST
+        \Filament\Notifications\Notification::make()
+            ->title(__('Aus Favoriten entfernt'))
+            ->body('Das Rezept wird im Hintergrund verarbeitet.')
+            ->success()
+            ->send();
+
         // Get user for background job
         $user = $this->getBookPatient();
         if (!$user) return;
@@ -84,19 +91,14 @@ class FavoriteRecipesTable extends Component
 
         // Dispatch UI event
         $this->dispatch('recipeRemovedFromFavorites', $id);
-
-        // Show immediate feedback
-        \Filament\Notifications\Notification::make()
-            ->title(__('Aus Favoriten entfernt'))
-            ->body('Das Rezept wird im Hintergrund verarbeitet.')
-            ->success()
-            ->send();
     }
 
     public function addToBook($id)
     {
-        // Accept either internal or external id
-        $recipe = Recipe::where('id_recipe', $id)->orWhere('id_external', $id)->first();
+        // Get recipe data BEFORE removing from array (no DB query)
+        $recipe = collect($this->recipes)->first(function($r) use ($id) {
+            return $r->id_recipe == $id || $r->id_external == $id;
+        });
         if (!$recipe) return;
 
         // Immediate UI update - remove from favorites
@@ -105,18 +107,18 @@ class FavoriteRecipesTable extends Component
                 return $r->id_recipe == $recipe->id_recipe || $r->id_external == $recipe->id_external;
             })->values();
 
-        // Dispatch background job for heavy operations
-        \App\Jobs\ProcessRecipeOperation::dispatch('add_to_book', $recipe->id_external ?? $recipe->id_recipe, $this->bookId);
-
-        // Dispatch UI event
-        $this->dispatch('recipeAddedToBook', $recipe->id_external ?? $recipe->id_recipe);
-
-        // Show immediate feedback
+        // Show immediate feedback FIRST
         \Filament\Notifications\Notification::make()
             ->title(__('Rezept hinzugefügt'))
             ->body('Das Rezept wird im Hintergrund verarbeitet.')
             ->success()
             ->send();
+
+        // Dispatch background job for heavy operations
+        \App\Jobs\ProcessRecipeOperation::dispatch('add_to_book', $recipe->id_external ?? $recipe->id_recipe, $this->bookId);
+
+        // Dispatch UI event
+        $this->dispatch('recipeAddedToBook', $recipe->id_external ?? $recipe->id_recipe);
     }
 
     public function addFavoriteRecipe($externalId)

@@ -88,6 +88,12 @@ class ProcessRecipeOperation implements ShouldQueue
         if ($book->status !== 'Warten auf Versand') {
             $book->status = 'Geändert nach Versand';
             $book->save();
+            // Dispatch event to update UI
+            \Filament\Notifications\Notification::make()
+                ->title(__('Buch Status aktualisiert'))
+                ->body('Der Buch Status wurde auf "Geändert nach Versand" gesetzt.')
+                ->info()
+                ->send();
         }
 
         // Clean up orphaned recipe
@@ -129,6 +135,12 @@ class ProcessRecipeOperation implements ShouldQueue
         if ($book->status !== 'Warten auf Versand') {
             $book->status = 'Geändert nach Versand';
             $book->save();
+            // Dispatch event to update UI
+            \Filament\Notifications\Notification::make()
+                ->title(__('Buch Status aktualisiert'))
+                ->body('Der Buch Status wurde auf "Geändert nach Versand" gesetzt.')
+                ->info()
+                ->send();
         }
 
         Log::info('Recipe added to book', [
@@ -187,6 +199,12 @@ class ProcessRecipeOperation implements ShouldQueue
                 if ($book->status !== 'Warten auf Versand') {
                     $book->status = 'Geändert nach Versand';
                     $book->save();
+                    // Dispatch event to update UI
+                    \Filament\Notifications\Notification::make()
+                        ->title(__('Buch Status aktualisiert'))
+                        ->body('Der Buch Status wurde auf "Geändert nach Versand" gesetzt.')
+                        ->info()
+                        ->send();
                 }
             }
 

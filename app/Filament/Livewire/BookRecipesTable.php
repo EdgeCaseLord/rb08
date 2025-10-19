@@ -48,6 +48,11 @@ class BookRecipesTable extends Component
 
     public function removeRecipe($id)
     {
+        // Get recipe data BEFORE removing from array
+        $recipe = collect($this->recipes)->first(function ($r) use ($id) {
+            return ($r['id_recipe'] ?? null) == $id || ($r['id_external'] ?? null) == $id;
+        });
+
         // Immediate UI update - remove from local array
         $this->recipes = array_values(array_filter($this->recipes, function ($r) use ($id) {
             return ($r['id_recipe'] ?? null) != $id && ($r['id_external'] ?? null) != $id;
@@ -63,24 +68,13 @@ class BookRecipesTable extends Component
         // Dispatch background job for heavy operations (truly async)
         \App\Jobs\ProcessRecipeOperation::dispatch('remove_from_book', $id, $this->bookId);
 
-        // Check if recipe is a favorite and dispatch accordingly
-        $recipe = Recipe::where('id_recipe', $id)->first();
-        if (!$recipe) {
-            $recipe = Recipe::where('id_external', $id)->first();
-        }
-
-        if ($recipe) {
-            $user = $this->getBookPatient();
-            $settings = $user ? ($user->settings ?? []) : [];
-            $favorites = $settings['favorites'] ?? [];
-
-            if (in_array($recipe->id_external, $favorites) || in_array($recipe->id_recipe, $favorites)) {
-                // Recipe is a favorite - add to favorites
-                $this->dispatch('recipeAddedToFavorites', $recipe->id_external ?? $recipe->id_recipe);
-            } else {
-                // Recipe is not a favorite - add to available recipes
-                $this->dispatch('recipeRemovedFromBook', $id);
-            }
+        // Check if recipe is a favorite using UI state (no DB query)
+        if ($recipe && isset($recipe['is_favorite']) && $recipe['is_favorite']) {
+            // Recipe is a favorite - add to favorites
+            $this->dispatch('recipeAddedToFavorites', $recipe['id_external'] ?? $recipe['id_recipe'] ?? $id);
+        } else {
+            // Recipe is not a favorite - add to available recipes
+            $this->dispatch('recipeRemovedFromBook', $id);
         }
     }
 
@@ -100,52 +94,38 @@ class BookRecipesTable extends Component
     {
         $user = $this->getBookPatient();
         if (!$user) return;
-        $id = (string) $id;
-        $recipe = null;
-        foreach ($this->recipes as $r) {
-            if ((string)($r['id_recipe'] ?? null) === $id || (string)($r['id_external'] ?? null) === $id) {
-                $recipe = $r;
-                break;
-            }
-        }
-        if (!$recipe) return;
-        $dbRecipe = \App\Filament\Livewire\AvailableRecipesTable::arrayToRecipeModel($recipe);
-        if (!$dbRecipe) return;
 
-        // Dispatch background job for database operations
-        \App\Jobs\ProcessRecipeOperation::dispatch('add_to_favorites', (string)$dbRecipe->id_external, null, $user->id);
-
-        // Dispatch UI event
-        $this->dispatch('recipeAddedToFavorites', (string)$dbRecipe->id_external);
-
-        // Show immediate feedback
+        // Show immediate feedback FIRST
         \Filament\Notifications\Notification::make()
             ->title(__('Zu Favoriten hinzugefügt'))
             ->body('Das Rezept wird im Hintergrund verarbeitet.')
             ->success()
             ->send();
+
+        // Dispatch background job for database operations
+        \App\Jobs\ProcessRecipeOperation::dispatch('add_to_favorites', (string)$id, null, $user->id);
+
+        // Dispatch UI event
+        $this->dispatch('recipeAddedToFavorites', (string)$id);
     }
 
     public function removeFromFavorites($id)
     {
         $user = $this->getBookPatient();
         if (!$user) return;
-        $id = (string) $id;
-        $recipe = \App\Models\Recipe::where('id_recipe', $id)->orWhere('id_external', $id)->first();
-        if (!$recipe) return;
 
-        // Dispatch background job for database operations
-        \App\Jobs\ProcessRecipeOperation::dispatch('remove_from_favorites', (string)$recipe->id_external, null, $user->id);
-
-        // Dispatch UI event
-        $this->dispatch('recipeRemovedFromFavorites', (string)$recipe->id_external);
-
-        // Show immediate feedback
+        // Show immediate feedback FIRST
         \Filament\Notifications\Notification::make()
             ->title(__('Aus Favoriten entfernt'))
             ->body('Das Rezept wird im Hintergrund verarbeitet.')
             ->success()
             ->send();
+
+        // Dispatch background job for database operations
+        \App\Jobs\ProcessRecipeOperation::dispatch('remove_from_favorites', (string)$id, null, $user->id);
+
+        // Dispatch UI event
+        $this->dispatch('recipeRemovedFromFavorites', (string)$id);
     }
 
     public function confirmRemoveFromFavorites($id)

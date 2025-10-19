@@ -346,6 +346,13 @@ class AvailableRecipesTable extends Component
         });
         $this->recipes = array_values($recipesArray);
 
+        // Show immediate feedback FIRST
+        \Filament\Notifications\Notification::make()
+            ->title(__('Zu Favoriten hinzugefügt'))
+            ->body('Das Rezept wird im Hintergrund verarbeitet.')
+            ->success()
+            ->send();
+
         // Get user for background job
         $user = $this->getBookPatient();
         if (!$user) return;
@@ -359,17 +366,17 @@ class AvailableRecipesTable extends Component
 
         // Dispatch UI event
         $this->dispatch('recipeAddedToFavorites', $externalId);
-
-        // Show immediate feedback
-        \Filament\Notifications\Notification::make()
-            ->title(__('Zu Favoriten hinzugefügt'))
-            ->body('Das Rezept wird im Hintergrund verarbeitet.')
-            ->success()
-            ->send();
     }
 
     public function removeFromFavorites($externalId)
     {
+        // Show immediate feedback FIRST
+        \Filament\Notifications\Notification::make()
+            ->title(__('Aus Favoriten entfernt'))
+            ->body('Das Rezept wird im Hintergrund verarbeitet.')
+            ->success()
+            ->send();
+
         // Get user for background job
         $user = $this->getBookPatient();
         if (!$user) return;
@@ -383,31 +390,25 @@ class AvailableRecipesTable extends Component
 
         // Dispatch UI event
         $this->dispatch('recipeRemovedFromFavorites', $externalId);
-
-        // Show immediate feedback
-        \Filament\Notifications\Notification::make()
-            ->title(__('Aus Favoriten entfernt'))
-            ->body('Das Rezept wird im Hintergrund verarbeitet.')
-            ->success()
-            ->send();
     }
 
     public function addToAvailableRecipes($id)
     {
-        // Simple check if already present
+        // Skip if already present to avoid unnecessary processing
         $alreadyPresent = collect($this->recipes)->contains(function ($r) use ($id) {
             return ($r['id'] ?? null) == $id || ($r['id_external'] ?? null) == $id || ($r['id_recipe'] ?? null) == $id;
         });
         if ($alreadyPresent) return;
 
-        // Simple recipe fetch without heavy processing
-        $recipe = \App\Models\Recipe::find($id);
-        if ($recipe) {
-            // Simple array conversion without image processing
-            $arr = $recipe->toArray();
-            $arr['id'] = $arr['id_external'] ?? $arr['id_recipe'];
-            $this->recipes[] = $arr;
-        }
+        // Create minimal recipe entry without database queries
+        $this->recipes[] = [
+            'id' => $id,
+            'id_external' => $id,
+            'title' => 'Recipe ' . $id,
+            'category' => [],
+            'diets' => [],
+            'allergens' => []
+        ];
     }
 
     public function updatedFilterTitle() { $this->resetAndReload(); }
