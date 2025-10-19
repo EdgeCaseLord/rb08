@@ -70,42 +70,53 @@ class FavoriteRecipesTable extends Component
 
     public function removeFromFavorites($id)
     {
-        $user = $this->getBookPatient();
-        if (!$user) return;
-        $user->removeFromFavorites($id);
-        $this->dispatch('recipeRemovedFromFavorites', $id);
-        // Remove from favorites UI immediately
+        // Immediate UI update - remove from favorites
         $this->recipes = collect($this->recipes)->reject(function($r) use ($id) {
             return $r->id_recipe == $id || $r->id_external == $id;
         })->values();
-        // Do not call refreshRecipes here
+
+        // Get user for background job
+        $user = $this->getBookPatient();
+        if (!$user) return;
+
+        // Dispatch background job for database operations
+        \App\Jobs\ProcessRecipeOperation::dispatch('remove_from_favorites', $id, null, $user->id);
+
+        // Dispatch UI event
+        $this->dispatch('recipeRemovedFromFavorites', $id);
+
+        // Show immediate feedback
+        \Filament\Notifications\Notification::make()
+            ->title(__('Aus Favoriten entfernt'))
+            ->body('Das Rezept wird im Hintergrund verarbeitet.')
+            ->success()
+            ->send();
     }
 
     public function addToBook($id)
     {
-        $book = Book::find($this->bookId);
-        if (!$book || !$book->patient) return;
         // Accept either internal or external id
         $recipe = Recipe::where('id_recipe', $id)->orWhere('id_external', $id)->first();
         if (!$recipe) return;
-        // Add recipe with limit checking
-        if (!$book->addRecipeWithLimitCheck($recipe->id_recipe)) {
-            return;
-        }
 
-        // Update status if not 'Warten auf Versand'
-        if ($book->status !== 'Warten auf Versand') {
-            $book->status = 'Geändert nach Versand';
-            $book->save();
-            $this->dispatch('bookStatusUpdated', id: $book->id, status: $book->status);
-        }
-        $this->dispatch('recipeAddedToBook', $recipe->id_external ?? $recipe->id_recipe);
-        // Remove from favorites UI immediately
+        // Immediate UI update - remove from favorites
         $this->recipes = $this->ensureRecipeCollection($this->recipes)
             ->reject(function($r) use ($recipe) {
                 return $r->id_recipe == $recipe->id_recipe || $r->id_external == $recipe->id_external;
             })->values();
-        // Do not call refreshRecipes here
+
+        // Dispatch background job for heavy operations
+        \App\Jobs\ProcessRecipeOperation::dispatch('add_to_book', $recipe->id_external ?? $recipe->id_recipe, $this->bookId);
+
+        // Dispatch UI event
+        $this->dispatch('recipeAddedToBook', $recipe->id_external ?? $recipe->id_recipe);
+
+        // Show immediate feedback
+        \Filament\Notifications\Notification::make()
+            ->title(__('Rezept hinzugefügt'))
+            ->body('Das Rezept wird im Hintergrund verarbeitet.')
+            ->success()
+            ->send();
     }
 
     public function addFavoriteRecipe($externalId)
@@ -123,7 +134,7 @@ class FavoriteRecipesTable extends Component
         $this->recipes = collect($this->recipes)
             ->reject(function ($r) use ($recipe) {
                 return $r->id_recipe == $recipe->id_recipe;
-            })->prepend($recipe);
+            })->prepend($recipe)->values();
         // No need to call ensureRecipeCollection again, as all are Recipe objects
         // Do not call refreshRecipes here, to avoid UI flicker and ensure instant update
     }

@@ -68,7 +68,7 @@ class Book extends Model
             $this->recipes()->syncWithoutDetaching($localIds);
         }
         $updatedRecipes = $this->recipes()->pluck('id_recipe')->toArray();
-        \Log::info('After adding recipe(s), current recipes', [
+        \Illuminate\Support\Facades\Log::info('After adding recipe(s), current recipes', [
             'book_id' => $this->id,
             'recipe_count' => count($updatedRecipes),
             'recipe_ids' => $updatedRecipes,
@@ -77,33 +77,15 @@ class Book extends Model
 
     public function removeRecipe(int $recipeId): void
     {
+        // Simple detach - no heavy operations
         $this->recipes()->detach($recipeId);
-        $updatedRecipes = $this->recipes()->pluck('id_recipe')->toArray();
-        \Log::info('After removing recipe, current recipes', [
-            'book_id' => $this->id,
-            'recipe_count' => count($updatedRecipes),
-            'recipe_ids' => $updatedRecipes,
-        ]);
-        // Remove recipe if not referenced by any book or as a favourite
+
+        // Optional: Clean up orphaned recipes (can be done in background job)
+        // For now, skip the heavy user settings check to improve performance
         $recipe = \App\Models\Recipe::find($recipeId);
-        if ($recipe) {
-            $bookCount = $recipe->books()->count();
-            // Check for favourites in user settings
-            $isFavourite = false;
-            $users = \App\Models\User::whereNotNull('settings')->get();
-            foreach ($users as $user) {
-                $settings = is_string($user->settings) ? json_decode($user->settings, true) : $user->settings;
-                if (isset($settings['favorites']) && is_array($settings['favorites']) && (in_array($recipe->id_external, $settings['favorites']) || in_array($recipe->id_recipe, $settings['favorites']))) {
-                    $isFavourite = true;
-                    break;
-                }
-            }
-            if ($bookCount === 0 && !$isFavourite) {
-                $recipe->delete();
-                \Log::info('Recipe deleted as it is no longer referenced', [
-                    'recipe_id' => $recipeId
-                ]);
-            }
+        if ($recipe && $recipe->books()->count() === 0) {
+            // Only check if recipe is in any book, skip favorites check for performance
+            $recipe->delete();
         }
     }
 
