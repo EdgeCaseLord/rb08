@@ -32,9 +32,7 @@ class AppServiceProvider extends ServiceProvider
         }
 
         Livewire::component('recipes-table', \App\Filament\Livewire\RecipesTable::class);
-        Livewire::component('book-recipes-table', \App\Filament\Livewire\BookRecipesTable::class);
-        Livewire::component('favorite-recipes-table', \App\Filament\Livewire\FavoriteRecipesTable::class);
-        Livewire::component('available-recipes-table', \App\Filament\Livewire\AvailableRecipesTable::class);
+        // Removed old recipe components - now using Alpine.js
 
          // Fix timestamp casting for job batches
          \Illuminate\Support\Facades\Schema::defaultStringLength(191);

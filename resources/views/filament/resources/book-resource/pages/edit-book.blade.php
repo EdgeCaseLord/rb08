@@ -83,14 +83,9 @@
                 </div>
             </div>
         </div>
-        <x-filament::section heading="Rezepte im Buch" collapsible="true" class="max-h-[80vh] overflow-y-auto">
-            @livewire('book-recipes-table', ['bookId' => $bookId])
-        </x-filament::section>
-        <x-filament::section heading="Favoriten" collapsible="true" class="max-h-[80vh] overflow-y-auto">
-            @livewire('favorite-recipes-table', ['bookId' => $bookId])
-        </x-filament::section>
-        <x-filament::section heading="Verfügbare Rezepte" collapsible="true" class="max-h-[80vh] overflow-y-auto">
-            @livewire('available-recipes-table', ['bookId' => $bookId])
-        </x-filament::section>
+        @php
+            $viewData = $this->getViewData();
+        @endphp
+        @include('filament.resources.book-resource.pages.edit-book-recipes', $viewData)
     </div>
 </x-filament-panels::page>

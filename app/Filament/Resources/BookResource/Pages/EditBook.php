@@ -577,4 +577,53 @@ class EditBook extends EditRecord
     {
         return 'filament.resources.book-resource.pages.edit-book';
     }
+
+    protected function getViewData(): array
+    {
+        $book = $this->record;
+
+        // Load book recipes
+        $bookRecipes = $book->recipes()->get()->map(function($r) {
+            return \App\Filament\Livewire\AvailableRecipesTable::recipeModelToArray($r);
+        })->toArray();
+
+        // Calculate counts per course
+        $bookRecipeCounts = ['starter' => 0, 'main_course' => 0, 'dessert' => 0];
+        foreach ($bookRecipes as $recipe) {
+            $categories = $recipe['category'] ?? [];
+            $primaryCategory = \App\Filament\Resources\BookResource::getPrimaryCategory($categories);
+            $course = \App\Filament\Resources\BookResource::mapCategoryToCourse($primaryCategory);
+            $bookRecipeCounts[$course]++;
+        }
+
+        // Get limits
+        $recipeLimits = $book->getRecipesPerCourse();
+
+        // Load favorites
+        $patient = $book->patient;
+        $favoriteIds = $patient ? ($patient->settings['favorites'] ?? []) : [];
+        $bookRecipeIds = collect($bookRecipes)->pluck('id_recipe')->toArray();
+        $favoriteRecipes = \App\Models\Recipe::whereIn('id_external', $favoriteIds)
+            ->whereNotIn('id_recipe', $bookRecipeIds)
+            ->get()
+            ->map(function($r) {
+                return \App\Filament\Livewire\AvailableRecipesTable::recipeModelToArray($r);
+            })
+            ->toArray();
+
+        // Load initial available recipes (first page only)
+        $cookButlerService = app(\App\Services\CookButlerService::class);
+        $filters = [];
+        $result = $cookButlerService->fetchAvailableRecipesForPatient($patient, $filters, 10, 0);
+        $availableRecipes = $result['recipes'] ?? [];
+
+        return [
+            'bookRecipes' => $bookRecipes,
+            'favoriteRecipes' => $favoriteRecipes,
+            'availableRecipes' => $availableRecipes,
+            'bookRecipeCounts' => $bookRecipeCounts,
+            'recipeLimits' => $recipeLimits,
+            'bookId' => $book->id
+        ];
+    }
 }
