@@ -308,6 +308,41 @@ class AvailableRecipesTable extends Component
 
     public function addToBook($externalId)
     {
+        // Check recipe limits BEFORE updating UI
+        $book = \App\Models\Book::find($this->bookId);
+        if (!$book) return;
+
+        // Get recipe data to check course limits
+        $recipe = collect($this->recipes)->first(function ($r) use ($externalId) {
+            $id = isset($r['id']) ? $r['id'] : (isset($r['id_external']) ? $r['id_external'] : (isset($r['id_recipe']) ? $r['id_recipe'] : null));
+            return $id == $externalId;
+        });
+
+        if (!$recipe) return;
+
+        // Check if we can add this recipe (course limits)
+        $categories = $recipe['category'] ?? [];
+        $primaryCategory = \App\Filament\Resources\BookResource::getPrimaryCategory($categories);
+        $course = \App\Filament\Resources\BookResource::mapCategoryToCourse($primaryCategory);
+
+        $recipeLimits = $book->getRecipesPerCourse();
+        $currentCount = $book->recipes()->where('course', $course)->count();
+        $limit = $recipeLimits[$course] ?? PHP_INT_MAX;
+
+        if ($currentCount >= $limit) {
+            // Show limit reached notification
+            \Filament\Notifications\Notification::make()
+                ->title(__('Rezeptlimit erreicht'))
+                ->body(__('Maximale Rezepteanzahl für :course erreicht! Aktuell: :current von :limit', [
+                    'course' => $course,
+                    'current' => $currentCount,
+                    'limit' => $limit
+                ]))
+                ->warning()
+                ->send();
+            return;
+        }
+
         // Immediate UI update - remove from available recipes
         $recipesArray = $this->recipes;
         if ($recipesArray instanceof \Illuminate\Support\Collection) {

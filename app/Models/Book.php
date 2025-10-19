@@ -160,23 +160,25 @@ class Book extends Model
     /**
      * Add a recipe to the book with limit checking and notification
      */
-    public function addRecipeWithLimitCheck($recipeId): bool
+    public function addRecipeWithLimitCheck($recipeId, $sendNotification = true): bool
     {
         $limitCheck = $this->canAddRecipe($recipeId);
 
         if (!$limitCheck['can_add']) {
-            \Filament\Notifications\Notification::make()
-                ->title(__('Rezeptlimit erreicht'))
-                ->body($limitCheck['message'])
-                ->warning()
-                ->actions([
-                    \Filament\Notifications\Actions\Action::make('upgrade')
-                        ->label(__('Konto upgraden'))
-                        ->url('#')
-                        ->color('success')
-                        // ->visible(false) // Uncomment to hide upgrade button for now
-                ])
-                ->send();
+            if ($sendNotification) {
+                \Filament\Notifications\Notification::make()
+                    ->title(__('Rezeptlimit erreicht'))
+                    ->body($limitCheck['message'])
+                    ->warning()
+                    ->actions([
+                        \Filament\Notifications\Actions\Action::make('upgrade')
+                            ->label(__('Konto upgraden'))
+                            ->url('#')
+                            ->color('success')
+                            // ->visible(false) // Uncomment to hide upgrade button for now
+                    ])
+                    ->send();
+            }
             return false;
         }
 

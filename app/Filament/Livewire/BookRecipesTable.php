@@ -34,8 +34,15 @@ class BookRecipesTable extends Component
 
     public function refreshRecipes()
     {
-        // Skip database queries for immediate UI response
-        // The UI will be updated by the background job
+        $book = Book::find($this->bookId);
+        Log::info('BookRecipesTable: refreshRecipes', ['bookId' => $this->bookId, 'book' => $book]);
+        if (!$book) { $this->recipes = []; $this->dispatch('bookRecipesChanged'); return; }
+        $recipes = $book->recipes()->get();
+        $this->recipes = array_map(function($r) {
+            return \App\Filament\Livewire\AvailableRecipesTable::recipeModelToArray($r);
+        }, $recipes->all());
+        $idRecipes = array_map(function($r) { return $r['id_recipe'] ?? null; }, $this->recipes);
+        Log::info('BookRecipesTable: recipes: ' . implode(',', $idRecipes));
         $this->dispatch('bookRecipesChanged');
     }
 

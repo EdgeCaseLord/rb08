@@ -51,9 +51,16 @@ class FavoriteRecipesTable extends Component
 
     public function refreshRecipes()
     {
-        // Skip database queries for immediate UI response
-        // The UI will be updated by the background job
-        $this->recipes = collect();
+        $book = Book::find($this->bookId);
+        if (!$book || !$book->patient) { $this->recipes = collect(); return; }
+        $patient = $this->getBookPatient();
+        $settings = $patient->settings ?? [];
+        $favorites = $settings['favorites'] ?? [];
+        $bookRecipeIds = $book->recipes()->pluck('id_recipe')->toArray();
+        $recipes = Recipe::whereIn('id_external', $favorites)
+            ->whereNotIn('id_recipe', $bookRecipeIds)
+            ->get();
+        $this->recipes = $this->ensureRecipeCollection($recipes);
     }
 
     private function normalizeRecipes()
@@ -112,18 +119,22 @@ class FavoriteRecipesTable extends Component
 
     public function addFavoriteRecipe($externalId)
     {
-        // Create minimal recipe entry without database queries
+        $book = Book::find($this->bookId);
+        if (!$book || !$book->patient) return;
+        $patient = $this->getBookPatient();
+        $settings = $patient->settings ?? [];
+        $favorites = $settings['favorites'] ?? [];
+        $bookRecipeIds = $book->recipes()->pluck('id_recipe')->toArray();
+        $recipe = Recipe::where('id_external', $externalId)->orWhere('id_recipe', $externalId)->first();
+        if (!$recipe) return;
+        if (in_array($recipe->id_recipe, $bookRecipeIds)) return; // Do not add to UI if in book
+        // Always prepend, even if already present, to ensure UI update
         $this->recipes = collect($this->recipes)
-            ->reject(function ($r) use ($externalId) {
-                return ($r->id_external ?? null) == $externalId || ($r->id_recipe ?? null) == $externalId;
-            })->prepend((object)[
-                'id_external' => $externalId,
-                'id_recipe' => $externalId,
-                'title' => 'Recipe ' . $externalId,
-                'category' => [],
-                'diets' => [],
-                'allergens' => []
-            ])->values();
+            ->reject(function ($r) use ($recipe) {
+                return $r->id_recipe == $recipe->id_recipe;
+            })->prepend($recipe)->values();
+        // No need to call ensureRecipeCollection again, as all are Recipe objects
+        // Do not call refreshRecipes here, to avoid UI flicker and ensure instant update
     }
 
     public function render()

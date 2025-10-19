@@ -116,8 +116,8 @@ class ProcessRecipeOperation implements ShouldQueue
             return;
         }
 
-        // Add to book with limit checking
-        if (!$book->addRecipeWithLimitCheck($recipe->id_recipe)) {
+        // Add to book with limit checking (don't send notification since it was already sent in Livewire)
+        if (!$book->addRecipeWithLimitCheck($recipe->id_recipe, false)) {
             Log::warning('Recipe limit reached for book', [
                 'bookId' => $this->bookId,
                 'recipeId' => $this->recipeId
