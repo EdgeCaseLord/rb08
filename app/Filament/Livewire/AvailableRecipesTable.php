@@ -319,18 +319,18 @@ class AvailableRecipesTable extends Component
         });
         $this->recipes = array_values($recipesArray);
 
-        // Dispatch background job for heavy operations (API calls, database operations)
-        \App\Jobs\ProcessRecipeOperation::dispatch('add_to_book', $externalId, $this->bookId);
-
-        // Dispatch UI event
-        $this->dispatch('recipeAddedToBook', $externalId);
-
-        // Show immediate feedback
+        // Show immediate feedback FIRST
         \Filament\Notifications\Notification::make()
             ->title(__('Rezept hinzugefügt'))
             ->body('Das Rezept wird im Hintergrund verarbeitet.')
             ->success()
             ->send();
+
+        // Dispatch background job for heavy operations (truly async)
+        \App\Jobs\ProcessRecipeOperation::dispatch('add_to_book', $externalId, $this->bookId);
+
+        // Dispatch UI event
+        $this->dispatch('recipeAddedToBook', $externalId);
     }
 
     public function addToFavorites($externalId)

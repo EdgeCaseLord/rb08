@@ -53,16 +53,22 @@ class BookRecipesTable extends Component
             return ($r['id_recipe'] ?? null) != $id && ($r['id_external'] ?? null) != $id;
         }));
 
-        // Get recipe info for background processing
+        // Show immediate feedback FIRST
+        \Filament\Notifications\Notification::make()
+            ->title(__('Rezept entfernt'))
+            ->body('Das Rezept wird im Hintergrund verarbeitet.')
+            ->success()
+            ->send();
+
+        // Dispatch background job for heavy operations (truly async)
+        \App\Jobs\ProcessRecipeOperation::dispatch('remove_from_book', $id, $this->bookId);
+
+        // Check if recipe is a favorite and dispatch accordingly
         $recipe = Recipe::where('id_recipe', $id)->first();
         if (!$recipe) {
             $recipe = Recipe::where('id_external', $id)->first();
         }
 
-        // Dispatch background job for heavy operations
-        \App\Jobs\ProcessRecipeOperation::dispatch('remove_from_book', $id, $this->bookId);
-
-        // Check if recipe is a favorite and dispatch accordingly
         if ($recipe) {
             $user = $this->getBookPatient();
             $settings = $user ? ($user->settings ?? []) : [];
@@ -76,13 +82,6 @@ class BookRecipesTable extends Component
                 $this->dispatch('recipeRemovedFromBook', $id);
             }
         }
-
-        // Show immediate feedback
-        \Filament\Notifications\Notification::make()
-            ->title(__('Rezept entfernt'))
-            ->body('Das Rezept wird im Hintergrund verarbeitet.')
-            ->success()
-            ->send();
     }
 
     protected function getBookPatient()
