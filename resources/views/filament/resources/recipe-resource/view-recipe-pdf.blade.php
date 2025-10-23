@@ -485,7 +485,6 @@
                     <tbody>
                         @foreach(array_keys($nutrientList) as $i => $nutrient)
                         @php
-                                $unit = $nutrientList[$nutrient];
                                         $substance = $substances->first(function($s) use ($nutrient) {
                                             if (!isset($s['substance'])) return false;
                                             // Try exact match first
@@ -501,6 +500,10 @@
                                             }
                                             return false;
                                         });
+
+                                        // Use API unit_short if available, fallback to hardcoded unit
+                                        $unit = $substance['unit_short'] ?? $nutrientList[$nutrient];
+
                                 $value = $substance['portion']['amount'] ?? $substance['value'] ?? null;
                                 $value = is_numeric($value) ? number_format($value, 1) : '–';
                         @endphp

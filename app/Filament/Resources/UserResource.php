@@ -138,7 +138,7 @@ class UserResource extends Resource
                     'biologisch' => __('Biologisch'),
                     'eifrei' => __('Eifrei'),
                     'glutenfrei' => __('Glutenfrei'),
-                    'histamin-free' => __('Histaminfrei'),
+                    'histamine-low' => __('Histaminarm'),
                     'laktosefrei' => __('Laktosefrei'),
                     'ohne Fisch' => __('Ohne Fisch'),
                     'ohne Fleisch' => __('Ohne Fleisch'),

@@ -138,7 +138,7 @@
                         'wheat-free' => __('Weizenfrei'),
                         'alcohol-free' => __('Ohne Alkohol'),
                         //'biological' => __('Biologisch'),
-                        'histamin-free' => __('Histaminfrei'),
+                        'histamine-low' => __('Histaminarm'),
                     ] as $key => $label)
                         <label class="flex items-center space-x-2">
                             <input type="checkbox" name="filterDiets[]" value="{{ $key }}" class="form-checkbox" @if(collect(old('filterDiets', $filterSet['filterDiets'] ?? []))->contains($key)) checked @endif>

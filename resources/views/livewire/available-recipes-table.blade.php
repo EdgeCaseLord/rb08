@@ -98,7 +98,7 @@
                             'wheat-free' => __('Weizenfrei'),
                             'alcohol-free' => __('Ohne Alkohol'),
                             //'biological' => __('Biologisch'),
-                            'histamin-free' => __('Histaminfrei'),
+                            'histamine-low' => __('Histaminarm'),
                         ];
                         if ($key === 'filterDifficulty') $valueMap = [
                             'easy' => __('einfach'), 'medium' => __('mittel'), 'difficult' => __('schwierig'),
@@ -256,7 +256,7 @@
                             'vegetarian' => __('Vegetarisch'),
                             'wheat-free' => __('Weizenfrei'),
                             'alcohol-free' => __('Ohne Alkohol'),
-                            'histamin-free' => __('Histaminfrei'),
+                            'histamine-low' => __('Histaminarm'),
                         ] as $key => $label)
                             <label class="flex items-center space-x-2">
                                 <input type="checkbox" wire:model="filterDiets.{{ $key }}" value="{{ $key }}" class="form-checkbox">

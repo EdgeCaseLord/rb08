@@ -169,7 +169,7 @@ class PatientResource extends Resource
                                         'vegetarian' => 'Vegetarisch',
                                         'wheat-free' => 'Weizenfrei',
                                         'alcohol-free' => 'Ohne Alkohol',
-                                        'histamin-free' => 'Histaminfrei',
+                                        'histamine-low' => 'Histaminarm',
                                     ])
                                     ->columns([
                                         'default' => 1,

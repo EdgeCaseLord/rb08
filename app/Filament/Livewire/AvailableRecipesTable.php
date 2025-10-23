@@ -471,7 +471,7 @@ class AvailableRecipesTable extends Component
             'glutenfrei' => 'gluten-free',
             'laktosefrei' => 'lactose-free',
             'biological' => 'biological',
-            'histamin-free' => 'histamin-free',
+            'histamine-low' => 'histamine-low',
         ];
         $diets = array_keys(array_filter($this->filterDiets));
         $diets = array_map(function($diet) use ($dietApiKeyMap) {
