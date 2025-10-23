@@ -520,7 +520,7 @@
                                         // Use API unit_short if available, fallback to hardcoded unit
                                         $unit = $substance['unit_short'] ?? $nutrientList[$nutrient];
 
-                                        $value = $substance['portion']['amount'] ?? $substance['value'] ?? null;
+                                        $value = $substance['portion']['amount'] ?? null;
                                         $value = is_numeric($value) ? number_format($value, 1) : '–';
                                         $rowClass = $i % 2 == 0 ? 'nutrient-row-even' : 'nutrient-row-odd';
                                 @endphp
