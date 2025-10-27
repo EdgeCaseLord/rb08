@@ -37,7 +37,18 @@ class PdfController extends Controller
                 ])
                 ->format('a4')
                 ->withBrowsershot(function (Browsershot $browsershot) {
-                    $browsershot->noSandbox()->timeout(240); // 4 minutes timeout
+                    $browsershot->noSandbox()
+                        ->addChromiumArguments([
+                            '--disable-dev-shm-usage',
+                            '--disable-gpu',
+                            '--disable-web-security',
+                            '--disable-features=VizDisplayCompositor',
+                            '--run-all-compositor-stages-before-draw',
+                            '--disable-background-timer-throttling',
+                            '--disable-backgrounding-occluded-windows',
+                            '--disable-renderer-backgrounding'
+                        ])
+                        ->timeout(240); // 4 minutes timeout
                 })
                 ->download($pdfFileName);
         } catch (\Throwable $e) {

@@ -221,17 +221,8 @@
 <body>
 <!-- Debug Recipes -->
 @php
-    \Log::debug('Template recipes count: ' . count($recipes));
-    foreach ($recipes as $index => $recipe) {
-        \Log::debug("Template recipe $index: " . json_encode([
-            'title' => $recipe->title,
-            'media_raw' => $recipe->media,
-            'media_decoded' => is_string($recipe->media ?? null) ? json_decode($recipe->media, true) : (is_array($recipe->media ?? null) ? $recipe->media : []),
-            'course' => $recipe->course,
-            'ingredients' => $recipe->ingredients,
-            'steps' => $recipe->steps,
-        ]));
-    }
+    // Removed excessive debug logging to prevent memory issues and intermittent failures
+    \Log::info('Template processing started', ['recipe_count' => count($recipes)]);
 
     // Define categories and group recipes
     $categories = ['Vorspeise', 'Hauptgericht', 'Dessert'];
