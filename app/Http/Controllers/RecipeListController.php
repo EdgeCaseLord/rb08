@@ -44,19 +44,36 @@ class RecipeListController extends Controller
             $allergens = [];
             $allRaw = $arr['allergens'] ?? ($rec['allergens'] ?? []);
             if (!empty($allRaw) && is_array($allRaw)) {
-                foreach ($allRaw as $it) {
-                    if (is_array($it)) {
-                        $name = $it['allergen'] ?? null;
-                        $val = $it['value'] ?? null;
-                        if ($name && $val === true) $allergens[] = (string)$name;
-                    } elseif (is_string($it)) {
-                        // If API already gives strings, take them directly
-                        $s = trim($it);
-                        if ($s !== '') $allergens[] = $s;
+                // Associative dict of booleans: take keys where value===true
+                if ($this->isAssoc($allRaw)) {
+                    foreach ($allRaw as $k => $v) {
+                        $kStr = (string)$k;
+                        if ($v === true && $kStr !== '' && stripos($kStr, 'pro_') !== 0 && $kStr[0] !== ':') {
+                            $allergens[] = $kStr;
+                        }
+                    }
+                } else {
+                    foreach ($allRaw as $it) {
+                        if (is_array($it)) {
+                            $name = $it['allergen'] ?? null;
+                            $val = $it['value'] ?? null;
+                            if ($name && $val === true && stripos((string)$name, 'pro_') !== 0) $allergens[] = (string)$name;
+                        } elseif (is_string($it)) {
+                            // If API already gives strings, take them directly (exclude pro_ codes)
+                            $s = trim($it);
+                            if ($s !== '' && stripos($s, 'pro_') !== 0) $allergens[] = $s;
+                        }
                     }
                 }
                 $allergens = array_values(array_unique(array_filter($allergens)));
             }
+            // Restrict to standard allergen set (German labels used in filters)
+            $allowedAllergens = [
+                'Erdnüsse','Fisch','Glutenhaltiges Getreide','Hühnerei','Krebstiere','Lupinen','Milch','Schalenfrüchte','Schwefeldioxid und Sulfit','Sellerie','Senf','Sesamsamen','Soja','Weichtiere',
+            ];
+            $norm = function($s){ return mb_strtolower(trim((string)$s)); };
+            $allowedSet = array_flip(array_map($norm, $allowedAllergens));
+            $allergens = array_values(array_filter($allergens, function($name) use($allowedSet, $norm){ return isset($allowedSet[$norm($name)]); }));
             // Convert to [{allergen: name, value: true}]
             $allergenObjs = array_map(fn($n) => ['allergen' => $n, 'value' => true], $allergens);
 
@@ -115,15 +132,34 @@ class RecipeListController extends Controller
 
         $allergenNames = [];
         if (is_array($allergensRaw)) {
-            foreach ($allergensRaw as $it) {
-                if (is_array($it)) {
-                    $name = $it['allergen'] ?? ($it['name'] ?? null);
-                    $val = $it['value'] ?? null;
-                    if ($name && $val === true) $allergenNames[] = (string)$name;
+            if ($this->isAssoc($allergensRaw)) {
+                foreach ($allergensRaw as $k => $v) {
+                    $kStr = (string)$k;
+                    if ($v === true && $kStr !== '' && stripos($kStr, 'pro_') !== 0 && $kStr[0] !== ':') {
+                        $allergenNames[] = $kStr;
+                    }
+                }
+            } else {
+                foreach ($allergensRaw as $it) {
+                    if (is_array($it)) {
+                        $name = $it['allergen'] ?? ($it['name'] ?? null);
+                        $val = $it['value'] ?? null;
+                        if ($name && $val === true && stripos((string)$name, 'pro_') !== 0) $allergenNames[] = (string)$name;
+                    } elseif (is_string($it)) {
+                        $s = trim($it);
+                        if ($s !== '' && stripos($s, 'pro_') !== 0) $allergenNames[] = $s;
+                    }
                 }
             }
         }
         $allergenNames = array_values(array_unique(array_filter($allergenNames)));
+        // Restrict to standard allergen set (German labels used in filters)
+        $allowedAllergens = [
+            'Erdnüsse','Fisch','Glutenhaltiges Getreide','Hühnerei','Krebstiere','Lupinen','Milch','Schalenfrüchte','Schwefeldioxid und Sulfit','Sellerie','Senf','Sesamsamen','Soja','Weichtiere',
+        ];
+        $norm = function($s){ return mb_strtolower(trim((string)$s)); };
+        $allowedSet = array_flip(array_map($norm, $allowedAllergens));
+        $allergenNames = array_values(array_filter($allergenNames, function($name) use($allowedSet, $norm){ return isset($allowedSet[$norm($name)]); }));
         $allergenObjs = array_map(fn($n) => ['allergen' => $n, 'value' => true], $allergenNames);
 
         $thumb = null;
