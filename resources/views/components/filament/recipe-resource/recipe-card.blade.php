@@ -137,7 +137,7 @@
     <!-- Image -->
     <div class="aspect-w-16 aspect-h-9">
         @if ($previewImageUrl)
-            <img src="{{ $previewImageUrl }}?v={{ time() }}"
+            <img src="{{ $previewImageUrl }}"
                  alt="{{ $title }}"
                  class="w-full h-48 object-cover object-center">
         @else

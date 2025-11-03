@@ -419,7 +419,36 @@ class AvailableRecipesTable extends Component
         });
         if ($alreadyPresent) return;
 
-        // Create minimal recipe entry without database queries
+        // Try to fetch a lightweight recipe payload from API (minimal fields used in the list)
+        try {
+            if (!$this->cookButlerService) {
+                $this->cookButlerService = app(\App\Services\CookButlerService::class);
+            }
+            $apiRecipe = $this->cookButlerService->fetchRecipeDetails($id);
+            if (is_array($apiRecipe) && !empty($apiRecipe)) {
+                $minimal = [
+                    'id' => $apiRecipe['id'] ?? $id,
+                    'id_external' => $apiRecipe['id'] ?? $id,
+                    'title' => $apiRecipe['title'] ?? ('Recipe ' . $id),
+                    // keep only the fields displayed in the list
+                    'category' => $apiRecipe['category'] ?? [],
+                    'diets' => $apiRecipe['diets'] ?? [],
+                    'allergens' => $apiRecipe['allergens'] ?? [],
+                    // prefer preview images if present
+                    'images' => $apiRecipe['images'] ?? (($apiRecipe['media']['preview'] ?? []) ?: []),
+                    'media' => $apiRecipe['media'] ?? [],
+                ];
+                $this->recipes[] = self::normalizeRecipe($minimal);
+                return;
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('addToAvailableRecipes: fallback to stub due to API error', [
+                'id' => $id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        // Fallback: create minimal stub entry without blocking on API
         $this->recipes[] = [
             'id' => $id,
             'id_external' => $id,

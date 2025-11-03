@@ -6,6 +6,7 @@ use App\Models\Book;
 use Spatie\LaravelPdf\Facades\Pdf;
 use Spatie\Browsershot\Browsershot;
 use App\Models\Analysis;
+use App\Models\TextTemplate;
 
 class PdfController extends Controller
 {
@@ -24,13 +25,26 @@ class PdfController extends Controller
             $sampleCode = $analysis?->sample_code;
             $pdfFileName = $sampleCode ? ($sampleCode . '_RB.pdf') : "book-{$book->id}-rezepte.pdf";
 
+            // Increase limits for complex PDFs
+            @ini_set('memory_limit', '1024M');
+            @set_time_limit(600);
+
+            // Fetch optional text templates so they appear in the PDF
+            $impressumTemplate = TextTemplate::where('type', 'book_text_impressum')->first();
+            $erlaeuterungTemplate = TextTemplate::where('type', 'book_text_erlaeuterung')->first();
+
             return Pdf::view('pdf.book', [
                     'book' => $book,
-                    'recipes' => $book->recipes()->get()
+                    'recipes' => $book->recipes()->get(),
+                    'impressumTemplate' => $impressumTemplate,
+                    'erlaeuterungTemplate' => $erlaeuterungTemplate,
                 ])
                 ->format('a4')
                 ->withBrowsershot(function (Browsershot $browsershot) {
-                    $browsershot->noSandbox();
+                    $browsershot
+                        ->noSandbox()
+                        ->addChromiumArguments(['--disable-dev-shm-usage', '--disable-gpu'])
+                        ->timeout(120);
                 })
                 ->download($pdfFileName);
         } catch (\Throwable $e) {
