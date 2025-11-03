@@ -25,9 +25,12 @@ class RecipeListController extends Controller
         if (isset($arr['recipe']) && is_array($arr['recipe'])) {
             $rec = $arr['recipe'];
             $opt = isset($arr['optional']) && is_array($arr['optional']) ? $arr['optional'] : [];
+            // Merge top-level and recipe for robust field access
+            $merged = array_merge($arr, $rec);
 
-            // Media/thumbnail
-            $media = isset($rec['media']) ? (is_string($rec['media']) ? (json_decode($rec['media'], true) ?: []) : (is_array($rec['media']) ? $rec['media'] : [])) : [];
+            // Media/thumbnail: prefer top-level media
+            $mediaRaw = $merged['media'] ?? [];
+            $media = is_string($mediaRaw) ? (json_decode($mediaRaw, true) ?: []) : (is_array($mediaRaw) ? $mediaRaw : []);
             $thumb = null;
             if (!empty($media['search'])) {
                 $thumb = is_array($media['search']) ? ($media['search'][0] ?? null) : $media['search'];
@@ -39,20 +42,40 @@ class RecipeListController extends Controller
 
             // Allergens: array of objects { allergen: string, value: bool }
             $allergens = [];
-            if (!empty($rec['allergens']) && is_array($rec['allergens'])) {
-                foreach ($rec['allergens'] as $it) {
+            $allRaw = $arr['allergens'] ?? ($rec['allergens'] ?? []);
+            if (!empty($allRaw) && is_array($allRaw)) {
+                foreach ($allRaw as $it) {
                     if (is_array($it)) {
                         $name = $it['allergen'] ?? null;
                         $val = $it['value'] ?? null;
                         if ($name && $val === true) $allergens[] = (string)$name;
+                    } elseif (is_string($it)) {
+                        // If API already gives strings, take them directly
+                        $s = trim($it);
+                        if ($s !== '') $allergens[] = $s;
                     }
                 }
                 $allergens = array_values(array_unique(array_filter($allergens)));
             }
+            // Convert to [{allergen: name, value: true}]
+            $allergenObjs = array_map(fn($n) => ['allergen' => $n, 'value' => true], $allergens);
 
-            // Categories/diets may be in optional
-            $category = $this->normalizeArrayLabels($opt['category'] ?? []);
-            $diets = $this->normalizeArrayLabels($opt['diets'] ?? []);
+            // Categories/diets: prefer top-level, then optional, then recipe
+            $category = $this->normalizeArrayLabels($arr['category'] ?? ($opt['category'] ?? ($rec['category'] ?? [])));
+            // Extract truthy diets
+            $dietsRaw = $arr['diets'] ?? ($opt['diets'] ?? ($rec['diets'] ?? []));
+            $dietNames = [];
+            if (is_array($dietsRaw)) {
+                foreach ($dietsRaw as $it) {
+                    if (is_array($it)) {
+                        $name = $it['diet'] ?? ($it['name'] ?? ($it['label'] ?? ($it['title'] ?? null)));
+                        $val = $it['value'] ?? null;
+                        if ($name && $val === true) $dietNames[] = (string)$name;
+                    }
+                }
+            }
+            $dietNames = array_values(array_unique(array_filter($dietNames)));
+            $dietObjs = array_map(fn($n) => ['diet' => $n, 'value' => true], $dietNames);
 
             return [
                 'id_recipe' => $rec['id_recipe'] ?? ($rec['id'] ?? null),
@@ -62,8 +85,8 @@ class RecipeListController extends Controller
                 'media' => [ 'search' => $thumb ? [$thumb] : [] ],
                 'images' => $thumb ? [$thumb] : [],
                 'category' => $category,
-                'diets' => $diets,
-                'allergens' => $allergens,
+                'diets' => $dietObjs,
+                'allergens' => $allergenObjs,
             ];
         }
 
@@ -76,12 +99,40 @@ class RecipeListController extends Controller
         $allergensRaw = isset($arr['allergens']) ? (is_string($arr['allergens']) ? (json_decode($arr['allergens'], true) ?: $arr['allergens']) : $arr['allergens']) : [];
 
         $category = $this->normalizeArrayLabels($categoryRaw);
-        $diets = $this->normalizeArrayLabels($dietsRaw);
-        $allergens = $this->normalizeArrayLabels($allergensRaw);
+        // Truthy-only transform for diets/allergens if objects with value are present
+        $dietNames = [];
+        if (is_array($dietsRaw)) {
+            foreach ($dietsRaw as $it) {
+                if (is_array($it)) {
+                    $name = $it['diet'] ?? ($it['name'] ?? ($it['label'] ?? ($it['title'] ?? null)));
+                    $val = $it['value'] ?? null;
+                    if ($name && $val === true) $dietNames[] = (string)$name;
+                }
+            }
+        }
+        $dietNames = array_values(array_unique(array_filter($dietNames)));
+        $dietObjs = array_map(fn($n) => ['diet' => $n, 'value' => true], $dietNames);
+
+        $allergenNames = [];
+        if (is_array($allergensRaw)) {
+            foreach ($allergensRaw as $it) {
+                if (is_array($it)) {
+                    $name = $it['allergen'] ?? ($it['name'] ?? null);
+                    $val = $it['value'] ?? null;
+                    if ($name && $val === true) $allergenNames[] = (string)$name;
+                }
+            }
+        }
+        $allergenNames = array_values(array_unique(array_filter($allergenNames)));
+        $allergenObjs = array_map(fn($n) => ['allergen' => $n, 'value' => true], $allergenNames);
 
         $thumb = null;
         if (!empty($media['search'])) {
             $thumb = is_array($media['search']) ? ($media['search'][0] ?? null) : $media['search'];
+        } elseif (!empty($media['preview_no_wm'])) {
+            $thumb = is_array($media['preview_no_wm']) ? ($media['preview_no_wm'][0] ?? null) : $media['preview_no_wm'];
+        } elseif (!empty($media['preview'])) {
+            $thumb = is_array($media['preview']) ? ($media['preview'][0] ?? null) : $media['preview'];
         } elseif (!empty($images)) {
             $thumb = $images[0] ?? null;
         }
@@ -94,8 +145,8 @@ class RecipeListController extends Controller
             'media' => [ 'search' => $thumb ? [$thumb] : [] ],
             'images' => $thumb ? [$thumb] : [],
             'category' => $category,
-            'diets' => $diets,
-            'allergens' => $allergens,
+            'diets' => $dietObjs,
+            'allergens' => $allergenObjs,
         ];
     }
 
