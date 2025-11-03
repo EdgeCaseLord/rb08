@@ -21,9 +21,14 @@ class RecipeListController extends Controller
         }
         $media = isset($arr['media']) ? (is_string($arr['media']) ? (json_decode($arr['media'], true) ?: []) : (is_array($arr['media']) ? $arr['media'] : [])) : [];
         $images = isset($arr['images']) ? (is_string($arr['images']) ? (json_decode($arr['images'], true) ?: []) : (is_array($arr['images']) ? $arr['images'] : [])) : [];
-        $category = isset($arr['category']) ? (is_string($arr['category']) ? (json_decode($arr['category'], true) ?: []) : (is_array($arr['category']) ? $arr['category'] : [])) : [];
-        $diets = isset($arr['diets']) ? (is_string($arr['diets']) ? (json_decode($arr['diets'], true) ?: []) : (is_array($arr['diets']) ? $arr['diets'] : [])) : [];
-        $allergens = isset($arr['allergens']) ? (is_string($arr['allergens']) ? (json_decode($arr['allergens'], true) ?: []) : (is_array($arr['allergens']) ? $arr['allergens'] : [])) : [];
+
+        $categoryRaw = isset($arr['category']) ? (is_string($arr['category']) ? (json_decode($arr['category'], true) ?: $arr['category']) : $arr['category']) : [];
+        $dietsRaw = isset($arr['diets']) ? (is_string($arr['diets']) ? (json_decode($arr['diets'], true) ?: $arr['diets']) : $arr['diets']) : [];
+        $allergensRaw = isset($arr['allergens']) ? (is_string($arr['allergens']) ? (json_decode($arr['allergens'], true) ?: $arr['allergens']) : $arr['allergens']) : [];
+
+        $category = $this->normalizeArrayLabels($categoryRaw);
+        $diets = $this->normalizeArrayLabels($dietsRaw);
+        $allergens = $this->normalizeArrayLabels($allergensRaw);
 
         $thumb = null;
         if (!empty($media['search'])) {
@@ -39,10 +44,86 @@ class RecipeListController extends Controller
             'title' => $arr['title'] ?? '',
             'media' => [ 'search' => $thumb ? [$thumb] : [] ],
             'images' => $thumb ? [$thumb] : [],
-            'category' => array_values(array_filter($category)),
-            'diets' => array_values(array_filter(is_array($diets) ? $diets : [])),
-            'allergens' => array_values(array_filter(is_array($allergens) ? $allergens : [])),
+            'category' => $category,
+            'diets' => $diets,
+            'allergens' => $allergens,
         ];
+    }
+
+    /**
+     * Normalize various list shapes to an array of human-readable strings.
+     * Supports:
+     * - associative dict of booleans: return keys where value === true
+     * - array of objects: use name|label|title|value
+     * - array of strings: drop literal 'true'/'false'
+     * - single object dict: treat as dict of booleans
+     */
+    private function normalizeArrayLabels($val): array
+    {
+        // decode strings like "[...]" already done by caller; keep safety here
+        if (is_string($val)) {
+            $decoded = json_decode($val, true);
+            if (json_last_error() === JSON_ERROR_NONE) {
+                $val = $decoded;
+            } else {
+                $s = trim($val);
+                if ($s !== '' && strtolower($s) !== 'true' && strtolower($s) !== 'false') {
+                    return [$s];
+                }
+                return [];
+            }
+        }
+
+        // single object treated as dict
+        if (is_object($val)) {
+            $val = (array)$val;
+        }
+
+        // dict of booleans
+        if (is_array($val) && $this->isAssoc($val)) {
+            $out = [];
+            foreach ($val as $k => $v) {
+                if ($v === true) $out[] = (string)$k;
+            }
+            return array_values(array_unique(array_filter($out)));
+        }
+
+        // list
+        if (is_array($val)) {
+            $out = [];
+            foreach ($val as $item) {
+                if (is_string($item)) {
+                    $s = trim($item);
+                    if ($s !== '' && strtolower($s) !== 'true' && strtolower($s) !== 'false') {
+                        $out[] = $s;
+                    }
+                    continue;
+                }
+                if (is_bool($item)) continue;
+                if (is_object($item)) $item = (array)$item;
+                if (is_array($item)) {
+                    // object-like
+                    $name = $item['name'] ?? ($item['label'] ?? ($item['title'] ?? ($item['value'] ?? null)));
+                    if (is_string($name) && strtolower($name) !== 'true' && strtolower($name) !== 'false') {
+                        $out[] = $name;
+                        continue;
+                    }
+                    // dict boolean fallback
+                    foreach ($item as $k => $v) {
+                        if ($v === true) $out[] = (string)$k;
+                    }
+                }
+            }
+            return array_values(array_unique(array_filter($out)));
+        }
+
+        return [];
+    }
+
+    private function isAssoc(array $arr): bool
+    {
+        if ([] === $arr) return false;
+        return array_keys($arr) !== range(0, count($arr) - 1);
     }
 
     public function bookRecipes(Request $request, Book $book)
