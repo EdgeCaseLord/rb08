@@ -121,6 +121,13 @@ Route::middleware(['auth'])->group(function () {
     });
 
     Route::post('/admin/patients/{patient}/filters', [PatientFilterController::class, 'save'])->name('patients.filters.save');
+
+    // Minimal JSON endpoints for Edit Book page
+    Route::get('/books/{book}/recipes.json', [\App\Http\Controllers\RecipeListController::class, 'bookRecipes'])->name('books.recipes.json');
+    Route::get('/favorites.json', [\App\Http\Controllers\RecipeListController::class, 'favorites'])->name('favorites.json');
+    Route::get('/available.json', [\App\Http\Controllers\RecipeListController::class, 'available'])->name('available.json');
+    Route::post('/favorites/{id}', [\App\Http\Controllers\RecipeListController::class, 'addFavorite'])->name('favorites.add');
+    Route::delete('/favorites/{id}', [\App\Http\Controllers\RecipeListController::class, 'removeFavorite'])->name('favorites.remove');
 });
 
 Route::get('/books/{book}/pdf', [PdfController::class, 'downloadBook'])->name('book.pdf');
