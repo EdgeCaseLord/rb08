@@ -28,7 +28,16 @@
     }
 
     $media = $record['media'] ?? [];
-    $previewImageUrl = !empty($media['preview']) ? $media['preview'][0] : null;
+    $imagesArr = $record['images'] ?? [];
+    if (is_string($imagesArr)) { $decoded = json_decode($imagesArr, true); $imagesArr = is_array($decoded) ? $decoded : [$imagesArr]; }
+    // Prefer smaller images: use images[] first (usually small thumbs), then media['preview'], avoid 'preview_no_wm'
+    $previewImageUrl = null;
+    if (!empty($imagesArr) && is_array($imagesArr)) {
+        $previewImageUrl = $imagesArr[0] ?? null;
+    }
+    if (!$previewImageUrl && !empty($media['preview'])) {
+        $previewImageUrl = is_array($media['preview']) ? ($media['preview'][0] ?? null) : $media['preview'];
+    }
 
     $title = $record['title'] ?? '';
     $category = $record['category'] ?? [];
@@ -139,6 +148,10 @@
         @if ($previewImageUrl)
             <img src="{{ $previewImageUrl }}"
                  alt="{{ $title }}"
+                 loading="lazy"
+                 decoding="async"
+                 fetchpriority="low"
+                 width="640" height="360"
                  class="w-full h-48 object-cover object-center">
         @else
             <div class="w-full h-48 bg-gray-200 dark:bg-gray-700 flex items-center justify-center">

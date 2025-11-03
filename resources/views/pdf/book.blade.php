@@ -5,6 +5,7 @@
     <title>{{ $book->title ?? 'Rezeptbuch' }}</title>
     <style>
         @page { margin: 0; }
+        @if(empty($pdfOptimize))
         @font-face {
             font-family: 'Roboto-Regular';
             src: url('/fonts/Roboto-Regular.ttf') format('truetype');
@@ -17,6 +18,7 @@
             font-weight: 600;
             font-style: italic;
         }
+        @endif
         html, body {
             width: 100%; height: 100%; margin: 0; padding: 0;
             font-family: 'Roboto-Regular', Helvetica, Arial, sans-serif;
@@ -481,11 +483,12 @@
         $randomMedia = $randomRecipe ? (is_string($randomRecipe->media ?? null) ? json_decode($randomRecipe->media, true) : (is_array($randomRecipe->media ?? null) ? $randomRecipe->media : null)) : null;
         $randomImage = null;
         if ($randomMedia) {
-            if (!empty($randomMedia['preview_no_wm'])) {
-                $randomImage = $randomMedia['preview_no_wm'][0];
-            }
-            elseif (!empty($randomMedia['preview'])) {
+            // Prefer smaller preview for optimized PDF size
+            if (!empty($randomMedia['preview'])) {
                 $randomImage = $randomMedia['preview'][0];
+            }
+            elseif (!empty($randomMedia['preview_no_wm'])) {
+                $randomImage = $randomMedia['preview_no_wm'][0];
             }
         }
         $catPlural = ['Vorspeise' => 'Vorspeisen', 'Hauptgericht' => 'Hauptgerichte', 'Dessert' => 'Desserts'][$cat] ?? $cat;

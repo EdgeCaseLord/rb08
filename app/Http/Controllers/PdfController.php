@@ -23,7 +23,17 @@ class PdfController extends Controller
                 $analysis = Analysis::where('patient_id', $book->patient->id)->latest()->first();
             }
             $sampleCode = $analysis?->sample_code;
-            $pdfFileName = $sampleCode ? ($sampleCode . '_RB.pdf') : "book-{$book->id}-rezepte.pdf";
+            if ($sampleCode) {
+                // Sanitize to safe filename: allow letters, numbers, dash and underscore only
+                $safeSample = preg_replace('/[^A-Za-z0-9_-]+/', '_', $sampleCode);
+                $safeSample = trim($safeSample, '_-');
+                if ($safeSample === '') {
+                    $safeSample = 'book';
+                }
+                $pdfFileName = $safeSample . '_RB.pdf';
+            } else {
+                $pdfFileName = "book-{$book->id}-rezepte.pdf";
+            }
 
             // Increase limits for complex PDFs
             @ini_set('memory_limit', '1024M');
@@ -38,13 +48,18 @@ class PdfController extends Controller
                     'recipes' => $book->recipes()->get(),
                     'impressumTemplate' => $impressumTemplate,
                     'erlaeuterungTemplate' => $erlaeuterungTemplate,
+                    // Enable client-side optimizations in the Blade view
+                    'pdfOptimize' => true,
                 ])
                 ->format('a4')
                 ->withBrowsershot(function (Browsershot $browsershot) {
                     $browsershot
                         ->noSandbox()
                         ->addChromiumArguments(['--disable-dev-shm-usage', '--disable-gpu'])
-                        ->timeout(120);
+                        // Reduce PDF size and generation time
+                        ->printBackground(false)
+                        ->scale(0.9)
+                        ->timeout(240);
                 })
                 ->download($pdfFileName);
         } catch (\Throwable $e) {
