@@ -156,7 +156,60 @@
         <x-slot name="heading">
             Verfügbare Rezepte (<span x-text="availableRecipes.length"></span>)
         </x-slot>
-
+        <div class="mb-3 border border-gray-200 dark:border-gray-700 rounded-lg">
+            <div x-data="{ openFilters: false }" class="bg-gray-50 dark:bg-gray-900 rounded-lg">
+                <button type="button" class="w-full flex items-center justify-between px-3 py-2 text-sm" @click="openFilters = !openFilters">
+                    <span class="font-medium">Filter</span>
+                    <svg :class="{'rotate-180': openFilters}" class="h-4 w-4 transition-transform" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                </button>
+                <div x-show="openFilters" x-transition class="px-3 pb-3">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <input type="text" class="filament-input rounded-lg" placeholder="Titel" x-model.debounce.400ms="filters.filterTitle">
+                        <input type="text" class="filament-input rounded-lg" placeholder="Zutaten (Bsp.: paprika, nudeln -aprikosen)" x-model.debounce.500ms="filters.filterIngredients">
+                    </div>
+                    <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                            <div class="text-xs font-semibold mb-1">Allergene</div>
+                            <div class="flex flex-wrap gap-2">
+                                <label class="flex items-center gap-1 text-xs"><input type="checkbox" x-model="filters.filterAllergen.peanuts"> <span>Erdnüsse</span></label>
+                                <label class="flex items-center gap-1 text-xs"><input type="checkbox" x-model="filters.filterAllergen.fish"> <span>Fisch</span></label>
+                                <label class="flex items-center gap-1 text-xs"><input type="checkbox" x-model="filters.filterAllergen.gluten"> <span>Glutenhaltiges Getreide</span></label>
+                                <label class="flex items-center gap-1 text-xs"><input type="checkbox" x-model="filters.filterAllergen.egg"> <span>Hühnerei</span></label>
+                                <label class="flex items-center gap-1 text-xs"><input type="checkbox" x-model="filters.filterAllergen.crustaceans"> <span>Krebstiere</span></label>
+                                <label class="flex items-center gap-1 text-xs"><input type="checkbox" x-model="filters.filterAllergen.lupin"> <span>Lupinen</span></label>
+                                <label class="flex items-center gap-1 text-xs"><input type="checkbox" x-model="filters.filterAllergen.milk"> <span>Milch</span></label>
+                                <label class="flex items-center gap-1 text-xs"><input type="checkbox" x-model="filters.filterAllergen.nuts"> <span>Schalenfrüchte</span></label>
+                                <label class="flex items-center gap-1 text-xs"><input type="checkbox" x-model="filters.filterAllergen.sulphure"> <span>Schwefeldioxid und Sulfit</span></label>
+                                <label class="flex items-center gap-1 text-xs"><input type="checkbox" x-model="filters.filterAllergen.celery"> <span>Sellerie</span></label>
+                                <label class="flex items-center gap-1 text-xs"><input type="checkbox" x-model="filters.filterAllergen.mustard"> <span>Senf</span></label>
+                                <label class="flex items-center gap-1 text-xs"><input type="checkbox" x-model="filters.filterAllergen.sesame"> <span>Sesamsamen</span></label>
+                                <label class="flex items-center gap-1 text-xs"><input type="checkbox" x-model="filters.filterAllergen.soybeans"> <span>Soja</span></label>
+                                <label class="flex items-center gap-1 text-xs"><input type="checkbox" x-model="filters.filterAllergen.molluscs"> <span>Weichtiere</span></label>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="text-xs font-semibold mb-1">Ernährungsweise</div>
+                            <div class="flex flex-wrap gap-2">
+                                <label class="flex items-center gap-1 text-xs"><input type="checkbox" x-model="filters.filterDiets.eifrei"> <span>Eifrei</span></label>
+                                <label class="flex items-center gap-1 text-xs"><input type="checkbox" x-model="filters.filterDiets.glutenfrei"> <span>Glutenfrei</span></label>
+                                <label class="flex items-center gap-1 text-xs"><input type="checkbox" x-model="filters.filterDiets.laktosefrei"> <span>Laktosefrei</span></label>
+                                <label class="flex items-center gap-1 text-xs"><input type="checkbox" x-model="filters.filterDiets['fish-free']"> <span>Ohne Fisch</span></label>
+                                <label class="flex items-center gap-1 text-xs"><input type="checkbox" x-model="filters.filterDiets['meat-free']"> <span>Ohne Fleisch</span></label>
+                                <label class="flex items-center gap-1 text-xs"><input type="checkbox" x-model="filters.filterDiets['soy-free']"> <span>Sojafrei</span></label>
+                                <label class="flex items-center gap-1 text-xs"><input type="checkbox" x-model="filters.filterDiets.vegan"> <span>Vegan</span></label>
+                                <label class="flex items-center gap-1 text-xs"><input type="checkbox" x-model="filters.filterDiets.vegetarian"> <span>Vegetarisch</span></label>
+                                <label class="flex items-center gap-1 text-xs"><input type="checkbox" x-model="filters.filterDiets['wheat-free']"> <span>Weizenfrei</span></label>
+                                <label class="flex items-center gap-1 text-xs"><input type="checkbox" x-model="filters.filterDiets['alcohol-free']"> <span>Ohne Alkohol</span></label>
+                                <label class="flex items-center gap-1 text-xs"><input type="checkbox" x-model="filters.filterDiets['histamine-low']"> <span>Histaminarm</span></label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-3 flex justify-end">
+                        <button type="button" class="px-3 py-1 bg-primary-600 text-white rounded hover:bg-primary-700 text-sm" @click="applyFilters()">Filter anwenden</button>
+                    </div>
+                </div>
+            </div>
+        </div>
         <div class="columns-1 sm:columns-2 xl:columns-3 2xl:columns-4 gap-4" wire:ignore>
             <template x-for="(recipe, i) in availableRecipes" :key="idOf(recipe) ? 'avail-'+idOf(recipe) : 'avail-'+i">
                 <div class="mb-4 break-inside-avoid">

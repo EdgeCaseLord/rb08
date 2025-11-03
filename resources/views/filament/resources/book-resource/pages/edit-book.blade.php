@@ -98,6 +98,19 @@
             availableRecipes: initial.availableRecipes || [],
             bookId: initial.bookId,
             recipeLimits: initial.recipeLimits || { starter: 5, main_course: 5, dessert: 5 },
+            // filters (legacy-compatible keys)
+            filters: {
+                filterTitle: '',
+                filterIngredients: '',
+                filterAllergen: {},
+                filterCategory: {},
+                filterCountry: [],
+                filterCourse: {},
+                filterDiets: {},
+                filterDifficulty: {},
+                filterMaxTime: {},
+                filterSubstances: {}
+            },
             // pagination
             perPage: 6,
             perPageAvail: 6,
@@ -132,6 +145,39 @@
                 return `${start}–${end} / ${total} Rezepte`;
             },
             csrf() { return document.querySelector('meta[name=csrf-token]')?.getAttribute('content') || '' },
+            buildFilterParams() {
+                const p = new URLSearchParams();
+                const f = this.filters || {};
+                if (f.filterTitle) p.append('filterTitle', f.filterTitle);
+                if (f.filterIngredients) p.append('filterIngredients', f.filterIngredients);
+                const appendBoolDict = (obj, key) => {
+                    if (!obj || typeof obj !== 'object') return;
+                    for (const k of Object.keys(obj)) { if (obj[k]) p.append(`${key}[${k}]`, '1'); }
+                };
+                const appendArray = (arr, key) => {
+                    if (!Array.isArray(arr)) return;
+                    for (const v of arr) p.append(`${key}[]`, v);
+                };
+                appendBoolDict(f.filterAllergen, 'filterAllergen');
+                appendBoolDict(f.filterCategory, 'filterCategory');
+                appendArray(f.filterCountry, 'filterCountry');
+                appendBoolDict(f.filterCourse, 'filterCourse');
+                appendBoolDict(f.filterDiets, 'filterDiets');
+                appendBoolDict(f.filterDifficulty, 'filterDifficulty');
+                appendBoolDict(f.filterMaxTime, 'filterMaxTime');
+                // substances: { key: { enabled, op, val1, val2 } }
+                if (f.filterSubstances && typeof f.filterSubstances === 'object') {
+                    for (const k of Object.keys(f.filterSubstances)) {
+                        const s = f.filterSubstances[k];
+                        if (!s || !s.enabled) continue;
+                        if (s.op) p.append(`filterSubstances[${k}][op]`, s.op);
+                        if (s.val1 != null && s.val1 !== '') p.append(`filterSubstances[${k}][val1]`, String(s.val1));
+                        if (s.val2 != null && s.val2 !== '') p.append(`filterSubstances[${k}][val2]`, String(s.val2));
+                        p.append(`filterSubstances[${k}][enabled]`, '1');
+                    }
+                }
+                return p.toString();
+            },
             categories(list) {
                 const arr = Array.isArray(list) ? list : [];
                 const isTrueString = (s) => typeof s === 'string' && (/^true$/i.test(s) || /^false$/i.test(s));
@@ -230,7 +276,8 @@
                 if (this.isLoadingAvail) return; this.isLoadingAvail = true;
                 try {
                     page = Math.max(1, page);
-                    const resp = await fetch(`/available.json?page=${page}&perPage=${this.perPageAvail}&_=${Date.now()}`,
+                    const qs = this.buildFilterParams();
+                    const resp = await fetch(`/available.json?page=${page}&perPage=${this.perPageAvail}&${qs}&_=${Date.now()}`,
                         { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, cache: 'no-store' });
                     if (resp.ok) {
                         const data = await resp.json();
@@ -240,6 +287,7 @@
                     }
                 } finally { this.isLoadingAvail = false; }
             },
+            applyFilters() { this.loadAvailPage(1); },
             updateAvailPerPage() {
                 const isSmall = window.matchMedia('(max-width: 640px)').matches;
                 const newPer = isSmall ? 3 : 6;
