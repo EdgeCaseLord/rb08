@@ -151,9 +151,10 @@
                 const fromDictBooleans = (dict) => Object.keys(dict||{}).filter(k => dict[k] === true).join(', ');
                 const takeName = (obj) => obj.name || obj.label || obj.title || obj.allergen || obj.diet || '';
                 let out = [];
+                let truthy = [];
                 if (arr.length === 1 && typeof arr[0] === 'object' && !Array.isArray(arr[0])) {
                     const dict = fromDictBooleans(arr[0]);
-                    if (dict) out.push(...dict.split(', '));
+                    if (dict) truthy.push(...dict.split(', '));
                 }
                 for (const item of arr) {
                     if (typeof item === 'string') { const s=item.trim(); if (s && s.toLowerCase()!=='value' && !isTrueString(s) && !isPlaceholder(s)) out.push(s); continue; }
@@ -163,18 +164,21 @@
                         // Special case: { allergen: 'X', value: true }
                         if ((Object.prototype.hasOwnProperty.call(item,'allergen') || Object.prototype.hasOwnProperty.call(item,'diet')) && Object.prototype.hasOwnProperty.call(item,'value')) {
                             const k = (item.allergen || item.diet || '').toString().trim();
-                            if (k && item.value === true) { out.push(k); continue; }
+                            if (k && item.value === true) { truthy.push(k); continue; }
                         }
                         const named = takeName(item);
                         if (named && named.toLowerCase()!=='value' && !isTrueString(named) && !isPlaceholder(named)) { out.push(named); continue; }
                         const dict = fromDictBooleans(item);
-                        if (dict) out.push(...dict.split(', '));
+                        if (dict) truthy.push(...dict.split(', '));
                     }
                 }
-                const uniq = Array.from(new Set(out.filter(Boolean)));
-                if (!uniq.length) return 'Keine';
-                const MAX = 12;
-                return uniq.length > MAX ? `${uniq.slice(0, MAX).join(', ')} …` : uniq.join(', ');
+                const uniqTruthy = Array.from(new Set(truthy.filter(Boolean)));
+                if (uniqTruthy.length) {
+                    const MAX = 12;
+                    return uniqTruthy.length > MAX ? `${uniqTruthy.slice(0, MAX).join(', ')} …` : uniqTruthy.join(', ');
+                }
+                // If there are no truthy-labelled entries, suppress raw string lists and show 'Keine'
+                return 'Keine';
             },
             bookCourseCounts: { starter: 0, main_course: 0, dessert: 0 },
             computeBookCourseCounts() {
