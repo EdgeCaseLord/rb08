@@ -30,9 +30,12 @@
     $media = $record['media'] ?? [];
     $imagesArr = $record['images'] ?? [];
     if (is_string($imagesArr)) { $decoded = json_decode($imagesArr, true); $imagesArr = is_array($decoded) ? $decoded : [$imagesArr]; }
-    // Prefer smaller images: use images[] first (usually small thumbs), then media['preview'], avoid 'preview_no_wm'
+    // Prefer smallest: use media['search'] first, then images[], then media['preview'] (avoid 'preview_no_wm')
     $previewImageUrl = null;
-    if (!empty($imagesArr) && is_array($imagesArr)) {
+    if (!empty($media['search'])) {
+        $previewImageUrl = is_array($media['search']) ? ($media['search'][0] ?? null) : $media['search'];
+    }
+    if (!$previewImageUrl && !empty($imagesArr) && is_array($imagesArr)) {
         $previewImageUrl = $imagesArr[0] ?? null;
     }
     if (!$previewImageUrl && !empty($media['preview'])) {

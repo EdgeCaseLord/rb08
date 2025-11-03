@@ -43,7 +43,7 @@ class PdfController extends Controller
             $impressumTemplate = TextTemplate::where('type', 'book_text_impressum')->first();
             $erlaeuterungTemplate = TextTemplate::where('type', 'book_text_erlaeuterung')->first();
 
-            return Pdf::view('pdf.book', [
+            $pdf = Pdf::view('pdf.book', [
                     'book' => $book,
                     'recipes' => $book->recipes()->get(),
                     'impressumTemplate' => $impressumTemplate,
@@ -58,10 +58,37 @@ class PdfController extends Controller
                         ->addChromiumArguments(['--disable-dev-shm-usage', '--disable-gpu'])
                         // Reduce PDF size and generation time
                         ->printBackground(false)
-                        ->scale(0.9)
                         ->timeout(240);
-                })
-                ->download($pdfFileName);
+                });
+
+            // Save to a temporary file first
+            $tmpDir = storage_path('app/public');
+            if (!is_dir($tmpDir)) {
+                @mkdir($tmpDir, 0755, true);
+            }
+            $tmpIn = $tmpDir . DIRECTORY_SEPARATOR . 'rb_tmp_' . uniqid() . '.pdf';
+            $tmpOut = $tmpDir . DIRECTORY_SEPARATOR . 'rb_tmp_' . uniqid() . '.pdf';
+            $pdf->save($tmpIn);
+
+            // Try Ghostscript compression if available
+            $gsBinary = trim((string) @shell_exec('which gs || command -v gs 2>/dev/null'));
+            if ($gsBinary && is_file($tmpIn)) {
+                $cmd = escapeshellcmd($gsBinary) . ' -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 '
+                    . '-dPDFSETTINGS=/ebook '
+                    . '-dNOPAUSE -dQUIET -dBATCH '
+                    . '-dDownsampleColorImages=true -dColorImageResolution=120 '
+                    . '-dDownsampleGrayImages=true -dGrayImageResolution=120 '
+                    . '-dDownsampleMonoImages=true -dMonoImageResolution=120 '
+                    . '-sOutputFile=' . escapeshellarg($tmpOut) . ' ' . escapeshellarg($tmpIn);
+                @shell_exec($cmd);
+                if (is_file($tmpOut) && filesize($tmpOut) > 0) {
+                    @unlink($tmpIn);
+                    return response()->download($tmpOut, $pdfFileName)->deleteFileAfterSend(true);
+                }
+            }
+
+            // Fallback: download the uncompressed PDF
+            return response()->download($tmpIn, $pdfFileName)->deleteFileAfterSend(true);
         } catch (\Throwable $e) {
             \Log::error('PDF generation failed', [
                 'book_id' => $book->id,

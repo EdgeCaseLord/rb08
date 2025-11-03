@@ -1,11 +1,13 @@
 <div class="recipe-content">
     <style>
+    @if(empty($pdfOptimize))
     @font-face {
         font-family: 'Roboto-Regular';
         src: url('/fonts/Roboto-Regular.ttf') format('truetype');
         font-weight: normal;
         font-style: normal;
     }
+    @endif
     .recipe-content {
         width: 100%;
         margin: 0;
@@ -320,7 +322,15 @@
             : [];
         $country = $data['country'] ?? $data->country ?? null;
         $media = is_string($data['media'] ?? null) ? json_decode($data['media'] ?? '[]', true) : (is_array($data['media'] ?? null) ? $data['media'] : []);
-        $previewImageUrl = !empty($media['preview_no_wm']) ? $media['preview_no_wm'][0] : (!empty($media['preview']) ? $media['preview'][0] : null);
+        // Prefer smallest variant for PDF: search -> preview -> preview_no_wm
+        $previewImageUrl = null;
+        if (!empty($media['search'])) {
+            $previewImageUrl = is_array($media['search']) ? ($media['search'][0] ?? null) : $media['search'];
+        } elseif (!empty($media['preview'])) {
+            $previewImageUrl = is_array($media['preview']) ? ($media['preview'][0] ?? null) : $media['preview'];
+        } elseif (!empty($media['preview_no_wm'])) {
+            $previewImageUrl = is_array($media['preview_no_wm']) ? ($media['preview_no_wm'][0] ?? null) : $media['preview_no_wm'];
+        }
         $ingredients = is_string($data['ingredients'] ?? null) ? json_decode($data['ingredients'] ?? '[]', true) : (is_array($data['ingredients'] ?? null) ? $data['ingredients'] : []);
         $substances = is_string($data['substances'] ?? null) ? collect(json_decode($data['substances'] ?? '[]', true)) : (is_array($data['substances'] ?? null) ? collect($data['substances']) : collect());
         $filteredSubstances = $substances->filter(function($s) {
