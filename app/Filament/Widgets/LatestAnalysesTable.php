@@ -14,6 +14,11 @@ class LatestAnalysesTable extends TableWidget
 {
     protected static ?string $heading = 'Neueste Analysen';
 
+    public static function getHeading(): string
+    {
+        return __('Neueste Analysen');
+    }
+
     protected int | string | array $columnSpan = [
         'default' => 4,
         'sm' => 4,

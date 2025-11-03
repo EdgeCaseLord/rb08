@@ -21,17 +21,21 @@ class AssignRecipesJob implements ShouldQueue
 
     protected $patients;
     protected $importId;
+    protected $results = [];
+    protected $userId; // Store user ID to send notification to
 
     /**
      * Erstelle eine neue Job-Instanz.
      *
      * @param mixed $patients Array von Patienten (User-Objekte oder IDs)
      * @param int|null $importId Import-ID für CSV-Importe
+     * @param int|null $userId User ID to send notification to
      */
-    public function __construct($patients, $importId = null)
+    public function __construct($patients, $importId = null, $userId = null)
     {
         $this->patients = is_array($patients) ? $patients : [$patients];
         $this->importId = $importId;
+        $this->userId = $userId ?? auth()->id();
     }
 
     /**
@@ -151,30 +155,54 @@ class AssignRecipesJob implements ShouldQueue
                     Log::error('Keine Rezeptdetails abgerufen', ['patient_id' => $patient->id, 'rezept_ids' => $patientRecipeIds]);
                     continue;
             }
-                // Assign only this patient's recipes to their book
-                    $this->assignRecipesToPatient($patient, $recipeDetails);
-                    // Collect recipe IDs to pass to CreateBookJob
-                    $recipeIds = [];
-                    foreach ($recipeDetails as $recipeDetail) {
-                        $recipe = \App\Models\Recipe::where('id_external', $recipeDetail['id'])->first();
-                        if ($recipe) {
-                            $recipeIds[] = $recipe->id_recipe;
-                        }
-                    }
-                    CreateBookJob::dispatch($patient, $recipeIds)->onQueue('default');
-                    Log::info('CreateBookJob für Patient gestartet', [
-                        'patient_id' => $patient->id,
+
+            // Collect recipe IDs to pass to CreateBookJob FIRST
+            $recipeIds = [];
+            foreach ($recipeDetails as $recipeDetail) {
+                $recipe = \App\Models\Recipe::where('id_external', $recipeDetail['id'])->first();
+                if ($recipe) {
+                    $recipeIds[] = $recipe->id_recipe;
+                }
+            }
+
+            // Only create a book if there are recipes for this user
+            if (!empty($recipeIds)) {
+                // Dispatch CreateBookJob FIRST to create the book
+                CreateBookJob::dispatch($patient, $recipeIds)->onQueue('default');
+                Log::info('CreateBookJob für Patient gestartet', [
+                    'patient_id' => $patient->id,
                     'rezept_anzahl' => count($recipeIds),
-                        'recipe_ids' => $recipeIds,
-                    ]);
+                    'recipe_ids' => $recipeIds,
+                ]);
+
+                // Track results for notification
+                $this->results[] = [
+                    'patient_name' => $patient->name,
+                    'patient_code' => $patient->patient_code,
+                    'book_created' => true,
+                    'recipe_count' => count($recipeIds),
+                ];
+            } else {
+                Log::info('No recipes found for patient, skipping book creation', [
+                    'patient_id' => $patient->id,
+                ]);
+
+                // Track results for notification
+                $this->results[] = [
+                    'patient_name' => $patient->name,
+                    'patient_code' => $patient->patient_code,
+                    'book_created' => false,
+                    'recipe_count' => 0,
+                ];
+            }
+
+            // Recipes will be assigned by CreateBookJob, no need to assign here
             }
 
             Log::info('AssignRecipesJob abgeschlossen', ['patient_anzahl' => $patients->count()]);
-            Notification::make()
-                ->title('Rezeptzuweisung abgeschlossen')
-                ->body('Sichere Rezepte wurden für ' . $patients->count() . ' Patienten zugewiesen.')
-                ->success()
-                ->send();
+
+            // Store results in cache for the caller to retrieve
+            $this->storeResultsInCache();
 
             return 1;
         } catch (\Exception $e) {
@@ -300,5 +328,54 @@ class AssignRecipesJob implements ShouldQueue
                 ]);
             }
         }
+    }
+
+    /**
+     * Store results in cache for the caller to retrieve and show notification
+     */
+    protected function storeResultsInCache(): void
+    {
+        $totalPatients = count($this->results);
+        $booksCreated = collect($this->results)->where('book_created', true)->count();
+        $totalRecipes = collect($this->results)->sum('recipe_count');
+
+        $cacheKey = "assign_recipes_results_{$this->userId}_{$this->importId}";
+        $results = [
+            'total_patients' => $totalPatients,
+            'books_created' => $booksCreated,
+            'total_recipes' => $totalRecipes,
+            'patient_results' => $this->results,
+            'completed_at' => now()->toISOString(),
+        ];
+
+        // Store in cache for 1 hour
+        \Cache::put($cacheKey, $results, 3600);
+
+        Log::info('Results stored in cache for notification', [
+            'cache_key' => $cacheKey,
+            'user_id' => $this->userId,
+            'import_id' => $this->importId,
+            'results' => $results,
+        ]);
+    }
+
+    /**
+     * Static method to retrieve results from cache
+     */
+    public static function getResultsForUser($userId, $importId = null): ?array
+    {
+        $cacheKey = "assign_recipes_results_{$userId}_{$importId}";
+        $results = \Cache::get($cacheKey);
+
+        if ($results) {
+            // Clear the cache after retrieving
+            \Cache::forget($cacheKey);
+            Log::info('Results retrieved and cache cleared', [
+                'cache_key' => $cacheKey,
+                'user_id' => $userId,
+            ]);
+        }
+
+        return $results;
     }
 }

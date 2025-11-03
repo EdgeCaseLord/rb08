@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('imports', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->nullable()->constrained('users')->onDelete('set null');
+            $table->unsignedBigInteger('user_id')->nullable();
             $table->string('file_name')->nullable();
             $table->string('file_path')->nullable();
             $table->string('importer')->nullable();
@@ -22,6 +22,11 @@ return new class extends Migration
             $table->timestamp('completed_at')->nullable();
             $table->timestamps();
             $table->index('created_at');
+        });
+
+        // Add foreign key constraint with explicit name
+        Schema::table('imports', function (Blueprint $table) {
+            $table->foreign('user_id', 'fk_imports_user_id')->references('id')->on('users')->onDelete('set null');
         });
     }
 

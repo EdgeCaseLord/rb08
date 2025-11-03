@@ -242,6 +242,20 @@
 .nutrient-row-odd {
     background: #FFFFFF;
 }
+
+/* Dark mode overrides - fix only body text in specific boxes */
+.dark .nutrients-compact-table td {
+    color: #000 !important;
+}
+
+.dark .ingredients-list li {
+    color: #000 !important;
+}
+
+.dark .times-table td {
+    color: #000 !important;
+}
+
 @media print {
     .filament-panels, .filament-header, .filament-footer, .filament-sidebar {
         display: none !important;
@@ -352,6 +366,7 @@
         'Energie (Kilojoule)' => 'kJ',
         'Energie (Kilokalorien)' => 'kcal',
         'Fett' => 'g',
+        'Fruktose' => 'mg',
         'Kohlenhydrate, resorbierbar' => 'g',
         'Vitamin A Beta-Carotin' => 'µg',
         'Vitamin B1 Thiamin' => 'mg',
@@ -486,11 +501,26 @@
                             <tbody>
                                 @foreach(array_keys($nutrientList) as $i => $nutrient)
                                 @php
-                                        $unit = $nutrientList[$nutrient];
                                         $substance = $substances->first(function($s) use ($nutrient) {
-                                            return isset($s['substance']) && stripos($s['substance'], strtok($nutrient, ' (')) !== false;
+                                            if (!isset($s['substance'])) return false;
+                                            // Try exact match first
+                                            if (strcasecmp($s['substance'], $nutrient) === 0) return true;
+                                            // Try partial match
+                                            if (stripos($s['substance'], $nutrient) !== false) return true;
+                                            // Special case for Fruktose - try different variations
+                                            if ($nutrient === 'Fruktose') {
+                                                $fructoseVariations = ['Fruktose', 'Fructose', 'fructose', 'fruktose'];
+                                                foreach ($fructoseVariations as $variation) {
+                                                    if (stripos($s['substance'], $variation) !== false) return true;
+                                                }
+                                            }
+                                            return false;
                                         });
-                                        $value = $substance['portion']['amount'] ?? $substance['value'] ?? null;
+
+                                        // Use API unit_short if available, fallback to hardcoded unit
+                                        $unit = $substance['unit_short'] ?? $nutrientList[$nutrient];
+
+                                        $value = $substance['portion']['amount'] ?? null;
                                         $value = is_numeric($value) ? number_format($value, 1) : '–';
                                         $rowClass = $i % 2 == 0 ? 'nutrient-row-even' : 'nutrient-row-odd';
                                 @endphp

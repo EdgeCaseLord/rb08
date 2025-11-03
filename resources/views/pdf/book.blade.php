@@ -5,6 +5,7 @@
     <title>{{ $book->title ?? 'Rezeptbuch' }}</title>
     <style>
         @page { margin: 0; }
+        @if(empty($pdfOptimize))
         @font-face {
             font-family: 'Roboto-Regular';
             src: url('/fonts/Roboto-Regular.ttf') format('truetype');
@@ -17,6 +18,7 @@
             font-weight: 600;
             font-style: italic;
         }
+        @endif
         html, body {
             width: 100%; height: 100%; margin: 0; padding: 0;
             font-family: 'Roboto-Regular', Helvetica, Arial, sans-serif;
@@ -284,7 +286,16 @@
     @php
         $randomRecipe = $recipes->shuffle()->first();
         $randomMedia = $randomRecipe ? (is_string($randomRecipe->media ?? null) ? json_decode($randomRecipe->media, true) : (is_array($randomRecipe->media ?? null) ? $randomRecipe->media : null)) : null;
-        $randomImage = $randomMedia && !empty($randomMedia['preview']) ? $randomMedia['preview'][0] : null;
+        $randomImage = null;
+        if ($randomMedia) {
+            if (!empty($randomMedia['search'])) {
+                $randomImage = is_array($randomMedia['search']) ? ($randomMedia['search'][0] ?? null) : $randomMedia['search'];
+            } elseif (!empty($randomMedia['preview'])) {
+                $randomImage = is_array($randomMedia['preview']) ? ($randomMedia['preview'][0] ?? null) : $randomMedia['preview'];
+            } elseif (!empty($randomMedia['preview_no_wm'])) {
+                $randomImage = is_array($randomMedia['preview_no_wm']) ? ($randomMedia['preview_no_wm'][0] ?? null) : $randomMedia['preview_no_wm'];
+            }
+        }
         $currentPage = 0; // Initialize page counter at 0 since cover pages don't count
     @endphp
     @if ($randomImage)
@@ -481,11 +492,13 @@
         $randomMedia = $randomRecipe ? (is_string($randomRecipe->media ?? null) ? json_decode($randomRecipe->media, true) : (is_array($randomRecipe->media ?? null) ? $randomRecipe->media : null)) : null;
         $randomImage = null;
         if ($randomMedia) {
-            if (!empty($randomMedia['preview_no_wm'])) {
-                $randomImage = $randomMedia['preview_no_wm'][0];
-            }
-            elseif (!empty($randomMedia['preview'])) {
-                $randomImage = $randomMedia['preview'][0];
+            // Prefer smallest/search variant first, then preview, then preview_no_wm
+            if (!empty($randomMedia['search'])) {
+                $randomImage = is_array($randomMedia['search']) ? ($randomMedia['search'][0] ?? null) : $randomMedia['search'];
+            } elseif (!empty($randomMedia['preview'])) {
+                $randomImage = is_array($randomMedia['preview']) ? ($randomMedia['preview'][0] ?? null) : $randomMedia['preview'];
+            } elseif (!empty($randomMedia['preview_no_wm'])) {
+                $randomImage = is_array($randomMedia['preview_no_wm']) ? ($randomMedia['preview_no_wm'][0] ?? null) : $randomMedia['preview_no_wm'];
             }
         }
         $catPlural = ['Vorspeise' => 'Vorspeisen', 'Hauptgericht' => 'Hauptgerichte', 'Dessert' => 'Desserts'][$cat] ?? $cat;
@@ -590,4 +603,3 @@
 </div>
 </body>
 </html>
-

@@ -23,9 +23,10 @@ return new class extends Migration
             $table->string('approval_by')->nullable();
             $table->text('additional_information')->nullable();
             $table->boolean('is_csv')->default(true);
-            $table->foreignId('doctor_id')->nullable()->constrained('users')->onDelete('set null')->index();
-            $table->foreignId('patient_id')->nullable()->constrained('users')->onDelete('set null')->index();            $table->foreignId('import_id')->nullable()->constrained('imports')->onDelete('set null')->index();
-            $table->foreignId('lab_id')->nullable()->constrained('users')->onDelete('set null')->index();
+            $table->unsignedBigInteger('doctor_id')->nullable()->index();
+            $table->unsignedBigInteger('patient_id')->nullable()->index();
+            $table->unsignedBigInteger('import_id')->nullable()->index();
+            $table->unsignedBigInteger('lab_id')->nullable()->index();
             $table->integer('antigen_id')->nullable();
             $table->string('antigen_name')->nullable();
             $table->string('code')->nullable();
@@ -35,6 +36,14 @@ return new class extends Migration
             $table->index('created_at');
             $table->index('updated_at');
             $table->index('sample_code');
+        });
+
+        // Add foreign key constraints with explicit names
+        Schema::table('analyses', function (Blueprint $table) {
+            $table->foreign('doctor_id', 'fk_analyses_doctor_id')->references('id')->on('users')->onDelete('set null');
+            $table->foreign('patient_id', 'fk_analyses_patient_id')->references('id')->on('users')->onDelete('set null');
+            $table->foreign('import_id', 'fk_analyses_import_id')->references('id')->on('imports')->onDelete('set null');
+            $table->foreign('lab_id', 'fk_analyses_lab_id')->references('id')->on('users')->onDelete('set null');
         });
     }
 

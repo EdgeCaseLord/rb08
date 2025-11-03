@@ -19,6 +19,11 @@ class AllergenResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-shield-exclamation';
     protected static ?string $navigationLabel = 'Allergene';
+
+    public static function getNavigationLabel(): string
+    {
+        return __('Allergene');
+    }
     public static function form(Form $form): Form
     {
         return $form

@@ -20,14 +20,19 @@ class UserResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-users';
     protected static ?int $navigationSort = 6;
     protected static ?string $navigationLabel = 'Benutzerverwaltung';
+
+    public static function getNavigationLabel(): string
+    {
+        return __('Benutzerverwaltung');
+    }
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
                 Forms\Components\TextInput::make('title')
-                    ->label('Titel'),
+                    ->label(__('Titel')),
                 Forms\Components\TextInput::make('first_name')
-                    ->label('Vorname'),
+                    ->label(__('Vorname')),
                 Forms\Components\TextInput::make('name')
                     ->required(),
                 Forms\Components\TextInput::make('email')
@@ -133,7 +138,7 @@ class UserResource extends Resource
                     'biologisch' => __('Biologisch'),
                     'eifrei' => __('Eifrei'),
                     'glutenfrei' => __('Glutenfrei'),
-                    'histamin-free' => __('Histaminfrei'),
+                    'histamine-low' => __('Histaminarm'),
                     'laktosefrei' => __('Laktosefrei'),
                     'ohne Fisch' => __('Ohne Fisch'),
                     'ohne Fleisch' => __('Ohne Fleisch'),
@@ -152,11 +157,11 @@ class UserResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('title')
-                    ->label('Titel')
+                    ->label(__('Titel'))
                     ->searchable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('first_name')
-                    ->label('Vorname')
+                    ->label(__('Vorname'))
                     ->searchable()
                     ->toggleable(isToggledHiddenByDefault: false),
                 Tables\Columns\TextColumn::make('name')

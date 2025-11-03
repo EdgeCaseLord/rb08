@@ -33,7 +33,7 @@ class User extends Authenticatable implements FilamentUser
 
     protected $casts = [
         'id' => 'integer',
-        'email_verified_at' => 'timestamp',
+        // 'email_verified_at' => 'timestamp',
         'trial_ends_at' => 'datetime',
         'verified' => 'integer',
         'lab_id' => 'integer',
@@ -43,6 +43,9 @@ class User extends Authenticatable implements FilamentUser
         'threshold' => 'float',
         'settings' => 'array',
         'recipe_totals' => 'array',
+        'email_verified_at' => 'datetime',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
     public function scopeLabs($query) { return $query->where('role', 'lab'); }

@@ -9,10 +9,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('allergen_user', function (Blueprint $table) {
-            $table->bigInteger('allergen_id');
-            $table->bigInteger('user_id');
-            $table->foreign('allergen_id')->references('id')->on('allergens')->onDelete('cascade');
-            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+            $table->unsignedBigInteger('allergen_id');
+            $table->unsignedBigInteger('user_id');
+            $table->foreign('allergen_id', 'fk_allergen_user_allergen_id')->references('id')->on('allergens')->onDelete('cascade');
+            $table->foreign('user_id', 'fk_allergen_user_user_id')->references('id')->on('users')->onDelete('cascade');
             $table->index(['user_id', 'allergen_id']);
             $table->timestamps();
         });

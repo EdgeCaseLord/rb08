@@ -23,6 +23,9 @@ class BookController extends Controller
                 'book_id' => $book->id,
                 'recipe_id' => $recipeId,
             ]);
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json(['ok' => true]);
+            }
             return redirect()->back()->with('success', 'Rezept hinzugefügt.');
         } catch (\Exception $e) {
             Log::error('Failed to add recipe to book', [
@@ -31,6 +34,9 @@ class BookController extends Controller
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json(['ok' => false, 'error' => $e->getMessage()], 422);
+            }
             return redirect()->back()->with('error', $e->getMessage());
         }
     }
@@ -50,6 +56,9 @@ class BookController extends Controller
                 'book_id' => $book->id,
                 'recipe_id' => $recipeId,
             ]);
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json(['ok' => true]);
+            }
             return redirect()->back()->with('success', 'Rezept entfernt.');
         } catch (\Exception $e) {
             Log::error('Failed to remove recipe from book', [
@@ -58,6 +67,9 @@ class BookController extends Controller
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json(['ok' => false, 'error' => $e->getMessage()], 422);
+            }
             return redirect()->back()->with('error', 'Failed to remove recipe: ' . $e->getMessage());
         }
     }

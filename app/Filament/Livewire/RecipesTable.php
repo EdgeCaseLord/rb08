@@ -201,7 +201,10 @@ class RecipesTable extends Component
                 return;
             }
         }
-        $book->addRecipe($recipe->id_recipe);
+        // Add recipe with limit checking
+        if (!$book->addRecipeWithLimitCheck($recipe->id_recipe)) {
+            return;
+        }
         $this->bookRecipes = $book->recipes()->get()->map(function($r) {
             return \App\Filament\Livewire\AvailableRecipesTable::recipeModelToArray($r);
         });

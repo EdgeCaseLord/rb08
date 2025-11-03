@@ -1,11 +1,13 @@
 <div class="recipe-content">
     <style>
+    @if(empty($pdfOptimize))
     @font-face {
         font-family: 'Roboto-Regular';
         src: url('/fonts/Roboto-Regular.ttf') format('truetype');
         font-weight: normal;
         font-style: normal;
     }
+    @endif
     .recipe-content {
         width: 100%;
         margin: 0;
@@ -272,6 +274,19 @@
     .nutrients-compact-table tr:nth-child(odd) {
         background: #fff;
     }
+
+    /* Dark mode overrides - fix only body text in specific boxes */
+    .dark .nutrients-compact-table td {
+        color: #000 !important;
+    }
+
+    .dark .ingredients-list li {
+        color: #000 !important;
+    }
+
+    .dark .times-table td {
+        color: #000 !important;
+    }
     </style>
 
     @php
@@ -307,7 +322,15 @@
             : [];
         $country = $data['country'] ?? $data->country ?? null;
         $media = is_string($data['media'] ?? null) ? json_decode($data['media'] ?? '[]', true) : (is_array($data['media'] ?? null) ? $data['media'] : []);
-        $previewImageUrl = !empty($media['preview_no_wm']) ? $media['preview_no_wm'][0] : (!empty($media['preview']) ? $media['preview'][0] : null);
+        // Prefer smallest variant for PDF: search -> preview -> preview_no_wm
+        $previewImageUrl = null;
+        if (!empty($media['search'])) {
+            $previewImageUrl = is_array($media['search']) ? ($media['search'][0] ?? null) : $media['search'];
+        } elseif (!empty($media['preview'])) {
+            $previewImageUrl = is_array($media['preview']) ? ($media['preview'][0] ?? null) : $media['preview'];
+        } elseif (!empty($media['preview_no_wm'])) {
+            $previewImageUrl = is_array($media['preview_no_wm']) ? ($media['preview_no_wm'][0] ?? null) : $media['preview_no_wm'];
+        }
         $ingredients = is_string($data['ingredients'] ?? null) ? json_decode($data['ingredients'] ?? '[]', true) : (is_array($data['ingredients'] ?? null) ? $data['ingredients'] : []);
         $substances = is_string($data['substances'] ?? null) ? collect(json_decode($data['substances'] ?? '[]', true)) : (is_array($data['substances'] ?? null) ? collect($data['substances']) : collect());
         $filteredSubstances = $substances->filter(function($s) {
@@ -325,25 +348,26 @@
             ->pluck('allergen')
             ->all() : [];
         $steps = is_string($data['steps'] ?? null) ? json_decode($data['steps'] ?? '[]', true) : (is_array($data['steps'] ?? null) ? $data['steps'] : []);
-        // Nutrients
-        $nutrientList = [
-            'Ballaststoffe' => 'g',
-            'Calcium' => 'mg',
-            'Eisen' => 'mg',
-            'Eiweiß (Protein)' => 'g',
-            'Energie (Kilojoule)' => 'kJ',
-            'Energie (Kilokalorien)' => 'kcal',
-            'Fett' => 'g',
-            'Kohlenhydrate, resorbierbar' => 'g',
-            'Vitamin A Beta-Carotin' => 'µg',
-            'Vitamin B1 Thiamin' => 'mg',
-            'Vitamin B6 Pyridoxin' => 'mg',
-            'Vitamin B9 gesamte Folsäure' => 'µg',
-            'Vitamin C Ascorbinsäure' => 'mg',
-            'Vitamin D Calciferole' => 'µg',
-            'Zink' => 'mg',
-            'Zucker (gesamt)' => 'g',
-        ];
+    // Nutrients
+    $nutrientList = [
+        'Ballaststoffe' => 'g',
+        'Calcium' => 'mg',
+        'Eisen' => 'mg',
+        'Eiweiß (Protein)' => 'g',
+        'Energie (Kilojoule)' => 'kJ',
+        'Energie (Kilokalorien)' => 'kcal',
+        'Fett' => 'g',
+        'Fruktose' => 'mg',
+        'Kohlenhydrate, resorbierbar' => 'g',
+        'Vitamin A Beta-Carotin' => 'µg',
+        'Vitamin B1 Thiamin' => 'mg',
+        'Vitamin B6 Pyridoxin' => 'mg',
+        'Vitamin B9 gesamte Folsäure' => 'µg',
+        'Vitamin C Ascorbinsäure' => 'mg',
+        'Vitamin D Calciferole' => 'µg',
+        'Zink' => 'mg',
+        'Zucker (gesamt)' => 'g',
+    ];
         // Ordered times for table
         $timesCol = collect($times);
         $orderedTimes = collect();
@@ -471,11 +495,26 @@
                     <tbody>
                         @foreach(array_keys($nutrientList) as $i => $nutrient)
                         @php
-                                $unit = $nutrientList[$nutrient];
-                                $substance = $substances->first(function($s) use ($nutrient) {
-                                    return isset($s['substance']) && stripos($s['substance'], strtok($nutrient, ' (')) !== false;
-                                });
-                                $value = $substance['portion']['amount'] ?? $substance['value'] ?? null;
+                                        $substance = $substances->first(function($s) use ($nutrient) {
+                                            if (!isset($s['substance'])) return false;
+                                            // Try exact match first
+                                            if (strcasecmp($s['substance'], $nutrient) === 0) return true;
+                                            // Try partial match
+                                            if (stripos($s['substance'], $nutrient) !== false) return true;
+                                            // Special case for Fruktose - try different variations
+                                            if ($nutrient === 'Fruktose') {
+                                                $fructoseVariations = ['Fruktose', 'Fructose', 'fructose', 'fruktose'];
+                                                foreach ($fructoseVariations as $variation) {
+                                                    if (stripos($s['substance'], $variation) !== false) return true;
+                                                }
+                                            }
+                                            return false;
+                                        });
+
+                                        // Use API unit_short if available, fallback to hardcoded unit
+                                        $unit = $substance['unit_short'] ?? $nutrientList[$nutrient];
+
+                                $value = $substance['portion']['amount'] ?? null;
                                 $value = is_numeric($value) ? number_format($value, 1) : '–';
                         @endphp
                             <tr>

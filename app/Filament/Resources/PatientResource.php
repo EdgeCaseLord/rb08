@@ -67,9 +67,9 @@ class PatientResource extends Resource
         return $form
             ->schema([
                 Forms\Components\TextInput::make('title')
-                    ->label('Titel'),
+                    ->label(__('Titel')),
                 Forms\Components\TextInput::make('first_name')
-                    ->label('Vorname'),
+                    ->label(__('Vorname')),
                 Forms\Components\TextInput::make('name')
                     ->label(__('Name'))
                     ->required()
@@ -104,7 +104,7 @@ class PatientResource extends Resource
                     ->required(),
                 Forms\Components\Hidden::make('role')
                     ->default('patient'),
-                Forms\Components\Section::make('Rezepte Filter')
+                Forms\Components\Section::make(__('Rezepte Filter'))
                     ->collapsible()
                     ->schema([
                         Forms\Components\Fieldset::make('Allergene')
@@ -169,7 +169,7 @@ class PatientResource extends Resource
                                         'vegetarian' => 'Vegetarisch',
                                         'wheat-free' => 'Weizenfrei',
                                         'alcohol-free' => 'Ohne Alkohol',
-                                        'histamin-free' => 'Histaminfrei',
+                                        'histamine-low' => 'Histaminarm',
                                     ])
                                     ->columns([
                                         'default' => 1,
@@ -210,15 +210,18 @@ class PatientResource extends Resource
                                         Forms\Components\Select::make('settings.recipe_filter_set.filterSubstances.fructose.op')
                                             ->options(['lt'=>'<','lte'=>'≤','gt'=>'>','gte'=>'≥'])
                                             ->default('lte')
-                                            ->label(false),
+                                            ->label(false)
+                                            ->extraInputAttributes(['class' => '!mt-0 !pt-0 !pb-0 !h-10']),
                                         Forms\Components\TextInput::make('settings.recipe_filter_set.filterSubstances.fructose.val1')
                                             ->numeric()
                                             ->default(0)
-                                            ->label(false),
+                                            ->label(false)
+                                            ->suffix('mg/100g')
+                                            ->extraInputAttributes(['class' => '!mt-0 !pt-0 !pb-0 !h-10']),
                                     ])
                                     ->columns([
                                         'default' => 1,
-                                        'md' => 2,
+                                        'md' => 1,
                                         'xl' => 3
                                     ]),
                                 Forms\Components\Grid::make(3)
@@ -227,11 +230,14 @@ class PatientResource extends Resource
                                         Forms\Components\Select::make('settings.recipe_filter_set.filterSubstances.vitamin_B1(thiamin).op')
                                             ->options(['lt'=>'<','lte'=>'≤','gt'=>'>','gte'=>'≥'])
                                             ->default('lte')
-                                            ->label(false),
+                                            ->label(false)
+                                            ->extraInputAttributes(['class' => '!mt-0 !pt-0 !pb-0 !h-10']),
                                         Forms\Components\TextInput::make('settings.recipe_filter_set.filterSubstances.vitamin_B1(thiamin).val1')
                                             ->numeric()
                                             ->default(0)
-                                            ->label(false),
+                                            ->label(false)
+                                            ->suffix('mg/100g')
+                                            ->extraInputAttributes(['class' => '!mt-0 !pt-0 !pb-0 !h-10']),
                                     ])
                                     ->columns([
                                         'default' => 1,
@@ -244,11 +250,14 @@ class PatientResource extends Resource
                                         Forms\Components\Select::make('settings.recipe_filter_set.filterSubstances.carbohydrates.op')
                                             ->options(['lt'=>'<','lte'=>'≤','gt'=>'>','gte'=>'≥'])
                                             ->default('lte')
-                                            ->label(false),
+                                            ->label(false)
+                                            ->extraInputAttributes(['class' => '!mt-0 !pt-0 !pb-0 !h-10']),
                                         Forms\Components\TextInput::make('settings.recipe_filter_set.filterSubstances.carbohydrates.val1')
                                             ->numeric()
                                             ->default(0)
-                                            ->label(false),
+                                            ->label(false)
+                                            ->suffix('g/100g')
+                                            ->extraInputAttributes(['class' => '!mt-0 !pt-0 !pb-0 !h-10']),
                                     ])
                                     ->columns([
                                         'default' => 1,
@@ -261,11 +270,14 @@ class PatientResource extends Resource
                                         Forms\Components\Select::make('settings.recipe_filter_set.filterSubstances.protein.op')
                                             ->options(['lt'=>'<','lte'=>'≤','gt'=>'>','gte'=>'≥'])
                                             ->default('lte')
-                                            ->label(false),
+                                            ->label(false)
+                                            ->extraInputAttributes(['class' => '!mt-0 !pt-0 !pb-0 !h-10']),
                                         Forms\Components\TextInput::make('settings.recipe_filter_set.filterSubstances.protein.val1')
                                             ->numeric()
                                             ->default(0)
-                                            ->label(false),
+                                            ->label(false)
+                                            ->suffix('g/100g')
+                                            ->extraInputAttributes(['class' => '!mt-0 !pt-0 !pb-0 !h-10']),
                                     ])
                                     ->columns([
                                         'default' => 1,
@@ -282,11 +294,11 @@ class PatientResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('title')
-                    ->label('Titel')
+                    ->label(__('Titel'))
                     ->searchable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('first_name')
-                    ->label('Vorname')
+                    ->label(__('Vorname'))
                     ->searchable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('name')

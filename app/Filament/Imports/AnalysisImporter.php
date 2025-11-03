@@ -190,13 +190,30 @@ class AnalysisImporter extends Importer
         $record = $this->record;
         $data = $this->data;
 
-        // Set threshold based on user role
+        // Set threshold based on user role and hierarchy
         $user = \Filament\Facades\Filament::auth()->user();
+
         if ($user && $user->role === 'lab') {
-            $this->threshold = $user->settings['allergen_threshold'] ?? 10;
-        } elseif ($user instanceof \App\Models\User && $user->isAdmin()) {
+            // Lab users use their own threshold
+            $this->threshold = $user->threshold ?? 10.0;
+        } elseif ($user && $user->role === 'doctor') {
+            // Doctors inherit threshold from their lab
+            $lab = $user->lab;
+            $this->threshold = $lab ? ($lab->threshold ?? 10.0) : 10.0;
+        } elseif ($user && $user->role === 'patient') {
+            // Patients inherit threshold from their lab (via doctor or direct lab assignment)
+            $lab = $user->lab;
+            if (!$lab && $user->doctor) {
+                $lab = $user->doctor->lab;
+            }
+            $this->threshold = $lab ? ($lab->threshold ?? 10.0) : 10.0;
+        } elseif ($user && $user->role === 'admin') {
+            // Admins use the first available lab's threshold, or default
             $firstLab = User::labs()->first();
-            $this->threshold = $firstLab ? ($firstLab->settings['allergen_threshold'] ?? 10) : 10;
+            $this->threshold = $firstLab ? ($firstLab->threshold ?? 10.0) : 10.0;
+        } else {
+            // Default fallback
+            $this->threshold = 10.0;
         }
 
         Log::debug('After save called', [
@@ -375,6 +392,30 @@ class AnalysisImporter extends Importer
         $value = (string) $value;
         Log::info('After string conversion', ['value' => $value]);
 
+        // Handle "less than" values (e.g., "< 5,00")
+        if (preg_match('/^<\s*([0-9,]+)$/', trim($value), $matches)) {
+            $numericValue = str_replace(',', '.', $matches[1]);
+            $finalValue = (float) $numericValue;
+            Log::info('Less than value detected', [
+                'original' => $value,
+                'extracted_value' => $numericValue,
+                'final_value' => $finalValue
+            ]);
+            return $finalValue;
+        }
+
+        // Handle "greater than" values (e.g., "> 5,00")
+        if (preg_match('/^>\s*([0-9,]+)$/', trim($value), $matches)) {
+            $numericValue = str_replace(',', '.', $matches[1]);
+            $finalValue = (float) $numericValue;
+            Log::info('Greater than value detected', [
+                'original' => $value,
+                'extracted_value' => $numericValue,
+                'final_value' => $finalValue
+            ]);
+            return $finalValue;
+        }
+
         // Accept comma or dot as decimal separator
         $value = str_replace(',', '.', $value);
 
@@ -389,7 +430,7 @@ class AnalysisImporter extends Importer
             $value = implode('.', $parts);
         }
 
-        // Remove any non-numeric characters except decimal point
+        // Remove any non-numeric characters except decimal point and minus sign
         $value = preg_replace('/[^0-9.\-]/', '', $value);
         Log::info('After removing non-numeric', ['value' => $value]);
 
@@ -449,10 +490,12 @@ class AnalysisImporter extends Importer
         $patients = User::whereIn('id', $patientIds)->where('role', 'patient')->get();
 
         if ($patients->isNotEmpty()) {
-            AssignRecipesJob::dispatch($patients->all())->onQueue('default');
+            $userId = $import->user_id;
+            AssignRecipesJob::dispatch($patients->all(), $import->id, $userId)->onQueue('default');
             $body .= ' ' . __('AssignRecipesJob started for :patient_count patients.', ['patient_count' => $patients->count()]);
             Log::info('AssignRecipesJob dispatched', [
                 'import_id' => $import->id,
+                'user_id' => $userId,
                 'patient_count' => $patients->count(),
                 'successful_rows' => $import->successful_rows,
                 'failed_rows' => $failedRowsCount,
@@ -475,5 +518,47 @@ class AnalysisImporter extends Importer
         self::$validationErrors = [];
 
         return $body;
+    }
+
+    /**
+     * Check for completed AssignRecipesJob results and show notification
+     */
+    public static function checkAndShowNotification($userId, $importId = null): bool
+    {
+        $results = AssignRecipesJob::getResultsForUser($userId, $importId);
+
+        if (!$results) {
+            return false;
+        }
+
+        $title = __('Rezeptzuweisung abgeschlossen');
+        $body = "**Zusammenfassung:**\n";
+        $body .= "• {$results['total_patients']} Patienten verarbeitet\n";
+        $body .= "• {$results['books_created']} Bücher erstellt\n";
+        $body .= "• {$results['total_recipes']} Rezepte zugewiesen\n\n";
+
+        $body .= "**Details pro Patient:**\n";
+        foreach ($results['patient_results'] as $result) {
+            $status = $result['book_created'] ? "✅ Buch erstellt" : "❌ Keine Rezepte";
+            $body .= "• {$result['patient_name']} ({$result['patient_code']}): {$status}";
+            if ($result['book_created']) {
+                $body .= " - {$result['recipe_count']} Rezepte";
+            }
+            $body .= "\n";
+        }
+
+        Notification::make()
+            ->title($title)
+            ->body($body)
+            ->success()
+            ->send();
+
+        Log::info('Notification shown for completed AssignRecipesJob', [
+            'user_id' => $userId,
+            'import_id' => $importId,
+            'results' => $results,
+        ]);
+
+        return true;
     }
 }

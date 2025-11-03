@@ -25,15 +25,15 @@ class BookPdfController extends Controller
             return redirect()->back()->with('error', 'Keine Rezepte in diesem Buch.');
         }
 
-        foreach ($recipes as $index => $recipe) {
-            Log::debug("Recipe $index details", [
-                'title' => $recipe->title,
-                'media' => $recipe->media,
-                'course' => $recipe->course,
-                'ingredients' => $recipe->ingredients,
-                'steps' => $recipe->steps,
-            ]);
-        }
+        // foreach ($recipes as $index => $recipe) {
+        //     Log::debug("Recipe $index details", [
+        //         'title' => $recipe->title,
+        //         'media' => $recipe->media,
+        //         'course' => $recipe->course,
+        //         'ingredients' => $recipe->ingredients,
+        //         'steps' => $recipe->steps,
+        //     ]);
+        // }
 
         // Fetch book text templates
         $impressumTemplate = \App\Models\TextTemplate::where('type', 'book_text_impressum')->first();

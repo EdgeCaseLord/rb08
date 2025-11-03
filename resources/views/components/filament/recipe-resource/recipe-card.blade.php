@@ -28,7 +28,19 @@
     }
 
     $media = $record['media'] ?? [];
-    $previewImageUrl = !empty($media['preview']) ? $media['preview'][0] : null;
+    $imagesArr = $record['images'] ?? [];
+    if (is_string($imagesArr)) { $decoded = json_decode($imagesArr, true); $imagesArr = is_array($decoded) ? $decoded : [$imagesArr]; }
+    // Prefer smallest: use media['search'] first, then images[], then media['preview'] (avoid 'preview_no_wm')
+    $previewImageUrl = null;
+    if (!empty($media['search'])) {
+        $previewImageUrl = is_array($media['search']) ? ($media['search'][0] ?? null) : $media['search'];
+    }
+    if (!$previewImageUrl && !empty($imagesArr) && is_array($imagesArr)) {
+        $previewImageUrl = $imagesArr[0] ?? null;
+    }
+    if (!$previewImageUrl && !empty($media['preview'])) {
+        $previewImageUrl = is_array($media['preview']) ? ($media['preview'][0] ?? null) : $media['preview'];
+    }
 
     $title = $record['title'] ?? '';
     $category = $record['category'] ?? [];
@@ -137,8 +149,12 @@
     <!-- Image -->
     <div class="aspect-w-16 aspect-h-9">
         @if ($previewImageUrl)
-            <img src="{{ $previewImageUrl }}?v={{ time() }}"
+            <img src="{{ $previewImageUrl }}"
                  alt="{{ $title }}"
+                 loading="lazy"
+                 decoding="async"
+                 fetchpriority="low"
+                 width="640" height="360"
                  class="w-full h-48 object-cover object-center">
         @else
             <div class="w-full h-48 bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
@@ -177,6 +193,8 @@
                         color="danger"
                         tooltip="{{ __('Remove from Favorites') }}"
                         x-on:click.prevent="if(confirm('Wirklich aus Favoriten entfernen?')) { $wire.removeFromFavorites({{ $id }}) }"
+                        wire:loading.attr="disabled"
+                        wire:target="removeFromFavorites({{ $id }})"
                     />
                 @else
                     <x-filament::icon-button
@@ -184,6 +202,8 @@
                         color="gray"
                         tooltip="{{ __('Add to Favorites') }}"
                         wire:click="addToFavorites({{ $id }})"
+                        wire:loading.attr="disabled"
+                        wire:target="addToFavorites({{ $id }})"
                     />
                 @endif
 
@@ -195,6 +215,7 @@
                         :tooltip="__('Aus Buch entfernen')"
                         wire:click="removeRecipe({{ $id }})"
                         wire:loading.attr="disabled"
+                        wire:target="removeRecipe({{ $id }})"
                     />
                 @endif
                 @if($context === 'available' || $context === 'favorites')
@@ -205,6 +226,7 @@
                         :tooltip="__('Zum Buch hinzufügen')"
                         wire:click.prevent="addToBook({{ $id }})"
                         wire:loading.attr="disabled"
+                        wire:target="addToBook({{ $id }})"
                     />
                 @endif
             </div>

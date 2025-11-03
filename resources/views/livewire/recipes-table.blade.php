@@ -97,8 +97,16 @@
             <button wire:click="loadMore" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">Mehr laden</button>
         </div>
     @endif
-    @if(!$hasMore && !$loading)
-        <div class="text-center text-gray-400 py-2">Keine weiteren Rezepte.</div>
+    @if(!$hasMore && !$loading && count($availableRecipes) > 0)
+        <div class="flex justify-center py-4">
+            <div class="text-center text-gray-500 bg-gray-50 rounded-lg px-4 py-3 border border-gray-200">
+                <svg class="w-5 h-5 mx-auto mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                <p class="text-sm font-medium">Alle verfügbaren Rezepte geladen</p>
+                <p class="text-xs text-gray-400 mt-1">Keine weiteren Rezepte verfügbar</p>
+            </div>
+        </div>
     @endif
 </div>
 

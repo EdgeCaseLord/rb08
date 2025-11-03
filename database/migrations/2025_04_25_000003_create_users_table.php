@@ -39,7 +39,7 @@ return new class extends Migration
             $table->string('patient_code')->nullable()->unique();
             $table->date('birthdate')->nullable()->index();
             $table->float('threshold')->nullable();
-            $table->json('settings')->nullable()->default('null');
+            $table->json('settings')->nullable();
             $table->timestamps();
             $table->index('created_at');
         });

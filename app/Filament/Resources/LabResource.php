@@ -88,7 +88,7 @@ class LabResource extends Resource
     // Customize navigation
     public static function getNavigationLabel(): string
     {
-        return 'Labore';
+        return __('Labore');
     }
 
 //    protected static ?string $navigationGroup = 'Benutzerverwaltung';

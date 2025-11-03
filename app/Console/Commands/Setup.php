@@ -27,10 +27,10 @@ class Setup extends Command
         // Step 2: Create or update admin user
         $this->info('Setting up admin user...');
         User::updateOrCreate(
-            ['email' => 'admin@rezept-butler.com'],
+            ['email' => 'admin@myintest-rezepte.de'],
             [
                 'name' => 'admin',
-                'password' => Hash::make('admin@rezept-butler.com'),
+                'password' => Hash::make('admin@myintest-rezepte.de'),
                 'role' => 'admin',
             ]
         );
@@ -49,10 +49,10 @@ class Setup extends Command
         // Step 3: Create or update ifm user
         $this->info('Setting up ifm user...');
         User::updateOrCreate(
-            ['email' => 'ifm@rezept-butler.com'],
+            ['email' => 'ifm@myintest-rezepte.de'],
             [
                 'name' => 'ifm',
-                'password' => Hash::make('ifm@rezept-butler.com'),
+                'password' => Hash::make('ifm@myintest-rezepte.de'),
                 'role' => 'lab',
             ]
         );
