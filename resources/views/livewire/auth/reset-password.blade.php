@@ -24,7 +24,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
     {
         $this->token = $token;
 
-        $this->email = request()->string('email');
+        $this->email = request()->string('email', $this->email);
     }
 
     /**

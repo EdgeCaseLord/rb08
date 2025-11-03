@@ -9,12 +9,16 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('country_recipe', function (Blueprint $table) {
-            $table->bigInteger('country_id');
-            $table->bigInteger('recipe_id');
-            $table->foreign('country_id')->references('id')->on('countries')->onDelete('cascade');
-            $table->foreign('recipe_id')->references('id_recipe')->on('recipes')->onDelete('cascade');
+            $table->unsignedBigInteger('country_id');
+            $table->unsignedBigInteger('recipe_id');
             $table->primary(['country_id', 'recipe_id']);
             $table->timestamps();
+        });
+
+        // Add foreign key constraints with explicit names
+        Schema::table('country_recipe', function (Blueprint $table) {
+            $table->foreign('country_id', 'fk_country_recipe_country_id')->references('id')->on('countries')->onDelete('cascade');
+            $table->foreign('recipe_id', 'fk_country_recipe_recipe_id')->references('id_recipe')->on('recipes')->onDelete('cascade');
         });
     }
 

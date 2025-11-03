@@ -26,7 +26,7 @@ class DoctorsWidget extends Widget
         return [
             'icon' => 'heroicon-o-user-group',
             'value' => User::doctors()->count(),
-            'label' => 'Ärzte',
+            'label' => __('Ärzte'),
             'resourceName' => 'Doctor',
         ];
     }

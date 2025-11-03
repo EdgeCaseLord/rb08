@@ -13,11 +13,16 @@ return new class extends Migration
     {
         Schema::create('text_templates', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
+            $table->unsignedBigInteger('user_id');
             $table->string('type'); // e.g., 'book_email', 'book_intro'
             $table->json('subject')->nullable(); // {"de": "...", "en": "..."}
             $table->json('body'); // {"de": "...", "en": "..."}
             $table->timestamps();
+        });
+
+        // Add foreign key constraint with explicit name
+        Schema::table('text_templates', function (Blueprint $table) {
+            $table->foreign('user_id', 'fk_text_templates_user_id')->references('id')->on('users')->onDelete('cascade');
         });
     }
 

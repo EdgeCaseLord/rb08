@@ -32,8 +32,8 @@ class AnalysisResource extends Resource
 
     protected static ?int $navigationSort = 2;
 
-    public static function getModelLabel(): string { return 'Analyse'; }
-    public static function getPluralModelLabel(): string { return 'Analysen'; }
+    public static function getModelLabel(): string { return __('Analysis'); }
+    public static function getPluralModelLabel(): string { return __('Analysen'); }
 
     public static function form(Form $form): Form
     {

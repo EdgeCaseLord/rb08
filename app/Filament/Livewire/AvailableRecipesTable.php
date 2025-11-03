@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
+use Filament\Notifications\Notification;
 
 class AvailableRecipesTable extends Component
 {
@@ -93,14 +94,28 @@ class AvailableRecipesTable extends Component
         $this->loadMore();
 
         // Set default operator and value for each substance if not already set
+        // Only set defaults if the substance filter doesn't exist at all
         foreach ([
             'fructose', 'vitamin B1(thiamin)', 'carbohydrates', 'protein'
         ] as $substance) {
-            if (!isset($this->filterSubstances[$substance]['op']) || $this->filterSubstances[$substance]['op'] === null || $this->filterSubstances[$substance]['op'] === '') {
-                $this->filterSubstances[$substance]['op'] = 'lte';
-            }
-            if (!isset($this->filterSubstances[$substance]['val1']) || $this->filterSubstances[$substance]['val1'] === null || $this->filterSubstances[$substance]['val1'] === '') {
-                $this->filterSubstances[$substance]['val1'] = 0;
+            if (!isset($this->filterSubstances[$substance])) {
+                $this->filterSubstances[$substance] = [
+                    'enabled' => false,
+                    'op' => 'lte',
+                    'val1' => 0
+                ];
+            } else {
+                // Only set defaults for missing fields, preserve existing values
+                if (!isset($this->filterSubstances[$substance]['op']) || $this->filterSubstances[$substance]['op'] === null || $this->filterSubstances[$substance]['op'] === '') {
+                    $this->filterSubstances[$substance]['op'] = 'lte';
+                }
+                if (!isset($this->filterSubstances[$substance]['val1']) || $this->filterSubstances[$substance]['val1'] === null || $this->filterSubstances[$substance]['val1'] === '') {
+                    $this->filterSubstances[$substance]['val1'] = 0;
+                }
+                // Ensure enabled flag exists
+                if (!isset($this->filterSubstances[$substance]['enabled'])) {
+                    $this->filterSubstances[$substance]['enabled'] = false;
+                }
             }
         }
     }
@@ -293,70 +308,42 @@ class AvailableRecipesTable extends Component
 
     public function addToBook($externalId)
     {
-        Log::debug('addToBook called', ['externalId' => $externalId, 'bookId' => $this->bookId]);
-        $user = Auth::user();
-        $book = Book::find($this->bookId);
-        if (!$user || !$book || !$book->patient) return;
-        // Find the recipe by externalId
-        $recipe = Recipe::where('id_external', $externalId)->first();
-        if (!$recipe) {
-            // Fetch details from API and create recipe
-            if (!$this->cookButlerService) {
-                $this->cookButlerService = app(CookButlerService::class);
-            }
-            $recipeData = $this->cookButlerService->fetchRecipeDetails($externalId, $book->patient);
-            if (!$recipeData) return;
-            $recipe = Recipe::create([
-                'id_external' => $externalId,
-                'title' => $recipeData['title'] ?? '',
-                'subtitle' => $recipeData['subtitle'] ?? null,
-                'description' => $recipeData['description'] ?? null,
-                'category' => is_string($recipeData['category'] ?? null) ? $recipeData['category'] : json_encode($recipeData['category'] ?? []),
-                'substances' => is_string($recipeData['substances'] ?? null) ? $recipeData['substances'] : json_encode($recipeData['substances'] ?? []),
-                'media' => is_string($recipeData['media'] ?? null) ? $recipeData['media'] : json_encode($recipeData['media'] ?? []),
-                'images' => is_string($recipeData['images'] ?? null) ? $recipeData['images'] : json_encode($recipeData['images'] ?? []),
-                'serving' => $recipeData['serving'] ?? null,
-                'language' => 'de-de',
-                'difficulty' => $recipeData['difficulty'] ?? null,
-                'time' => is_string($recipeData['time'] ?? null) ? $recipeData['time'] : json_encode($recipeData['time'] ?? 'keine Angabe'),
-                'steps' => is_string($recipeData['steps'] ?? null) ? $recipeData['steps'] : json_encode($recipeData['steps'] ?? []),
-                'ingredients' => is_string($recipeData['ingredients'] ?? null) ? $recipeData['ingredients'] : json_encode($recipeData['ingredients'] ?? []),
-                'diets' => is_string($recipeData['diets'] ?? null) ? $recipeData['diets'] : json_encode($recipeData['diets'] ?? []),
-                'course' => !empty($recipeData['category']) ? \App\Filament\Resources\BookResource::mapCategoryToCourse(
-                    \App\Filament\Resources\BookResource::getPrimaryCategory(
-                        is_string($recipeData['category']) ? json_decode($recipeData['category'], true) : $recipeData['category']
-                    )
-                ) : 'main_course',
-                'yield_quantity_1' => $recipeData['yield_quantity_1'] ?? null,
-                'yield_quantity_2' => $recipeData['yield_quantity_2'] ?? null,
-                'yield_info' => $recipeData['yield_info'] ?? null,
-                'yield_info_short' => $recipeData['yield_info_short'] ?? null,
-                'price' => $recipeData['price'] ?? null,
-                'suitable_for_pregnancy' => $recipeData['suitable_for_pregnancy'] ?? null,
-                'alttitle' => $recipeData['alttitle'] ?? null,
-                'allergens' => is_string($recipeData['allergens'] ?? null) ? $recipeData['allergens'] : json_encode($recipeData['allergens'] ?? []),
-                'create' => $recipeData['create'] ?? null,
-                'last_update' => $recipeData['last_update'] ?? null,
-            ]);
-        }
-        // Attach to book
-        try {
-            $book->addRecipe($recipe->id_recipe);
-            // Update status if not 'Warten auf Versand'
-            if ($book->status !== 'Warten auf Versand') {
-                $book->status = 'Geändert nach Versand';
-                $book->save();
-                $this->dispatch('bookStatusUpdated', id: $book->id, status: $book->status);
-            }
-        } catch (\Exception $e) {
+        // Check recipe limits BEFORE updating UI
+        $book = \App\Models\Book::find($this->bookId);
+        if (!$book) return;
+
+        // Get recipe data to check course limits
+        $recipe = collect($this->recipes)->first(function ($r) use ($externalId) {
+            $id = isset($r['id']) ? $r['id'] : (isset($r['id_external']) ? $r['id_external'] : (isset($r['id_recipe']) ? $r['id_recipe'] : null));
+            return $id == $externalId;
+        });
+
+        if (!$recipe) return;
+
+        // Check if we can add this recipe (course limits)
+        $categories = $recipe['category'] ?? [];
+        $primaryCategory = \App\Filament\Resources\BookResource::getPrimaryCategory($categories);
+        $course = \App\Filament\Resources\BookResource::mapCategoryToCourse($primaryCategory);
+
+        $recipeLimits = $book->getRecipesPerCourse();
+        $currentCount = $book->recipes()->where('course', $course)->count();
+        $limit = $recipeLimits[$course] ?? PHP_INT_MAX;
+
+        if ($currentCount >= $limit) {
+            // Show limit reached notification
             \Filament\Notifications\Notification::make()
-                ->title('Nicht hinzugefügt')
-                ->body($e->getMessage())
-                ->danger()
+                ->title(__('Rezeptlimit erreicht'))
+                ->body(__('Maximale Rezepteanzahl für :course erreicht! Aktuell: :current von :limit', [
+                    'course' => $course,
+                    'current' => $currentCount,
+                    'limit' => $limit
+                ]))
+                ->warning()
                 ->send();
             return;
         }
-        // Remove from available recipes UI
+
+        // Immediate UI update - remove from available recipes
         $recipesArray = $this->recipes;
         if ($recipesArray instanceof \Illuminate\Support\Collection) {
             $recipesArray = $recipesArray->all();
@@ -366,28 +353,24 @@ class AvailableRecipesTable extends Component
             return $id != $externalId;
         });
         $this->recipes = array_values($recipesArray);
+
+        // Show immediate feedback FIRST
+        \Filament\Notifications\Notification::make()
+            ->title(__('Rezept hinzugefügt'))
+            ->body('Das Rezept wird im Hintergrund verarbeitet.')
+            ->success()
+            ->send();
+
+        // Dispatch background job for heavy operations (truly async)
+        \App\Jobs\ProcessRecipeOperation::dispatch('add_to_book', $externalId, $this->bookId);
+
+        // Dispatch UI event
         $this->dispatch('recipeAddedToBook', $externalId);
     }
 
     public function addToFavorites($externalId)
     {
-        Log::debug('addToFavorites called', ['externalId' => $externalId, 'bookId' => $this->bookId]);
-        $user = $this->getBookPatient();
-        if (!$user) return;
-        if (!method_exists($user, 'save')) {
-            $user = \App\Models\User::find($user['id']);
-            if (!$user) return;
-        }
-        $settings = $user['settings'] ?? [];
-        $favorites = $settings['favorites'] ?? [];
-        if (!in_array($externalId, $favorites)) {
-            $favorites[] = $externalId;
-            $settings['favorites'] = $favorites;
-            $user['settings'] = $settings;
-            $user->save();
-            $this->dispatch('recipeAddedToFavorites', $externalId);
-        }
-        // Remove from available recipes (UI only)
+        // Immediate UI update - remove from available recipes
         $recipesArray = $this->recipes;
         if ($recipesArray instanceof \Illuminate\Support\Collection) {
             $recipesArray = $recipesArray->all();
@@ -397,110 +380,83 @@ class AvailableRecipesTable extends Component
             return $id != $externalId;
         });
         $this->recipes = array_values($recipesArray);
+
+        // Show immediate feedback FIRST
+        \Filament\Notifications\Notification::make()
+            ->title(__('Zu Favoriten hinzugefügt'))
+            ->body('Das Rezept wird im Hintergrund verarbeitet.')
+            ->success()
+            ->send();
+
+        // Dispatch background job for database operations (user ID will be resolved in job)
+        \App\Jobs\ProcessRecipeOperation::dispatch('add_to_favorites', $externalId, $this->bookId);
+
+        // Dispatch UI event
+        $this->dispatch('recipeAddedToFavorites', $externalId);
     }
 
     public function removeFromFavorites($externalId)
     {
-        $user = $this->getBookPatient();
-        if (!$user) return;
-        if (!method_exists($user, 'save')) {
-            $user = \App\Models\User::find($user['id']);
-            if (!$user) return;
-        }
-        $settings = $user['settings'] ?? [];
-        $favorites = $settings['favorites'] ?? [];
-        $favorites = array_filter($favorites, fn($fav) => $fav != $externalId);
-        $settings['favorites'] = array_values($favorites);
-        $user['settings'] = $settings;
-        $user->save();
+        // Show immediate feedback FIRST
+        \Filament\Notifications\Notification::make()
+            ->title(__('Aus Favoriten entfernt'))
+            ->body('Das Rezept wird im Hintergrund verarbeitet.')
+            ->success()
+            ->send();
+
+        // Dispatch background job for database operations (user ID will be resolved in job)
+        \App\Jobs\ProcessRecipeOperation::dispatch('remove_from_favorites', $externalId, $this->bookId);
+
+        // Dispatch UI event
         $this->dispatch('recipeRemovedFromFavorites', $externalId);
-        // Add back to available recipes if not in book, prepending to the beginning
-        $book = Book::find($this->bookId);
-        $inBook = false;
-        if ($book) {
-            $recipe = \App\Models\Recipe::where('id_external', $externalId)->orWhere('id_recipe', $externalId)->first();
-            if ($recipe) {
-                $inBook = $book->recipes()->where('id_recipe', $recipe->id_recipe)->exists();
-                if (!$inBook) {
-                    $arr = $recipe->toArray();
-                    foreach (['category', 'allergens', 'diets'] as $field) {
-                        if (isset($arr[$field])) {
-                            $decoded = self::normalizeField($arr[$field] ?? null);
-                            $arr[$field] = $decoded;
-                        }
-                    }
-                    // Always try to set images from cache if available, even if not fetching from API
-                    $shouldFetchImages = false;
-                    if (!isset($arr['images']) || (is_array($arr['images']) && count($arr['images']) === 0)) {
-                        $shouldFetchImages = true;
-                    } elseif (is_string($arr['images'])) {
-                        $decoded = json_decode($arr['images'], true);
-                        if (empty($decoded) || !is_array($decoded)) {
-                            $shouldFetchImages = true;
-                        }
-                    }
-                    $cacheKey = 'recipe_images_' . $arr['id_external'];
-                    $cachedImages = Cache::get($cacheKey);
-                    if (!empty($arr['id_external'])) {
-                        if ($cachedImages && is_array($cachedImages) && count($cachedImages) > 0) {
-                            $arr['images'] = $cachedImages;
-                            Log::debug('Loaded recipe images from cache', ['id_external' => $arr['id_external']]);
-                        } elseif ($shouldFetchImages) {
-                            Log::debug('Fetching recipe details from API for images', ['id_external' => $arr['id_external']]);
-                            if (!$this->cookButlerService) {
-                                $this->cookButlerService = app(\App\Services\CookButlerService::class);
-                            }
-                            $apiRecipe = $this->cookButlerService->fetchRecipeDetails($arr['id_external'], $book->patient);
-                            if (!empty($apiRecipe['images'])) {
-                                $arr['images'] = $apiRecipe['images'];
-                            } elseif (!empty($apiRecipe['media']['preview'])) {
-                                $arr['images'] = is_array($apiRecipe['media']['preview']) ? $apiRecipe['media']['preview'] : [$apiRecipe['media']['preview']];
-                            }
-                            if (!empty($apiRecipe['media'])) {
-                                $arr['media'] = $apiRecipe['media'];
-                            }
-                            // Cache the images for 1 day
-                            if (!empty($arr['images'])) {
-                                Cache::put($cacheKey, $arr['images'], now()->addDay());
-                                Log::debug('Cached recipe images for 1 day', ['id_external' => $arr['id_external']]);
-                            }
-                        } else if (!empty($arr['images']) && is_string($arr['images'])) {
-                            $decoded = json_decode($arr['images'], true);
-                            if (is_array($decoded)) {
-                                $arr['images'] = $decoded;
-                            }
-                        }
-                    }
-                    $recipesArray = $this->recipes;
-                    if ($recipesArray instanceof \Illuminate\Support\Collection) {
-                        $recipesArray = $recipesArray->all();
-                    }
-                    array_unshift($recipesArray, self::normalizeRecipe($arr));
-                    $this->recipes = array_values($recipesArray);
-                }
-            }
-        }
     }
 
     public function addToAvailableRecipes($id)
     {
-        // Only add if not already present
-        $alreadyPresent = array_filter($this->recipes, function ($r) use ($id) {
-            $rid = isset($r['id']) ? $r['id'] : (isset($r['id_external']) ? $r['id_external'] : (isset($r['id_recipe']) ? $r['id_recipe'] : null));
-            return $rid == $id;
+        // Skip if already present to avoid unnecessary processing
+        $alreadyPresent = collect($this->recipes)->contains(function ($r) use ($id) {
+            return ($r['id'] ?? null) == $id || ($r['id_external'] ?? null) == $id || ($r['id_recipe'] ?? null) == $id;
         });
         if ($alreadyPresent) return;
-        $recipe = \App\Models\Recipe::find($id);
-        if ($recipe) {
-            $arr = $recipe->toArray();
-            foreach (['category', 'allergens', 'diets'] as $field) {
-                if (isset($arr[$field])) {
-                    $decoded = self::normalizeField($arr[$field] ?? null);
-                    $arr[$field] = $decoded;
-                }
+
+        // Try to fetch a lightweight recipe payload from API (minimal fields used in the list)
+        try {
+            if (!$this->cookButlerService) {
+                $this->cookButlerService = app(\App\Services\CookButlerService::class);
             }
-            $this->recipes[] = self::normalizeRecipe($arr);
+            $apiRecipe = $this->cookButlerService->fetchRecipeDetails($id);
+            if (is_array($apiRecipe) && !empty($apiRecipe)) {
+                $minimal = [
+                    'id' => $apiRecipe['id'] ?? $id,
+                    'id_external' => $apiRecipe['id'] ?? $id,
+                    'title' => $apiRecipe['title'] ?? ('Recipe ' . $id),
+                    // keep only the fields displayed in the list
+                    'category' => $apiRecipe['category'] ?? [],
+                    'diets' => $apiRecipe['diets'] ?? [],
+                    'allergens' => $apiRecipe['allergens'] ?? [],
+                    // prefer preview images if present
+                    'images' => $apiRecipe['images'] ?? (($apiRecipe['media']['preview'] ?? []) ?: []),
+                    'media' => $apiRecipe['media'] ?? [],
+                ];
+                $this->recipes[] = self::normalizeRecipe($minimal);
+                return;
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('addToAvailableRecipes: fallback to stub due to API error', [
+                'id' => $id,
+                'error' => $e->getMessage(),
+            ]);
         }
+
+        // Fallback: create minimal stub entry without blocking on API
+        $this->recipes[] = [
+            'id' => $id,
+            'id_external' => $id,
+            'title' => 'Recipe ' . $id,
+            'category' => [],
+            'diets' => [],
+            'allergens' => []
+        ];
     }
 
     public function updatedFilterTitle() { $this->resetAndReload(); }
@@ -544,7 +500,7 @@ class AvailableRecipesTable extends Component
             'glutenfrei' => 'gluten-free',
             'laktosefrei' => 'lactose-free',
             'biological' => 'biological',
-            'histamin-free' => 'histamin-free',
+            'histamine-low' => 'histamine-low',
         ];
         $diets = array_keys(array_filter($this->filterDiets));
         $diets = array_map(function($diet) use ($dietApiKeyMap) {
@@ -818,7 +774,7 @@ class AvailableRecipesTable extends Component
         ];
         $user['settings'] = $settings;
         $user->save();
-        \Filament\Notifications\Notification::make()
+        Notification::make()
             ->title(__('Filter gespeichert'))
             ->body(__('Das aktuelle Filter-Set wurde im Benutzerprofil gespeichert.'))
             ->success()
@@ -851,7 +807,7 @@ class AvailableRecipesTable extends Component
     public function onBookRecreatedAndSent($bookId)
     {
         if ($bookId == $this->bookId) {
-            \Filament\Notifications\Notification::make()
+            Notification::make()
                 ->title(__('Das Buch wurde neu erstellt und wird jetzt versendet. Die Seite wird neu geladen.') . ' / ' . __('The book has been recreated and will now be sent. The page will reload.'))
                 ->success()
                 ->send();

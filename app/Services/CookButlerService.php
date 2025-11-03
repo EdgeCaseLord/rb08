@@ -19,7 +19,7 @@ class CookButlerService
         'biologisch' => 'organic',
         'eifrei' => 'egg-free',
         'glutenfrei' => 'gluten-free',
-        'histamin-free' => 'histamine-free',
+        'histamine-low' => 'histamine-low',
         'laktosefrei' => 'lactose-free',
         'ohne Fisch' => 'fish-free',
         'ohne Fleisch' => 'meat-free',
@@ -96,9 +96,17 @@ class CookButlerService
             } else {
                 $ingredientQuery = $filters['ingredients'];
             }
+            // Normalize unicode dashes to ASCII hyphen
+            $ingredientQuery = str_replace(["\u{2013}", "\u{2014}"], '-', $ingredientQuery);
             $ingredientQuery = preg_replace('/[\s,]+/', ' ', $ingredientQuery);
             $ingredientQuery = preg_replace('/\s*\/\s*/', ' || ', $ingredientQuery); // OR
-            $ingredientQuery = preg_replace('/\s*-([\wäöüÄÖÜß]+)/u', ' -- $1', $ingredientQuery); // NOT
+            // NOT: handle both leading '-' and in-between terms '-term'
+            // Leading term: "-zucker" or "- zucker" => "-- zucker"
+            $ingredientQuery = preg_replace('/^-\s*([\wäöüÄÖÜß]+)/u', '-- $1', $ingredientQuery);
+            // In-between terms: " nudeln -paprika" => " nudeln -- paprika"
+            $ingredientQuery = preg_replace('/\s-([\wäöüÄÖÜß]+)/u', ' -- $1', $ingredientQuery);
+            // Handle AND logic: space-separated terms should be AND
+            $ingredientQuery = preg_replace('/\s+/', ' && ', $ingredientQuery); // AND
             $ingredientQuery = trim($ingredientQuery);
         }
         if (!empty($ingredientQuery)) {
@@ -287,7 +295,7 @@ class CookButlerService
             }
             if (!empty($merged['allergen'])) {
                 $merged['allergen'] = array_filter($merged['allergen'], function($v) {
-                    return $v !== 'biologisch' && $v !== 'histamin-free';
+                    return $v !== 'biologisch' && $v !== 'histamine-low';
                 });
                 $apiFilters['allergen'] = (array)$merged['allergen'];
             }
@@ -570,7 +578,7 @@ class CookButlerService
             // Always set 'allergen' if present
             if (!empty($apiReadyFilters['allergen'])) {
                 $apiReadyFilters['allergen'] = array_filter($apiReadyFilters['allergen'], function($v) {
-                    return $v !== 'biologisch' && $v !== 'histamin-free';
+                    return $v !== 'biologisch' && $v !== 'histamine-low';
                 });
                 $finalApiFilters['allergen'] = (array)$apiReadyFilters['allergen'];
             }

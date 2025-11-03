@@ -68,6 +68,38 @@ class CreateBookJob implements ShouldQueue
         }
         Log::info('CreateBookJob: Patient validated', ['patient_id' => $patient->id]);
 
+        // Check if book already exists for this patient with these recipes (idempotency check)
+        if ($this->recipeIds && !$this->bookId) {
+            $existingBook = Book::where('patient_id', $patient->id)
+                ->whereHas('recipes', function($query) {
+                    $query->whereIn('recipes.id_recipe', $this->recipeIds);
+                })
+                ->first();
+
+            if ($existingBook) {
+                Log::info('CreateBookJob: Book already exists, skipping creation', [
+                    'patient_id' => $patient->id,
+                    'existing_book_id' => $existingBook->id,
+                    'recipe_ids' => $this->recipeIds
+                ]);
+                return;
+            }
+        }
+
+        // Additional check: prevent duplicate book creation for same patient
+        // This handles race conditions where multiple CreateBookJob instances
+        // are dispatched for the same patient before the first one completes
+        $lockKey = "create_book_patient_{$patient->id}";
+        $lockAcquired = \Illuminate\Support\Facades\Cache::lock($lockKey, 120)->get();
+
+        if (!$lockAcquired) {
+            Log::info('CreateBookJob: Another book creation is in progress for this patient, skipping', [
+                'patient_id' => $patient->id,
+                'lock_key' => $lockKey
+            ]);
+            return;
+        }
+
         try {
             $latestAnalysis = \App\Models\Analysis::where('patient_id', $patient->id)->latest('created_at')->first();
             Log::debug('CreateBookJob: Latest analysis fetched', [
@@ -189,6 +221,22 @@ class CreateBookJob implements ShouldQueue
                 'recipe_ids' => $currentRecipes,
             ]);
 
+            // Check if any recipes were added
+            if (empty($currentRecipes)) {
+                \Filament\Notifications\Notification::make()
+                    ->title(__('No Recipes Found'))
+                    ->body(__('No recipes were found for :name due to their allergen combination. No book was created.', ['name' => $patient->name]))
+                    ->warning()
+                    ->persistent()
+                    ->send();
+
+                Log::warning('CreateBookJob: No recipes found for patient, no book created', [
+                    'patient_id' => $patient->id,
+                    'patient_name' => $patient->name,
+                ]);
+                return;
+            }
+
             // Send email to lab
             Log::debug('CreateBookJob: Sending email to lab', [
                 'book_id' => $book->id,
@@ -198,8 +246,8 @@ class CreateBookJob implements ShouldQueue
 
             if ($createdNewBook) {
                 \Filament\Notifications\Notification::make()
-                    ->title('Rezeptbuch erstellt')
-                    ->body("Ein personalisiertes Rezeptbuch wurde für {$patient->name} erstellt.")
+                    ->title(__('Recipe Book Created'))
+                    ->body(__('A personalized recipe book has been created for :name', ['name' => $patient->name]))
                     ->success()
                     ->send();
             } elseif ($this->bookId) {
@@ -217,12 +265,12 @@ class CreateBookJob implements ShouldQueue
                         $onBookEditPage = true;
                     }
                 }
-                $body = "Das Rezeptbuch wurde mit neuen Rezepten basierend auf dem aktuellen Filter-Set aktualisiert.";
+                $body = __('The recipe book has been updated with new recipes based on the current filter set.');
                 if ($onBookEditPage) {
                     $body .= "\n\n<br>BITTE DIE SEITE NEU LADEN";
                 }
                 \Filament\Notifications\Notification::make()
-                    ->title('Rezeptbuch aktualisiert')
+                    ->title(__('Recipe Book Updated'))
                     ->body($body)
                     ->success()
                     ->persistent()
@@ -251,6 +299,13 @@ class CreateBookJob implements ShouldQueue
                 'trace' => $e->getTraceAsString(),
             ]);
             throw $e;
+        } finally {
+            // Release the lock
+            \Illuminate\Support\Facades\Cache::lock($lockKey)->release();
+            Log::debug('CreateBookJob: Lock released', [
+                'patient_id' => $patient->id,
+                'lock_key' => $lockKey
+            ]);
         }
     }
 
@@ -275,7 +330,7 @@ class CreateBookJob implements ShouldQueue
             $template = TextTemplate::where('type', 'book_send_email')->first();
         }
 
-        $editLink = url("https://rezept-butler.com/books/{$book->id}/edit");
+        $editLink = url("https://myintest-rezepte.de/books/{$book->id}/edit");
         $userName = $lab ? $lab->name : ($patient->name ?? 'Lab');
         $patientName = $patient->name;
 
@@ -294,8 +349,8 @@ class CreateBookJob implements ShouldQueue
         $subject = strtr($subject, $replacements);
         $body = strtr($body, $replacements);
 
-        // Log email content
-        Log::debug('Email content prepared', [
+        // Log email content to email channel
+        Log::channel('email')->debug('Email content prepared', [
             'book_id' => $book->id,
             'to' => $labEmail,
             'subject' => $subject,
@@ -311,25 +366,49 @@ class CreateBookJob implements ShouldQueue
         }
 
         try {
+            // Log mail configuration before sending to email channel
+            Log::channel('email')->debug('Mail configuration', [
+                'default_mailer' => config('mail.default'),
+                'log_channel' => config('mail.mailers.log.channel'),
+                'from_address' => config('mail.from.address'),
+                'from_name' => config('mail.from.name'),
+                'smtp_host' => config('mail.mailers.smtp.host'),
+                'smtp_port' => config('mail.mailers.smtp.port'),
+                'smtp_encryption' => config('mail.mailers.smtp.encryption'),
+            ]);
+
+            Log::channel('email')->info('Attempting to send email', [
+                'book_id' => $book->id,
+                'lab_email' => $labEmail,
+                'patient_id' => $patient->id,
+                'subject' => $subject,
+            ]);
+
             Mail::send([], [], function ($message) use ($subject, $body, $labEmail) {
                 $message->to($labEmail)
                     ->subject(mb_encode_mimeheader($subject, 'UTF-8'))
                     ->html($body);
             });
 
-            Log::info('Email sent to lab', [
+            Log::channel('email')->info('✅ EMAIL SENT SUCCESSFULLY', [
                 'book_id' => $book->id,
                 'lab_email' => $labEmail,
                 'patient_id' => $patient->id,
+                'subject' => $subject,
+                'timestamp' => now()->toISOString(),
             ]);
         } catch (\Exception $e) {
-            Log::error('Failed to send email to lab', [
+            Log::channel('email')->error('❌ EMAIL SENDING FAILED', [
                 'book_id' => $book->id,
                 'lab_email' => $labEmail,
                 'patient_id' => $patient->id,
+                'subject' => $subject,
                 'error' => $e->getMessage(),
+                'error_code' => $e->getCode(),
                 'trace' => $e->getTraceAsString(),
+                'timestamp' => now()->toISOString(),
             ]);
+            throw $e; // Re-throw to ensure job fails and can be retried
         }
     }
 
@@ -340,13 +419,14 @@ class CreateBookJob implements ShouldQueue
 
 <p>vielen Dank für Ihren Auftrag zur Typ-III-Allergiediagnostik.</p>
 
-<p>Sie können das individuell zusammengestellte Rezeptbuch für Ihre Patientin bzw. Ihren Patienten, abgestimmt auf die festgestellten Nahrungsmittelunverträglichkeiten, über den folgenden Link einsehen und bearbeiten:</p>
+<p>Sie können das individuell zusammengestellte Rezeptbuch für Ihre Patientin bzw. Ihren Patienten, abgestimmt auf die festgestellten Nahrungsmittelunverträglichkeiten, über den folgenden Link einsehen, bearbeiten und herunterladen:</p>
 
 <p><a href="{$editLink}">Rezeptbuch bearbeiten</a></p>
 
 <p>Bitte prüfen Sie die Angaben und Rezepte sorgfältig. Bei Fragen oder Änderungswünschen stehen wir Ihnen selbstverständlich jederzeit gerne zur Verfügung.</p>
 
 <p>Mit freundlichen Grüßen</p>
+<p><strong>Wichtiger Hinweis:</strong> Aus Sicherheitsgründen müssen Sie bei Ihrer ersten Anmeldung ein eigenes Passwort festlegen. Bitte folgen Sie den Anweisungen auf der Login-Seite. Sie erhalten dann eine Email mit einem Link, um das Passwort zu setzen und können danach erneut den oben genannten Link nutzen.</p>
 EOT;
     }
 
@@ -357,8 +437,8 @@ EOT;
             'trace' => $exception->getTraceAsString(),
         ]);
         Notification::make()
-            ->title('Rezeptbuch-Erstellung fehlgeschlagen')
-            ->body('Das Rezeptbuch konnte nicht erstellt werden. Bitte überprüfen Sie die Protokolle für Details.')
+            ->title(__('Book Creation Failed'))
+            ->body(__('Failed to create recipe book. Check logs for details.'))
             ->danger()
             ->persistent()
             ->send();

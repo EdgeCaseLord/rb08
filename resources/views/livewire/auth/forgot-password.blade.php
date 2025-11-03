@@ -7,6 +7,11 @@ use Livewire\Volt\Component;
 new #[Layout('components.layouts.auth')] class extends Component {
     public string $email = '';
 
+    public function mount(): void
+    {
+        $this->email = request()->query('email', $this->email);
+    }
+
     /**
      * Send a password reset link to the provided email address.
      */

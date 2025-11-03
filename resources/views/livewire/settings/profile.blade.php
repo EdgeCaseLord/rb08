@@ -106,7 +106,7 @@ new class extends Component {
                         'biologisch' => 'Biologisch',
                         'eifrei' => 'Eifrei',
                         'glutenfrei' => 'Glutenfrei',
-                        'histamin-free' => 'Histaminfrei',
+                        'histamine-low' => 'Histaminarm',
                         'laktosefrei' => 'Laktosefrei',
                         'ohne Fisch' => 'Ohne Fisch',
                         'ohne Fleisch' => 'Ohne Fleisch',

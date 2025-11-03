@@ -11,10 +11,16 @@ return new class extends Migration
         Schema::create('books', function (Blueprint $table) {
             $table->id();
             $table->string('title')->nullable()->index();
-            $table->foreignId('patient_id')->constrained('users')->onDelete('cascade');
-            $table->foreignId('analysis_id')->nullable()->constrained('analyses')->nullOnDelete();
+            $table->unsignedBigInteger('patient_id');
+            $table->unsignedBigInteger('analysis_id')->nullable();
             $table->string('status')->default('Warten auf Versand')->index();
             $table->timestamps();
+        });
+
+        // Add foreign key constraints with explicit names
+        Schema::table('books', function (Blueprint $table) {
+            $table->foreign('patient_id', 'fk_books_patient_id')->references('id')->on('users')->onDelete('cascade');
+            $table->foreign('analysis_id', 'fk_books_analysis_id')->references('id')->on('analyses')->nullOnDelete();
         });
     }
 

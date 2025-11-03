@@ -10,12 +10,17 @@ return new class extends Migration
     {
         Schema::create('failed_import_rows', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('import_id')->constrained('imports')->onDelete('cascade');
+            $table->unsignedBigInteger('import_id');
             $table->unsignedInteger('row_number')->nullable(); // Track the row number in the import file
             $table->json('data')->nullable();
             $table->text('validation_error')->nullable();
             $table->timestamps();
             $table->index('created_at');
+        });
+
+        // Add foreign key constraint with explicit name
+        Schema::table('failed_import_rows', function (Blueprint $table) {
+            $table->foreign('import_id', 'fk_failed_import_rows_import_id')->references('id')->on('imports')->onDelete('cascade');
         });
     }
 

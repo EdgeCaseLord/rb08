@@ -54,7 +54,7 @@ class EditBook extends EditRecord
 
             // Notify success
             \Filament\Notifications\Notification::make()
-                ->title('Rezept entfernt')
+                ->title(__('Rezept entfernt'))
                 ->body("Das Rezept '{$recipe->title}' wurde aus dem Buch entfernt.")
                 ->success()
                 ->send();
@@ -69,8 +69,8 @@ class EditBook extends EditRecord
 
             // Notify error
             \Filament\Notifications\Notification::make()
-                ->title('Fehler')
-                ->body('Das Rezept konnte nicht entfernt werden: ' . $e->getMessage())
+                ->title(__('Fehler'))
+                ->body($e->getMessage())
                 ->danger()
                 ->send();
         }
@@ -99,22 +99,14 @@ class EditBook extends EditRecord
                 })
                 ->count();
 
-            // Check if limit is reached BEFORE trying to add
-            if ($currentCount >= ($recipeLimits[$course] ?? PHP_INT_MAX)) {
-                \Filament\Notifications\Notification::make()
-                    ->title('Rezeptlimit erreicht')
-                    ->body("Maximale Rezepteanzahl für Gang {$course} erreicht!")
-                    ->warning()
-                    ->send();
+            // Add recipe with limit checking
+            if (!$book->addRecipeWithLimitCheck($recipeId)) {
                 return;
             }
 
-            // Only add the recipe if we haven't hit the limit
-            $book->addRecipe($recipeId);
-
             // Notify success
             \Filament\Notifications\Notification::make()
-                ->title('Rezept hinzugefügt')
+                ->title(__('Rezept hinzugefügt'))
                 ->body("Das Rezept '{$recipe->title}' wurde zum Buch hinzugefügt.")
                 ->success()
                 ->send();
@@ -129,8 +121,8 @@ class EditBook extends EditRecord
 
             // Notify error
             \Filament\Notifications\Notification::make()
-                ->title('Fehler')
-                ->body('Das Rezept konnte nicht hinzugefügt werden: ' . $e->getMessage())
+                ->title(__('Fehler'))
+                ->body($e->getMessage())
                 ->danger()
                 ->send();
         }
@@ -155,7 +147,7 @@ class EditBook extends EditRecord
             }
 
             \Filament\Notifications\Notification::make()
-                ->title('Zu Favoriten hinzugefügt')
+                ->title(__('Zu Favoriten hinzugefügt'))
                 ->success()
                 ->send();
         } catch (\Exception $e) {
@@ -165,8 +157,8 @@ class EditBook extends EditRecord
             ]);
 
             \Filament\Notifications\Notification::make()
-                ->title('Fehler')
-                ->body('Das Rezept konnte nicht zu den Favoriten hinzugefügt werden: ' . $e->getMessage())
+                ->title(__('Fehler'))
+                ->body($e->getMessage())
                 ->danger()
                 ->send();
         }
@@ -189,7 +181,7 @@ class EditBook extends EditRecord
             $user->save();
 
             \Filament\Notifications\Notification::make()
-                ->title('Aus Favoriten entfernt')
+                ->title(__('Aus Favoriten entfernt'))
                 ->success()
                 ->send();
         } catch (\Exception $e) {
@@ -199,8 +191,8 @@ class EditBook extends EditRecord
             ]);
 
             \Filament\Notifications\Notification::make()
-                ->title('Fehler')
-                ->body('Das Rezept konnte nicht aus den Favoriten entfernt werden: ' . $e->getMessage())
+                ->title(__('Fehler'))
+                ->body($e->getMessage())
                 ->danger()
                 ->send();
         }
@@ -242,8 +234,6 @@ class EditBook extends EditRecord
                         ->afterStateUpdated(function ($set, $get) {
                             $template = \App\Models\TextTemplate::find($get('template_id'));
                             $lang = $get('language') ?? 'de';
-                            $subject = $template ? ($template->subject[$lang] ?? '') : '';
-                            $body = $template ? ($template->body[$lang] ?? '') : '';
                             $book = $this->record;
                             $patient = $book->patient ?? null;
                             $lab = $patient && $patient->lab ? $patient->lab : null;
@@ -259,23 +249,10 @@ class EditBook extends EditRecord
                                 'name' => $patientName,
                                 'lab_name' => $labName,
                             ];
-                            $replaceVars = function ($text) use ($vars) {
-                                return preg_replace_callback('/\{\$?([a-zA-Z0-9_]+)(->\w+)*\}/', function ($matches) use ($vars) {
-                                    $expr = ltrim(trim($matches[0], '{}'), '$');
-                                    $parts = explode('->', $expr);
-                                    $val = $vars[$parts[0]] ?? null;
-                                    for ($i = 1; $i < count($parts); $i++) {
-                                        if (is_object($val) && isset($val->{$parts[$i]})) {
-                                            $val = $val->{$parts[$i]};
-                                        } else {
-                                            return $matches[0];
-                                        }
-                                    }
-                                    return $val;
-                                }, $text);
-                            };
-                            $set('subject', $replaceVars($subject));
-                            $set('body', $replaceVars($body));
+                            $subject = $template ? $template->getSubjectForLocaleWithVars($lang, $vars) : '';
+                            $body = $template ? $template->getBodyForLocale($lang, $vars) : '';
+                            $set('subject', $subject);
+                            $set('body', $body);
                         }),
                     \Filament\Forms\Components\Select::make('template_id')
                         ->label('Textvorlage')
@@ -290,6 +267,28 @@ class EditBook extends EditRecord
                             $options = [];
                             foreach ($templates as $template) {
                                 $label = $template->getSubjectForLocale('de') ?: 'Vorlage #' . $template->id;
+
+                                // Apply variable replacement to template label
+                                if ($label && $this->record) {
+                                    $book = $this->record;
+                                    $patient = $book->patient ?? null;
+                                    $lab = $patient && $patient->lab ? $patient->lab : null;
+                                    $editLink = url("/filament/resources/books/{$book->id}/edit");
+                                    $patientName = $patient ? $patient->name : '';
+                                    $labName = $lab ? $lab->name : '';
+                                    $vars = [
+                                        'book' => $book,
+                                        'patient' => $patient,
+                                        'lab' => $lab,
+                                        'edit_link' => $editLink,
+                                        'record' => $book,
+                                        'name' => $patientName,
+                                        'lab_name' => $labName,
+                                    ];
+
+                                    $label = $template->getSubjectForLocaleWithVars('de', $vars);
+                                }
+
                                 $options[$template->id] = $label;
                             }
                             return $options;
@@ -310,8 +309,6 @@ class EditBook extends EditRecord
                         ->afterStateUpdated(function ($set, $get) {
                             $template = \App\Models\TextTemplate::find($get('template_id'));
                             $lang = $get('language') ?? 'de';
-                            $subject = $template ? ($template->subject[$lang] ?? '') : '';
-                            $body = $template ? ($template->body[$lang] ?? '') : '';
                             $book = $this->record;
                             $patient = $book->patient ?? null;
                             $lab = $patient && $patient->lab ? $patient->lab : null;
@@ -327,23 +324,10 @@ class EditBook extends EditRecord
                                 'name' => $patientName,
                                 'lab_name' => $labName,
                             ];
-                            $replaceVars = function ($text) use ($vars) {
-                                return preg_replace_callback('/\{\$?([a-zA-Z0-9_]+)(->\w+)*\}/', function ($matches) use ($vars) {
-                                    $expr = ltrim(trim($matches[0], '{}'), '$');
-                                    $parts = explode('->', $expr);
-                                    $val = $vars[$parts[0]] ?? null;
-                                    for ($i = 1; $i < count($parts); $i++) {
-                                        if (is_object($val) && isset($val->{$parts[$i]})) {
-                                            $val = $val->{$parts[$i]};
-                                        } else {
-                                            return $matches[0];
-                                        }
-                                    }
-                                    return $val;
-                                }, $text);
-                            };
-                            $set('subject', $replaceVars($subject));
-                            $set('body', $replaceVars($body));
+                            $subject = $template ? $template->getSubjectForLocaleWithVars($lang, $vars) : '';
+                            $body = $template ? $template->getBodyForLocale($lang, $vars) : '';
+                            $set('subject', $subject);
+                            $set('body', $body);
                         }),
                     \Filament\Forms\Components\Select::make('language')
                         ->label('Sprache')
@@ -375,8 +359,6 @@ class EditBook extends EditRecord
                         ->afterStateUpdated(function ($set, $get) {
                             $template = \App\Models\TextTemplate::find($get('template_id'));
                             $lang = $get('language') ?? 'de';
-                            $subject = $template ? ($template->subject[$lang] ?? '') : '';
-                            $body = $template ? ($template->body[$lang] ?? '') : '';
                             $book = $this->record;
                             $patient = $book->patient ?? null;
                             $lab = $patient && $patient->lab ? $patient->lab : null;
@@ -392,23 +374,10 @@ class EditBook extends EditRecord
                                 'name' => $patientName,
                                 'lab_name' => $labName,
                             ];
-                            $replaceVars = function ($text) use ($vars) {
-                                return preg_replace_callback('/\{\$?([a-zA-Z0-9_]+)(->\w+)*\}/', function ($matches) use ($vars) {
-                                    $expr = ltrim(trim($matches[0], '{}'), '$');
-                                    $parts = explode('->', $expr);
-                                    $val = $vars[$parts[0]] ?? null;
-                                    for ($i = 1; $i < count($parts); $i++) {
-                                        if (is_object($val) && isset($val->{$parts[$i]})) {
-                                            $val = $val->{$parts[$i]};
-                                        } else {
-                                            return $matches[0];
-                                        }
-                                    }
-                                    return $val;
-                                }, $text);
-                            };
-                            $set('subject', $replaceVars($subject));
-                            $set('body', $replaceVars($body));
+                            $subject = $template ? $template->getSubjectForLocaleWithVars($lang, $vars) : '';
+                            $body = $template ? $template->getBodyForLocale($lang, $vars) : '';
+                            $set('subject', $subject);
+                            $set('body', $body);
                         }),
                     \Filament\Forms\Components\TextInput::make('subject')
                         ->label('Betreff')
@@ -436,22 +405,6 @@ class EditBook extends EditRecord
                                 'name' => $patientName,
                                 'lab_name' => $labName,
                             ];
-                            $replaceVars = function ($text) use ($vars) {
-                                return preg_replace_callback('/\{\$?([a-zA-Z0-9_]+)(->\w+)*\}/', function ($matches) use ($vars) {
-                                    $expr = ltrim(trim($matches[0], '{}'), '$');
-                                    $parts = explode('->', $expr);
-                                    $val = $vars[$parts[0]] ?? null;
-                                    for ($i = 1; $i < count($parts); $i++) {
-                                        if (is_object($val) && isset($val->{$parts[$i]})) {
-                                            $val = $val->{$parts[$i]};
-                                        } else {
-                                            return $matches[0];
-                                        }
-                                    }
-                                    return $val;
-                                }, $text);
-                            };
-                            $subject = $replaceVars($subject);
                             $set('subject', $subject);
                         })
                         ->visible(fn ($get) => filled($get('recipient'))),
@@ -481,22 +434,6 @@ class EditBook extends EditRecord
                                 'name' => $patientName,
                                 'lab_name' => $labName,
                             ];
-                            $replaceVars = function ($text) use ($vars) {
-                                return preg_replace_callback('/\{\$?([a-zA-Z0-9_]+)(->\w+)*\}/', function ($matches) use ($vars) {
-                                    $expr = ltrim(trim($matches[0], '{}'), '$');
-                                    $parts = explode('->', $expr);
-                                    $val = $vars[$parts[0]] ?? null;
-                                    for ($i = 1; $i < count($parts); $i++) {
-                                        if (is_object($val) && isset($val->{$parts[$i]})) {
-                                            $val = $val->{$parts[$i]};
-                                        } else {
-                                            return $matches[0];
-                                        }
-                                    }
-                                    return $val;
-                                }, $text);
-                            };
-                            $body = $replaceVars($body);
                             $set('body', $body);
                         })
                         ->visible(fn ($get) => filled($get('recipient'))),
@@ -504,8 +441,6 @@ class EditBook extends EditRecord
                     \Filament\Forms\Components\Placeholder::make('preview')
                         ->label('Vorschau')
                         ->content(function ($get) {
-                            $subject = $get('subject') ?? '';
-                            $body = $get('body') ?? '';
                             $book = $this->record;
                             $patient = $book->patient ?? null;
                             $lab = $patient && $patient->lab ? $patient->lab : null;
@@ -521,23 +456,12 @@ class EditBook extends EditRecord
                                 'name' => $patientName,
                                 'lab_name' => $labName,
                             ];
-                            $replaceVars = function ($text) use ($vars) {
-                                return preg_replace_callback('/\{\$?([a-zA-Z0-9_]+)(->\w+)*\}/', function ($matches) use ($vars) {
-                                    $expr = ltrim(trim($matches[0], '{}'), '$');
-                                    $parts = explode('->', $expr);
-                                    $val = $vars[$parts[0]] ?? null;
-                                    for ($i = 1; $i < count($parts); $i++) {
-                                        if (is_object($val) && isset($val->{$parts[$i]})) {
-                                            $val = $val->{$parts[$i]};
-                                        } else {
-                                            return $matches[0];
-                                        }
-                                    }
-                                    return $val;
-                                }, $text);
-                            };
-                            $subject = $replaceVars($subject);
-                            $body = $replaceVars($body);
+
+                            // Get template and language from form data
+                            $template = \App\Models\TextTemplate::find($get('template_id'));
+                            $lang = $get('language') ?? 'de';
+                            $subject = $template ? $template->getSubjectForLocaleWithVars($lang, $vars) : '';
+                            $body = $template ? $template->getBodyForLocale($lang, $vars) : '';
                             return new \Illuminate\Support\HtmlString('<div><div><b>Betreff:</b> ' . e($subject) . '</div><div style="margin-top:10px;"><b>Text:</b><br>' . $body . '</div></div>');
                         })
                         ->columnSpanFull()
@@ -564,8 +488,8 @@ class EditBook extends EditRecord
                     }
                     if (!$email) {
                         \Filament\Notifications\Notification::make()
-                            ->title('Fehler')
-                            ->body('Keine gültige E-Mail-Adresse gefunden.')
+                            ->title(__('Fehler'))
+                            ->body(__('Keine gültige E-Mail-Adresse gefunden.'))
                             ->danger()
                             ->send();
                         return;
@@ -595,8 +519,6 @@ class EditBook extends EditRecord
                         $browsershot->noSandbox();
                     })
                     ->save(\Illuminate\Support\Facades\Storage::path($pdfPath));
-                    $subject = $data['subject'] ?? '';
-                    $body = $data['body'] ?? '';
                     $editLink = url("/filament/resources/books/{$this->record->id}/edit");
                     $patientName = $this->record->patient ? $this->record->patient->name : '';
                     $labName = $this->record->patient && $this->record->patient->lab ? $this->record->patient->lab->name : '';
@@ -610,23 +532,12 @@ class EditBook extends EditRecord
                         'name' => $patientName,
                         'lab_name' => $labName,
                     ];
-                    $replaceVars = function ($text) use ($vars) {
-                        return preg_replace_callback('/\\{\\$?([a-zA-Z0-9_]+)(->\\w+)*\\}/', function ($matches) use ($vars) {
-                            $expr = ltrim(trim($matches[0], '{}'), '$');
-                            $parts = explode('->', $expr);
-                            $val = $vars[$parts[0]] ?? null;
-                            for ($i = 1; $i < count($parts); $i++) {
-                                if (is_object($val) && isset($val->{$parts[$i]})) {
-                                    $val = $val->{$parts[$i]};
-                                } else {
-                                    return $matches[0];
-                                }
-                            }
-                            return $val;
-                        }, $text);
-                    };
-                    $subject = $replaceVars($subject);
-                    $body = $replaceVars($body);
+
+                    // Get template and language from form data
+                    $template = \App\Models\TextTemplate::find($data['template_id'] ?? null);
+                    $lang = $data['language'] ?? 'de';
+                    $subject = $template ? $template->getSubjectForLocale($lang) : '';
+                    $body = $template ? $template->getBodyForLocale($lang, $vars) : '';
                     // Remove all line breaks and extra spaces from subject, force string
                     $subject = preg_replace('/[\r\n]+/', ' ', (string)$subject);
                     $subject = trim(preg_replace('/\s+/', ' ', $subject));
@@ -637,7 +548,7 @@ class EditBook extends EditRecord
                     }
                     \Illuminate\Support\Facades\Mail::send([], [], function ($message) use ($email, $name, $subject, $body, $pdfPath, $pdfFileName) {
                         $message->to($email, $name)
-                            ->from('no-reply@rezept-butler.com', 'Rezept-Butler')
+                            ->from('no-reply@myintest-rezepte.de', 'myintest-rezepte.de')
                             ->subject($subject)
                             ->html($body)
                             ->attach(\Illuminate\Support\Facades\Storage::path($pdfPath), [
@@ -653,8 +564,8 @@ class EditBook extends EditRecord
                         $this->dispatch('bookStatusUpdated', id: $this->record->id, status: $this->record->status);
                     }
                     \Filament\Notifications\Notification::make()
-                        ->title('E-Mail gesendet')
-                        ->body("Das Rezeptbuch wurde an {$email} gesendet.")
+                        ->title(__('E-Mail gesendet'))
+                        ->body(__('Das Rezeptbuch wurde an :email gesendet.', ['email' => $email]))
                         ->success()
                         ->send();
                 }),

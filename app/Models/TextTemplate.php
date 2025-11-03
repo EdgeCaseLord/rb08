@@ -30,6 +30,61 @@ class TextTemplate extends Model
         return $subject;
     }
 
+    public function getSubjectForLocaleWithVars($locale = null, $vars = [])
+    {
+        $subject = $this->getSubjectForLocale($locale);
+
+        // Apply variable replacement
+        if (!empty($vars) && is_string($subject)) {
+            $subject = preg_replace_callback('/\{\$?([a-zA-Z0-9_]+)(->\w+)*\}/', function ($matches) use ($vars) {
+                $expr = ltrim(trim($matches[0], '{}'), '$');
+                $parts = explode('->', $expr);
+                $val = $vars[$parts[0]] ?? null;
+
+                // Debug logging
+                \Illuminate\Support\Facades\Log::info('Variable replacement debug', [
+                    'original' => $matches[0],
+                    'expr' => $expr,
+                    'parts' => $parts,
+                    'val_type' => gettype($val),
+                    'val_value' => $val,
+                ]);
+
+                for ($i = 1; $i < count($parts); $i++) {
+                    if (is_object($val) && isset($val->{$parts[$i]})) {
+                        $val = $val->{$parts[$i]};
+                    } elseif (is_array($val) && isset($val[$parts[$i]])) {
+                        $val = $val[$parts[$i]];
+                    } else {
+                        \Illuminate\Support\Facades\Log::info('Variable replacement failed', [
+                            'part' => $parts[$i],
+                            'val_type' => gettype($val),
+                            'val_value' => $val,
+                        ]);
+                        return $matches[0];
+                    }
+                }
+
+                \Illuminate\Support\Facades\Log::info('Variable replacement result', [
+                    'final_val' => $val,
+                    'final_type' => gettype($val),
+                ]);
+
+                // Ensure we always return a string
+                if (is_array($val)) {
+                    return json_encode($val);
+                } elseif (is_object($val)) {
+                    return (string) $val;
+                } elseif (is_null($val)) {
+                    return '';
+                }
+                return (string) $val;
+            }, $subject);
+        }
+
+        return $subject;
+    }
+
     public function getBodyForLocale($locale = null, $vars = [])
     {
         $locale = $locale ?: app()->getLocale();

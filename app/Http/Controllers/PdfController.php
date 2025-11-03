@@ -6,6 +6,7 @@ use App\Models\Book;
 use Spatie\LaravelPdf\Facades\Pdf;
 use Spatie\Browsershot\Browsershot;
 use App\Models\Analysis;
+use App\Models\TextTemplate;
 
 class PdfController extends Controller
 {
@@ -22,17 +23,72 @@ class PdfController extends Controller
                 $analysis = Analysis::where('patient_id', $book->patient->id)->latest()->first();
             }
             $sampleCode = $analysis?->sample_code;
-            $pdfFileName = $sampleCode ? ($sampleCode . '_RB.pdf') : "book-{$book->id}-rezepte.pdf";
+            if ($sampleCode) {
+                // Sanitize to safe filename: allow letters, numbers, dash and underscore only
+                $safeSample = preg_replace('/[^A-Za-z0-9_-]+/', '_', $sampleCode);
+                $safeSample = trim($safeSample, '_-');
+                if ($safeSample === '') {
+                    $safeSample = 'book';
+                }
+                $pdfFileName = $safeSample . '_RB.pdf';
+            } else {
+                $pdfFileName = "book-{$book->id}-rezepte.pdf";
+            }
 
-            return Pdf::view('pdf.book', [
+            // Increase limits for complex PDFs
+            @ini_set('memory_limit', '1024M');
+            @set_time_limit(600);
+
+            // Fetch optional text templates so they appear in the PDF
+            $impressumTemplate = TextTemplate::where('type', 'book_text_impressum')->first();
+            $erlaeuterungTemplate = TextTemplate::where('type', 'book_text_erlaeuterung')->first();
+
+            $pdf = Pdf::view('pdf.book', [
                     'book' => $book,
-                    'recipes' => $book->recipes()->get()
+                    'recipes' => $book->recipes()->get(),
+                    'impressumTemplate' => $impressumTemplate,
+                    'erlaeuterungTemplate' => $erlaeuterungTemplate,
+                    // Enable client-side optimizations in the Blade view
+                    'pdfOptimize' => true,
                 ])
                 ->format('a4')
                 ->withBrowsershot(function (Browsershot $browsershot) {
-                    $browsershot->noSandbox();
-                })
-                ->download($pdfFileName);
+                    $browsershot
+                        ->noSandbox()
+                        ->addChromiumArguments(['--disable-dev-shm-usage', '--disable-gpu'])
+                        // Reduce PDF size and generation time
+                        ->printBackground(false)
+                        ->timeout(240);
+                });
+
+            // Save to a temporary file first
+            $tmpDir = storage_path('app/public');
+            if (!is_dir($tmpDir)) {
+                @mkdir($tmpDir, 0755, true);
+            }
+            $tmpIn = $tmpDir . DIRECTORY_SEPARATOR . 'rb_tmp_' . uniqid() . '.pdf';
+            $tmpOut = $tmpDir . DIRECTORY_SEPARATOR . 'rb_tmp_' . uniqid() . '.pdf';
+            $pdf->save($tmpIn);
+
+            // Try Ghostscript compression if available
+            $gsBinary = trim((string) @shell_exec('which gs || command -v gs 2>/dev/null'));
+            if ($gsBinary && is_file($tmpIn)) {
+                $cmd = escapeshellcmd($gsBinary) . ' -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 '
+                    . '-dPDFSETTINGS=/ebook '
+                    . '-dNOPAUSE -dQUIET -dBATCH '
+                    . '-dDownsampleColorImages=true -dColorImageResolution=120 '
+                    . '-dDownsampleGrayImages=true -dGrayImageResolution=120 '
+                    . '-dDownsampleMonoImages=true -dMonoImageResolution=120 '
+                    . '-sOutputFile=' . escapeshellarg($tmpOut) . ' ' . escapeshellarg($tmpIn);
+                @shell_exec($cmd);
+                if (is_file($tmpOut) && filesize($tmpOut) > 0) {
+                    @unlink($tmpIn);
+                    return response()->download($tmpOut, $pdfFileName)->deleteFileAfterSend(true);
+                }
+            }
+
+            // Fallback: download the uncompressed PDF
+            return response()->download($tmpIn, $pdfFileName)->deleteFileAfterSend(true);
         } catch (\Throwable $e) {
             \Log::error('PDF generation failed', [
                 'book_id' => $book->id,
