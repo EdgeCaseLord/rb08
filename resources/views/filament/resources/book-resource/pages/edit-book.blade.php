@@ -57,8 +57,7 @@
                                 @endif
                             </div>
                             <div x-data="{ status: @js($book->status ?? 'Warten auf Versand') }"
-                                 x-init="window.addEventListener('bookStatusUpdated', e => { if (e.detail.id == @js($book->id)) status = e.detail.status });
-                                          window.addEventListener('bookRecipesChanged', () => { $wire.$refresh() });">
+                                 x-init="window.addEventListener('bookStatusUpdated', e => { if (e.detail.id == @js($book->id)) status = e.detail.status });">
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">{{ __('Status') }}</label>
                                 @php
                                     $statusColors = [
@@ -83,14 +82,12 @@
                 </div>
             </div>
         </div>
-        <x-filament::section heading="Rezepte im Buch" collapsible="true" class="max-h-[80vh] overflow-y-auto">
-            @livewire('book-recipes-table', ['bookId' => $bookId])
-        </x-filament::section>
-        <x-filament::section heading="Favoriten" collapsible="true" class="max-h-[80vh] overflow-y-auto">
-            @livewire('favorite-recipes-table', ['bookId' => $bookId])
-        </x-filament::section>
-        <x-filament::section heading="Verfügbare Rezepte" collapsible="true" class="max-h-[80vh] overflow-y-auto">
-            @livewire('available-recipes-table', ['bookId' => $bookId])
-        </x-filament::section>
+        <div wire:ignore>
+            @include('filament.resources.book-resource.pages.edit-book-recipes', [
+                'bookId' => $bookId,
+                'bookRecipeCounts' => ['starter' => 0, 'main_course' => 0, 'dessert' => 0],
+                'recipeLimits' => $book->getRecipesPerCourse() ?? ['starter' => 5, 'main_course' => 5, 'dessert' => 5],
+            ])
+        </div>
     </div>
 </x-filament-panels::page>
