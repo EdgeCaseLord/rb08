@@ -14,11 +14,60 @@ class RecipeListController extends Controller
 {
     private function mapRecipeMinimal($r): array
     {
+        // Accept multiple shapes: Eloquent Recipe, flat array, or CookButler API shape { id: { recipe: {...}, optional: {...} } }
         if ($r instanceof Recipe) {
             $arr = $r->toArray();
         } else {
             $arr = is_array($r) ? $r : (array)$r;
         }
+
+        // If CookButler API shape detected
+        if (isset($arr['recipe']) && is_array($arr['recipe'])) {
+            $rec = $arr['recipe'];
+            $opt = isset($arr['optional']) && is_array($arr['optional']) ? $arr['optional'] : [];
+
+            // Media/thumbnail
+            $media = isset($rec['media']) ? (is_string($rec['media']) ? (json_decode($rec['media'], true) ?: []) : (is_array($rec['media']) ? $rec['media'] : [])) : [];
+            $thumb = null;
+            if (!empty($media['search'])) {
+                $thumb = is_array($media['search']) ? ($media['search'][0] ?? null) : $media['search'];
+            } elseif (!empty($media['preview_no_wm'])) {
+                $thumb = is_array($media['preview_no_wm']) ? ($media['preview_no_wm'][0] ?? null) : $media['preview_no_wm'];
+            } elseif (!empty($media['preview'])) {
+                $thumb = is_array($media['preview']) ? ($media['preview'][0] ?? null) : $media['preview'];
+            }
+
+            // Allergens: array of objects { allergen: string, value: bool }
+            $allergens = [];
+            if (!empty($rec['allergens']) && is_array($rec['allergens'])) {
+                foreach ($rec['allergens'] as $it) {
+                    if (is_array($it)) {
+                        $name = $it['allergen'] ?? null;
+                        $val = $it['value'] ?? null;
+                        if ($name && $val === true) $allergens[] = (string)$name;
+                    }
+                }
+                $allergens = array_values(array_unique(array_filter($allergens)));
+            }
+
+            // Categories/diets may be in optional
+            $category = $this->normalizeArrayLabels($opt['category'] ?? []);
+            $diets = $this->normalizeArrayLabels($opt['diets'] ?? []);
+
+            return [
+                'id_recipe' => $rec['id_recipe'] ?? ($rec['id'] ?? null),
+                'id_external' => $rec['id_external'] ?? null,
+                'id' => $rec['id'] ?? ($rec['id_recipe'] ?? null),
+                'title' => $rec['title'] ?? '',
+                'media' => [ 'search' => $thumb ? [$thumb] : [] ],
+                'images' => $thumb ? [$thumb] : [],
+                'category' => $category,
+                'diets' => $diets,
+                'allergens' => $allergens,
+            ];
+        }
+
+        // Flat/eloquent shape fallback
         $media = isset($arr['media']) ? (is_string($arr['media']) ? (json_decode($arr['media'], true) ?: []) : (is_array($arr['media']) ? $arr['media'] : [])) : [];
         $images = isset($arr['images']) ? (is_string($arr['images']) ? (json_decode($arr['images'], true) ?: []) : (is_array($arr['images']) ? $arr['images'] : [])) : [];
 
@@ -83,7 +132,8 @@ class RecipeListController extends Controller
         if (is_array($val) && $this->isAssoc($val)) {
             $out = [];
             foreach ($val as $k => $v) {
-                if ($v === true) $out[] = (string)$k;
+                $kStr = (string)$k;
+                if ($v === true && $kStr !== '' && strcasecmp($kStr, 'value') !== 0 && $kStr[0] !== ':') $out[] = $kStr;
             }
             return array_values(array_unique(array_filter($out)));
         }
@@ -94,7 +144,7 @@ class RecipeListController extends Controller
             foreach ($val as $item) {
                 if (is_string($item)) {
                     $s = trim($item);
-                    if ($s !== '' && strtolower($s) !== 'true' && strtolower($s) !== 'false') {
+                    if ($s !== '' && strcasecmp($s, 'value') !== 0 && $s[0] !== ':' && strtolower($s) !== 'true' && strtolower($s) !== 'false') {
                         $out[] = $s;
                     }
                     continue;
@@ -102,15 +152,32 @@ class RecipeListController extends Controller
                 if (is_bool($item)) continue;
                 if (is_object($item)) $item = (array)$item;
                 if (is_array($item)) {
-                    // object-like
-                    $name = $item['name'] ?? ($item['label'] ?? ($item['title'] ?? ($item['value'] ?? null)));
-                    if (is_string($name) && strtolower($name) !== 'true' && strtolower($name) !== 'false') {
+                    // Special case: { allergen|diet: name, value: bool }
+                    if ((array_key_exists('allergen', $item) || array_key_exists('diet', $item)) && array_key_exists('value', $item)) {
+                        $k = isset($item['allergen']) ? (string)$item['allergen'] : (isset($item['diet']) ? (string)$item['diet'] : '');
+                        if ($k !== '' && ($item['value'] === true)) {
+                            $out[] = $k;
+                            continue;
+                        }
+                    }
+                    // Special case: { name|label|title: name, value: bool }
+                    if (array_key_exists('value', $item)) {
+                        $n = isset($item['name']) ? (string)$item['name'] : (isset($item['label']) ? (string)$item['label'] : (isset($item['title']) ? (string)$item['title'] : ''));
+                        if ($n !== '' && ($item['value'] === true)) {
+                            $out[] = $n;
+                            continue;
+                        }
+                    }
+                    // object-like (do not use 'value' as a display name)
+                    $name = $item['name'] ?? ($item['label'] ?? ($item['title'] ?? ($item['allergen'] ?? ($item['diet'] ?? null))));
+                    if (is_string($name) && $name !== '' && strcasecmp($name, 'value') !== 0 && $name[0] !== ':' && strtolower($name) !== 'true' && strtolower($name) !== 'false') {
                         $out[] = $name;
                         continue;
                     }
                     // dict boolean fallback
                     foreach ($item as $k => $v) {
-                        if ($v === true) $out[] = (string)$k;
+                        $kStr = (string)$k;
+                        if ($v === true && $kStr !== '' && strcasecmp($kStr, 'value') !== 0 && $kStr[0] !== ':') $out[] = $kStr;
                     }
                 }
             }
@@ -197,16 +264,30 @@ class RecipeListController extends Controller
         if (!$user) return response()->json(['items' => [], 'total' => 0, 'page' => $page, 'perPage' => $perPage]);
 
         $filters = [];
-        $result = $service->fetchAvailableRecipesForPatient($user, $filters, $perPage, $offset);
+        // Request a larger pool and slice locally to avoid upstream paging quirks
+        $poolSize = max($perPage * 10, 60);
+        $result = $service->fetchAvailableRecipesForPatient($user, $filters, $poolSize, 0);
         $recipeIds = $result['recipe_ids'] ?? [];
         $total = $result['total']['value'] ?? 0;
         if (empty($recipeIds)) {
             return response()->json(['items' => [], 'total' => 0, 'page' => $page, 'perPage' => $perPage]);
         }
-        $details = $service->fetchRecipeDetailsBatch($recipeIds);
+        // Deterministic pagination window regardless of upstream behavior
+        $start = max(0, ($page - 1) * $perPage);
+        $sliceIds = array_slice(array_values($recipeIds), $start, $perPage);
+        if (empty($sliceIds)) {
+            return response()->json(['items' => [], 'total' => (int)$total, 'page' => $page, 'perPage' => $perPage]);
+        }
+        $details = $service->fetchRecipeDetailsBatch($sliceIds);
+        // $details may be associative keyed by id; normalize to values array
+        if (is_array($details) && $this->isAssoc($details)) {
+            $details = array_values($details);
+        }
         $items = array_map(function ($r) {
             return $this->mapRecipeMinimal($r);
-        }, $details);
+        }, is_array($details) ? $details : []);
+        // Items already correspond to the sliced IDs; ensure numeric index
+        $items = array_values($items);
         return response()->json([
             'items' => array_values($items),
             'total' => (int)$total,

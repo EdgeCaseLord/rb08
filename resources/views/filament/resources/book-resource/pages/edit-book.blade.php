@@ -108,6 +108,9 @@
             bookTotal: 0,
             favTotal: 0,
             availTotal: 0,
+            // loading guards
+            isLoadingFav: false,
+            isLoadingAvail: false,
             init() {
                 this.updateAvailPerPage();
                 window.addEventListener('resize', () => this.updateAvailPerPage());
@@ -133,10 +136,10 @@
                 const arr = Array.isArray(list) ? list : [];
                 const isTrueString = (s) => typeof s === 'string' && (/^true$/i.test(s) || /^false$/i.test(s));
                 const isPlaceholder = (s) => typeof s === 'string' && s.trim().startsWith(':');
-                const pick = (obj) => obj.name || obj.label || obj.title || obj.value || '';
+                const pick = (obj) => obj.name || obj.label || obj.title || obj.category || '';
                 const out = [];
                 for (const item of arr) {
-                    if (typeof item === 'string') { if (!isTrueString(item) && !isPlaceholder(item)) out.push(item); continue; }
+                    if (typeof item === 'string') { const s=item.trim(); if (s && s.toLowerCase()!== 'value' && !isTrueString(s) && !isPlaceholder(s)) out.push(s); continue; }
                     if (item && typeof item === 'object') { const v = pick(item); if (v && !isTrueString(v) && !isPlaceholder(v)) out.push(v); }
                 }
                 return Array.from(new Set(out.filter(Boolean)));
@@ -146,25 +149,32 @@
                 const isTrueString = (s) => typeof s === 'string' && (/^true$/i.test(s) || /^false$/i.test(s));
                 const isPlaceholder = (s) => typeof s === 'string' && s.trim().startsWith(':');
                 const fromDictBooleans = (dict) => Object.keys(dict||{}).filter(k => dict[k] === true).join(', ');
-                const takeName = (obj) => obj.name || obj.label || obj.title || obj.value || '';
+                const takeName = (obj) => obj.name || obj.label || obj.title || obj.allergen || obj.diet || '';
                 let out = [];
                 if (arr.length === 1 && typeof arr[0] === 'object' && !Array.isArray(arr[0])) {
                     const dict = fromDictBooleans(arr[0]);
                     if (dict) out.push(...dict.split(', '));
                 }
                 for (const item of arr) {
-                    if (typeof item === 'string') { if (!isTrueString(item) && !isPlaceholder(item)) out.push(item); continue; }
+                    if (typeof item === 'string') { const s=item.trim(); if (s && s.toLowerCase()!=='value' && !isTrueString(s) && !isPlaceholder(s)) out.push(s); continue; }
                     if (typeof item === 'boolean') { continue; }
                     if (Array.isArray(item)) { continue; }
                     if (item && typeof item === 'object') {
+                        // Special case: { allergen: 'X', value: true }
+                        if ((Object.prototype.hasOwnProperty.call(item,'allergen') || Object.prototype.hasOwnProperty.call(item,'diet')) && Object.prototype.hasOwnProperty.call(item,'value')) {
+                            const k = (item.allergen || item.diet || '').toString().trim();
+                            if (k && item.value === true) { out.push(k); continue; }
+                        }
                         const named = takeName(item);
-                        if (named && !isTrueString(named) && !isPlaceholder(named)) { out.push(named); continue; }
+                        if (named && named.toLowerCase()!=='value' && !isTrueString(named) && !isPlaceholder(named)) { out.push(named); continue; }
                         const dict = fromDictBooleans(item);
                         if (dict) out.push(...dict.split(', '));
                     }
                 }
                 const uniq = Array.from(new Set(out.filter(Boolean)));
-                return uniq.length ? uniq.join(', ') : 'Keine';
+                if (!uniq.length) return 'Keine';
+                const MAX = 12;
+                return uniq.length > MAX ? `${uniq.slice(0, MAX).join(', ')} …` : uniq.join(', ');
             },
             bookCourseCounts: { starter: 0, main_course: 0, dessert: 0 },
             computeBookCourseCounts() {
@@ -199,26 +209,32 @@
                 }
             },
             async loadFavPage(page) {
-                page = Math.max(1, page);
-                const resp = await fetch(`/favorites.json?page=${page}&perPage=${this.perPage}&_=${Date.now()}`,
-                    { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, cache: 'no-store' });
-                if (resp.ok) {
-                    const data = await resp.json();
-                    this.favoriteRecipes = data.items || [];
-                    this.favTotal = data.total || 0;
-                    this.favPage = data.page || page;
-                }
+                if (this.isLoadingFav) return; this.isLoadingFav = true;
+                try {
+                    page = Math.max(1, page);
+                    const resp = await fetch(`/favorites.json?page=${page}&perPage=${this.perPage}&_=${Date.now()}`,
+                        { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, cache: 'no-store' });
+                    if (resp.ok) {
+                        const data = await resp.json();
+                        this.favoriteRecipes = [...(data.items || [])];
+                        this.favTotal = data.total || 0;
+                        this.favPage = data.page || page;
+                    }
+                } finally { this.isLoadingFav = false; }
             },
             async loadAvailPage(page) {
-                page = Math.max(1, page);
-                const resp = await fetch(`/available.json?page=${page}&perPage=${this.perPageAvail}&_=${Date.now()}`,
-                    { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, cache: 'no-store' });
-                if (resp.ok) {
-                    const data = await resp.json();
-                    this.availableRecipes = data.items || [];
-                    this.availTotal = data.total || 0;
-                    this.availPage = data.page || page;
-                }
+                if (this.isLoadingAvail) return; this.isLoadingAvail = true;
+                try {
+                    page = Math.max(1, page);
+                    const resp = await fetch(`/available.json?page=${page}&perPage=${this.perPageAvail}&_=${Date.now()}`,
+                        { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, cache: 'no-store' });
+                    if (resp.ok) {
+                        const data = await resp.json();
+                        this.availableRecipes = [...(data.items || [])];
+                        this.availTotal = data.total || 0;
+                        this.availPage = data.page || page;
+                    }
+                } finally { this.isLoadingAvail = false; }
             },
             updateAvailPerPage() {
                 const isSmall = window.matchMedia('(max-width: 640px)').matches;
@@ -243,7 +259,8 @@
                   .catch(() => {
                       this.bookRecipes = this.bookRecipes.filter(x => this.idOf(x)!==id);
                       this.availableRecipes.unshift(r);
-                  });
+                  })
+                  .finally(() => { this.loadAvailPage(this.availPage); });
             },
             removeFromBook(r) {
                 const id = this.idOf(r); if (!id || !this.bookId) return;
@@ -256,19 +273,35 @@
                   .catch(() => {
                       this.availableRecipes = this.availableRecipes.filter(x => this.idOf(x)!==id);
                       this.bookRecipes.unshift(r);
-                  });
+                  })
+                  .finally(() => { this.loadAvailPage(this.availPage); });
             },
             addToFavorites(r) {
                 const id = this.idOf(r); if (!id) return;
-                if (!this.favoriteRecipes.find(x => this.idOf(x)===id)) this.favoriteRecipes.unshift(r);
+                // optimistic UI: add to favorites list if viewing and not already present
+                if (!this.favoriteRecipes.find(x => this.idOf(x)===id)) {
+                    this.favoriteRecipes.unshift(r);
+                    // keep current page length <= perPage for a stable pager view
+                    if (this.favoriteRecipes.length > this.perPage) this.favoriteRecipes.pop();
+                }
                 this.availableRecipes = this.availableRecipes.filter(x => this.idOf(x)!==id);
-                this.bookRecipes = this.bookRecipes.filter(x => this.idOf(x)!==id);
-                fetch(`/favorites/${id}`, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': this.csrf() } }).catch(()=>{});
+                // IMPORTANT: do NOT remove from book when toggling favorite in book
+                this.favTotal = Math.max(0, (this.favTotal||0) + 1);
+                fetch(`/favorites/${id}`, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': this.csrf() } })
+                  .catch(()=>{})
+                  .finally(() => { this.loadFavPage(this.favPage); this.loadAvailPage(this.availPage); });
             },
             removeFromFavorites(r) {
                 const id = this.idOf(r); if (!id) return;
                 this.favoriteRecipes = this.favoriteRecipes.filter(x => this.idOf(x)!==id);
-                fetch(`/favorites/${id}`, { method: 'DELETE', headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': this.csrf() } }).catch(()=>{});
+                this.favTotal = Math.max(0, (this.favTotal||0) - 1);
+                // if current page becomes empty after removal, try to load previous page
+                if (this.favoriteRecipes.length === 0 && this.favPage > 1) {
+                    this.loadFavPage(this.favPage - 1);
+                }
+                fetch(`/favorites/${id}`, { method: 'DELETE', headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': this.csrf() } })
+                  .catch(()=>{})
+                  .finally(() => { if (this.favoriteRecipes.length) this.loadFavPage(this.favPage); this.loadAvailPage(this.availPage); });
             },
         }
     }
