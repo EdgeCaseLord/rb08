@@ -350,7 +350,21 @@ class RecipeListController extends Controller
         $user = Auth::user();
         if (!$user) return response()->json(['items' => [], 'total' => 0, 'page' => $page, 'perPage' => $perPage]);
 
-        $filters = [];
+        // Collect filters from query (legacy-compatible keys from the old component)
+        $filters = $request->only([
+            'filterTitle',
+            'filterIngredients',
+            'filterAllergen',
+            'filterCategory',
+            'filterCountry',
+            'filterCourse',
+            'filterDiets',
+            'filterDifficulty',
+            'filterMaxTime',
+            'filterSubstances',
+            'offset',
+            'randomize_offset',
+        ]);
         // Request a larger pool and slice locally to avoid upstream paging quirks
         $poolSize = max($perPage * 10, 60);
         $result = $service->fetchAvailableRecipesForPatient($user, $filters, $poolSize, 0);
