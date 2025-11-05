@@ -106,6 +106,7 @@
     "Ernährungsweise": "Ernährungsweise",
     "No Recipes Found": "Keine Rezepte gefunden",
     "No recipes were found for :name due to their allergen combination. No book was created.": "Für :name wurden keine Rezepte aufgrund der Allergen-Kombination gefunden. Kein Buch wurde erstellt.",
+    "No recipes were found for :name with the current filter settings. Please adjust your filters and try again.": "Für :name wurden keine Rezepte mit den aktuellen Filtereinstellungen gefunden. Bitte passen Sie Ihre Filter an und versuchen Sie es erneut.",
     "Recipe Book Updated": "Rezeptbuch aktualisiert",
     "The recipe book has been updated with new recipes based on the current filter set.": "Das Rezeptbuch wurde mit neuen Rezepten basierend auf dem aktuellen Filter-Set aktualisiert.",
     "Settings": "Einstellungen",

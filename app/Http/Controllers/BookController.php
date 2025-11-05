@@ -134,4 +134,12 @@ class BookController extends Controller
         $book->update($data);
         return redirect()->back()->with('success', 'Buch aktualisiert.');
     }
+
+    public function status(Book $book)
+    {
+        return response()->json([
+            'status' => $book->status,
+            'recipe_count' => $book->recipes()->count(),
+        ]);
+    }
 }

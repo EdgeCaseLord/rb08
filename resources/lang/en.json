@@ -100,6 +100,7 @@
     "Email bei Analyseimport": "Email on Analysis Import",
     "No Recipes Found": "No Recipes Found",
     "No recipes were found for :name due to their allergen combination. No book was created.": "No recipes were found for :name due to their allergen combination. No book was created.",
+    "No recipes were found for :name with the current filter settings. Please adjust your filters and try again.": "No recipes were found for :name with the current filter settings. Please adjust your filters and try again.",
     "Recipe Book Updated": "Recipe Book Updated",
     "The recipe book has been updated with new recipes based on the current filter set.": "The recipe book has been updated with new recipes based on the current filter set.",
     "Email bei Buchversand": "Email on Book Send",
