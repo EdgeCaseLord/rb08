@@ -6,14 +6,36 @@
     }
     
     // Check if each filter section has active values to auto-expand
-    $hasAllergen = !empty(array_filter($filterSet['filterAllergen'] ?? []));
-    $hasCategory = !empty(array_filter($filterSet['filterCategory'] ?? []));
+    // Handle both array format ['dessert'] and object format {dessert: true}
+    $checkActive = function($val) {
+        if (empty($val)) return false;
+        if (is_array($val)) {
+            // If indexed array, check if non-empty
+            if (array_values($val) === $val) return count($val) > 0;
+            // If associative array, check if any value is truthy
+            return !empty(array_filter($val));
+        }
+        return false;
+    };
+    
+    $hasAllergen = $checkActive($filterSet['filterAllergen'] ?? []);
+    $hasCategory = $checkActive($filterSet['filterCategory'] ?? []);
     $hasCountry = !empty($filterSet['filterCountry'] ?? []);
-    $hasCourse = !empty(array_filter($filterSet['filterCourse'] ?? []));
-    $hasDiets = !empty(array_filter($filterSet['filterDiets'] ?? []));
-    $hasDifficulty = !empty(array_filter($filterSet['filterDifficulty'] ?? []));
-    $hasMaxTime = !empty(array_filter($filterSet['filterMaxTime'] ?? []));
-    $hasSubstances = !empty($filterSet['filterSubstances'] ?? []);
+    $hasCourse = $checkActive($filterSet['filterCourse'] ?? []);
+    $hasDiets = $checkActive($filterSet['filterDiets'] ?? []);
+    $hasDifficulty = $checkActive($filterSet['filterDifficulty'] ?? []);
+    $hasMaxTime = $checkActive($filterSet['filterMaxTime'] ?? []);
+    
+    // Check if any substance filter is actually enabled
+    $hasSubstances = false;
+    if (!empty($filterSet['filterSubstances']) && is_array($filterSet['filterSubstances'])) {
+        foreach ($filterSet['filterSubstances'] as $substance) {
+            if (is_array($substance) && !empty($substance['enabled'])) {
+                $hasSubstances = true;
+                break;
+            }
+        }
+    }
 @endphp
 <div class="mt-4" x-data="{ 
     oA: {{ $hasAllergen ? 'true' : 'false' }}, 
