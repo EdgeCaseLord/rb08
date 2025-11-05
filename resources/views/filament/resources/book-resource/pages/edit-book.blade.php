@@ -260,22 +260,29 @@
                 return 'Keine';
             },
             bookCourseCounts: { starter: 0, main_course: 0, dessert: 0 },
-            computeBookCourseCounts() {
-                const counts = { starter: 0, main_course: 0, dessert: 0 };
-                (this.bookRecipes||[]).forEach(r => {
-                    const cats = Array.isArray(r.category) ? r.category : [];
-                    const map = (name) => {
-                        const n = (typeof name === 'string') ? name.toLowerCase() : (name?.name||name?.label||'').toLowerCase();
-                        if (n.includes('vorspeise')) return 'starter';
-                        if (n.includes('dessert')) return 'dessert';
-                        if (n.includes('haupt')) return 'main_course';
-                        if (n.includes('fisch')) return 'main_course';
-                        if (n.includes('fleisch')) return 'main_course';
-                        return null;
-                    };
-                    for (const c of cats) { const key = map(c); if (key) { counts[key]++; break; } }
-                });
-                this.bookCourseCounts = counts;
+            async computeBookCourseCounts() {
+                // Fetch ALL recipes to count by course, not just current page
+                if (!this.bookId) {
+                    this.bookCourseCounts = { starter: 0, main_course: 0, dessert: 0 };
+                    return;
+                }
+                try {
+                    const resp = await fetch(`/books/${this.bookId}/recipes.json?page=1&perPage=999&_=${Date.now()}`,
+                        { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, cache: 'no-store' });
+                    if (resp.ok) {
+                        const data = await resp.json();
+                        const counts = { starter: 0, main_course: 0, dessert: 0 };
+                        (data.items||[]).forEach(r => {
+                            const course = r.course;
+                            if (course && counts.hasOwnProperty(course)) {
+                                counts[course]++;
+                            }
+                        });
+                        this.bookCourseCounts = counts;
+                    }
+                } catch (e) {
+                    console.error('Failed to compute course counts:', e);
+                }
             },
             // data loaders (JSON, minimal fields)
             async loadBookPage(page) {
