@@ -98,6 +98,7 @@
             availableRecipes: initial.availableRecipes || [],
             bookId: initial.bookId,
             recipeLimits: initial.recipeLimits || { starter: 5, main_course: 5, dessert: 5 },
+            openFilters: false,
             // filters (legacy-compatible keys)
             filters: {
                 filterTitle: '',
@@ -295,6 +296,159 @@
                     this.perPageAvail = newPer;
                     this.loadAvailPage(this.availPage);
                 }
+            },
+            // filter helper functions
+            activeFilterTags() {
+                const f = this.filters || {};
+                const tags = [];
+                const push = (k, sub, label) => tags.push({k, sub, label});
+                if (f.filterTitle) push('filterTitle', null, 'Titel: ' + f.filterTitle);
+                if (f.filterIngredients) push('filterIngredients', null, 'Zutaten: ' + f.filterIngredients);
+                const countryLabels = { 'ar':'Argentinien','au':'Australien','be':'Belgien','ba':'Bosnien-Herzegowina','br':'Brasilien','bg':'Bulgarien','cl':'Chile','cn':'China','de':'Deutschland','dk':'Dänemark','fi':'Finnland','fr':'Frankreich','gr':'Griechenland','gb':'Großbritannien','in':'Indien','id':'Indonesien','ie':'Irland','il':'Israel','it':'Italien','jp':'Japan','ca':'Kanada','hr':'Kroatien','lv':'Lettland','lt':'Litauen','ma':'Marokko','mx':'Mexiko','mn':'Mongolei','nz':'Neuseeland','nl':'Niederlande','no':'Norwegen','pe':'Peru','ph':'Philippinen','pt':'Portugal','ro':'Rumänien','ru':'Russland','se':'Schweden','ch':'Schweiz','rs':'Serbien','sc':'Seychellen','sg':'Singapur','sk':'Slowakei','si':'Slowenien','es':'Spanien','th':'Thailand','cz':'Tschechische Republik','tn':'Tunesien','tr':'Türkei','us':'USA','ua':'Ukraine','hu':'Ungarn','vn':'Vietnam','cy':'Zypern','at':'Österreich' };
+                if (Array.isArray(f.filterCountry)) {
+                    f.filterCountry.forEach(c => { if (c) push('filterCountry', c, 'Land: ' + (countryLabels[c] || c)); });
+                }
+                const expandDict = (obj, k, map, prefix) => {
+                    if (!obj || typeof obj !== 'object') return;
+                    Object.keys(obj).forEach(key => { if (obj[key]) push(k, key, prefix + ': ' + (map[key] || key)); });
+                };
+                expandDict(f.filterAllergen, 'filterAllergen', { 'peanuts':'Erdnüsse','fish':'Fisch','gluten':'Glutenhaltiges Getreide','egg':'Hühnerei','crustaceans':'Krebstiere','lupin':'Lupinen','milk':'Milch','nuts':'Schalenfrüchte','sulphure':'Schwefeldioxid und Sulfit','celery':'Sellerie','mustard':'Senf','sesame':'Sesamsamen','soybeans':'Soja','molluscs':'Weichtiere' }, 'Allergen');
+                expandDict(f.filterCategory, 'filterCategory', { 'side_dish':'Beilage','fingerfood':'Fingerfood','fish':'Fisch & Meeresfrüchte','meat':'Fleisch','vegetables':'Gemüse','drink':'Getränk','cake':'Kuchen','salad':'Salat','soup':'Suppe' }, 'Kategorie');
+                expandDict(f.filterCourse, 'filterCourse', { 'starter':'Vorspeise','main_course':'Hauptgericht','dessert':'Dessert' }, 'Gang');
+                expandDict(f.filterDiets, 'filterDiets', { 'egg-free':'Eifrei','gluten-free':'Glutenfrei','laktose-free':'Laktosefrei','fish-free':'Ohne Fisch','meat-free':'Ohne Fleisch','soy-free':'Sojafrei','vegan':'Vegan','vegetarian':'Vegetarisch','wheat-free':'Weizenfrei','alcohol-free':'Ohne Alkohol','histamine-low':'Histaminarm' }, 'Ernährung');
+                expandDict(f.filterDifficulty, 'filterDifficulty', { 'easy':'einfach','medium':'mittel','difficult':'schwierig' }, 'Schwierigkeit');
+                expandDict(f.filterMaxTime, 'filterMaxTime', { 'lte_30':'Bis 30 Minuten','lte_60':'Bis 60 Minuten','lte_120':'Bis 2 Stunden','gte_120':'Mehr als 2 Stunden' }, 'Zeit');
+                const subsLabels = { 'fructose':'Fruktose', 'vitamin B1(thiamin)':'Vitamin B1 (thiamin)', 'carbohydrates':'Kohlenhydrate', 'protein':'Protein' };
+                if (f.filterSubstances && typeof f.filterSubstances==='object') {
+                    Object.keys(f.filterSubstances).forEach(sk => {
+                        const s = f.filterSubstances[sk];
+                        if (s && (s.enabled || (s.op && s.op!==''))) push('filterSubstances', sk, 'Substanzen: ' + (subsLabels[sk] || sk));
+                    });
+                }
+                return tags;
+            },
+            hasActiveFilters() {
+                const f = this.filters || {};
+                if (f.filterTitle || f.filterIngredients) return true;
+                if (Array.isArray(f.filterCountry) && f.filterCountry.length) return true;
+                const anyTrue = (obj) => obj && typeof obj === 'object' && Object.keys(obj).some(k => !!obj[k]);
+                if (anyTrue(f.filterAllergen) || anyTrue(f.filterCategory) || anyTrue(f.filterCourse) || anyTrue(f.filterDiets) || anyTrue(f.filterDifficulty) || anyTrue(f.filterMaxTime)) return true;
+                if (f.filterSubstances && Object.keys(f.filterSubstances).length) return true;
+                return false;
+            },
+            removeTag(tag) {
+                if (!tag || !tag.k) return;
+                const k = tag.k; const sub = tag.sub;
+                const form = this.$refs ? this.$refs.filterForm : null;
+                if (k === 'filterTitle') {
+                    this.filters.filterTitle = '';
+                    const el = form && form.querySelector('[name=filterTitle]'); if (el) el.value = '';
+                    return;
+                }
+                if (k === 'filterIngredients') {
+                    this.filters.filterIngredients = '';
+                    const el = form && form.querySelector('[name=filterIngredients]'); if (el) el.value = '';
+                    return;
+                }
+                if (k === 'filterCountry') {
+                    if (Array.isArray(this.filters.filterCountry)) {
+                        this.filters.filterCountry = this.filters.filterCountry.filter(v => v !== sub);
+                    }
+                    if (form) {
+                        const sel = form.querySelector('select[name="filterCountry[]"]');
+                        if (sel) { for (const o of sel.options) { if (o.value === sub) o.selected = false; } }
+                    }
+                    return;
+                }
+                if (k === 'filterSubstances') {
+                    if (this.filters.filterSubstances && this.filters.filterSubstances[sub]) {
+                        delete this.filters.filterSubstances[sub];
+                    }
+                    if (form) {
+                        const pref = `filterSubstances[${sub}]`;
+                        const nodes = form.querySelectorAll(`[name^="${pref}"]`);
+                        nodes && nodes.forEach(i => { if (i.type === 'checkbox') i.checked = false; else i.value = ''; });
+                        const cb = form.querySelector(`input[name="filterSubstances[${sub}]"]`); if (cb) cb.checked = false;
+                    }
+                    return;
+                }
+                if (this.filters[k] && typeof this.filters[k] === 'object') {
+                    if (Object.prototype.hasOwnProperty.call(this.filters[k], sub)) {
+                        this.filters[k][sub] = false;
+                    }
+                    if (form) {
+                        const cb = form.querySelector(`input[name="${k}[${sub}]"]`);
+                        if (cb) cb.checked = false;
+                    }
+                }
+            },
+            clearAllFilters() {
+                this.filters = { filterTitle:'', filterIngredients:'', filterAllergen:{}, filterCategory:{}, filterCountry:[], filterCourse:{}, filterDiets:{}, filterDifficulty:{}, filterMaxTime:{}, filterSubstances:{} };
+                const form = this.$refs ? this.$refs.filterForm : null;
+                if (form) {
+                    form.querySelectorAll('input[type=text]').forEach(i => i.value = '');
+                    form.querySelectorAll('input[type=checkbox]').forEach(i => i.checked = false);
+                    form.querySelectorAll('input[type=number]').forEach(i => i.value = '');
+                    form.querySelectorAll('select').forEach(s => { if (s.multiple) { for (const o of s.options) o.selected = false; } else { s.selectedIndex = 0; } });
+                }
+            },
+            extractFiltersFromForm(form) {
+                const fd = new FormData(form);
+                const getBoolDict = (prefix) => {
+                    const out = {};
+                    for (const [k, v] of fd.entries()) {
+                        if (k.startsWith(prefix + '[')) {
+                            const key = k.substring(prefix.length + 1, k.length - 1);
+                            out[key] = true;
+                        }
+                    }
+                    return out;
+                };
+                const getArray = (name) => fd.getAll(name) || [];
+                this.filters.filterTitle = (fd.get('filterTitle') || '').toString().trim();
+                this.filters.filterIngredients = (fd.get('filterIngredients') || '').toString().trim();
+                this.filters.filterAllergen = getBoolDict('filterAllergen');
+                this.filters.filterCategory = getBoolDict('filterCategory');
+                this.filters.filterCourse = getBoolDict('filterCourse');
+                this.filters.filterDiets = getBoolDict('filterDiets');
+                this.filters.filterDifficulty = getBoolDict('filterDifficulty');
+                this.filters.filterMaxTime = getBoolDict('filterMaxTime');
+                this.filters.filterCountry = getArray('filterCountry[]');
+                const subs = {};
+                for (const [k, v] of fd.entries()) {
+                    if (k.startsWith('filterSubstances[')) {
+                        const inner = k.slice('filterSubstances['.length, -1);
+                        const parts = inner.split('][');
+                        const key = parts[0]; const subKey = parts[1] || null;
+                        if (!subs[key]) subs[key] = { enabled: false, op: '', val1: '', val2: '' };
+                        if (subKey === null) { subs[key].enabled = true; }
+                        else if (subKey === 'op') { subs[key].op = v; }
+                        else if (subKey === 'val1') { subs[key].val1 = v; }
+                        else if (subKey === 'val2') { subs[key].val2 = v; }
+                    }
+                }
+                this.filters.filterSubstances = subs;
+                ['filterAllergen','filterCategory','filterCourse','filterDiets','filterDifficulty','filterMaxTime'].forEach(k => {
+                    if (!this.filters[k]) this.filters[k] = {};
+                });
+            },
+            async saveFilters() {
+                if (!this.bookId || !this.patientId) return;
+                const body = { 
+                    filters: this.filters || {},
+                    availTotal: this.availTotal || 0
+                };
+                await fetch(`/admin/patients/${encodeURIComponent(this.patientId)}/filters`, {
+                    method: 'POST', headers: { 'Content-Type':'application/json', 'X-CSRF-TOKEN': this.csrf() }, body: JSON.stringify(body)
+                }).catch(()=>{});
+            },
+            async recreateBook() {
+                if (!this.bookId) return;
+                const body = { filters: this.filters || {}, updateBookWithFilters: true };
+                if (!this.patientId) return;
+                await fetch(`/admin/patients/${encodeURIComponent(this.patientId)}/filters`, {
+                    method: 'POST', headers: { 'Content-Type':'application/json', 'X-CSRF-TOKEN': this.csrf() }, body: JSON.stringify(body)
+                }).then(()=>{ window.dispatchEvent(new Event('startBookPolling')); }).catch(()=>{});
             },
             // ui actions
             openRecipe(r) { const id = this.idOf(r); if (!id) return; window.open(`/recipes/${id}`, '_blank'); },

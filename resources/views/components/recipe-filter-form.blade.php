@@ -5,7 +5,7 @@
         $filterSet = $filterSet($contextRecord);
     }
 @endphp
-<div class="mt-4">
+<div class="mt-4" x-data="{ oA:false, oC:false, oK:false, oG:false, oD:false, oS:false, oT:false, oSub:false }">
     <div class="mb-4 grid grid-cols-1 md:grid-cols-5 gap-2 items-end">
         <div class="col-span-full grid grid-cols-2 gap-4">
             <input type="text" placeholder="{{ __('Titel') }}" class="filament-input w-full rounded-lg" name="filterTitle" value="{{ old('filterTitle', $filterSet['filterTitle'] ?? '') }}">
@@ -26,22 +26,13 @@
                 <input type="text" placeholder="{{ __('Zutaten (Bsp.: paprika nudeln -aprikosen)') }}" class="filament-input w-full rounded-lg" name="filterIngredients" value="{{ old('filterIngredients', $filterSet['filterIngredients'] ?? '') }}">
             </div>
         </div>
-        <div class="col-span-full grid grid-cols-2 gap-4">
-            <div class="flex items-center gap-2">
-                <label for="offset" class="mb-0">{{ __('Startwert') }}</label>
-                <input type="number" id="offset" min="0" class="filament-input w-24 rounded-lg" name="filterOffset" value="{{ old('filterOffset', $filterSet['filterOffset'] ?? 0) }}">
-            </div>
-            <div class="flex items-center gap-2">
-                <input type="checkbox" id="randomizeOffset" name="filterRandomizeOffset" @if(old('filterRandomizeOffset', $filterSet['filterRandomizeOffset'] ?? false)) checked @endif>
-                <label for="randomizeOffset" class="mb-0">{{ __('Startwert zufällig wählen') }}</label>
-            </div>
-        </div>
         <div class="col-span-full">
             <div class="mb-2">
-                <button type="button" class="w-full flex justify-between items-center py-2">
+                <button type="button" class="w-full flex justify-between items-center py-2" @click="oA=!oA">
                     <span>{{ __('Allergene') }}</span>
+                    <svg :class="{'rotate-180': oA}" class="h-4 w-4 transition-transform" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
                 </button>
-                <div class="flex flex-wrap gap-2 mt-2">
+                <div class="flex flex-wrap gap-2 mt-2" x-show="oA" x-transition>
                     @foreach([
                         'peanuts' => __('Erdnüsse'),
                         'fish' => __('Fisch'),
@@ -59,17 +50,18 @@
                         'molluscs' => __('Weichtiere'),
                     ] as $key => $label)
                         <label class="flex items-center space-x-2">
-                            <input type="checkbox" name="filterAllergen[]" value="{{ $key }}" class="form-checkbox" @if(collect(old('filterAllergen', $filterSet['filterAllergen'] ?? []))->contains($key)) checked @endif>
+                            <input type="checkbox" name="filterAllergen[{{ $key }}]" value="1" class="form-checkbox" @if(old('filterAllergen.'.$key, ($filterSet['filterAllergen'][$key] ?? false))) checked @endif>
                             <span>{{ $label }}</span>
                         </label>
                     @endforeach
                 </div>
             </div>
             <div class="mb-2">
-                <button type="button" class="w-full flex justify-between items-center py-2">
+                <button type="button" class="w-full flex justify-between items-center py-2" @click="oK=!oK">
                     <span>{{ __('Kategorie') }}</span>
+                    <svg :class="{'rotate-180': oK}" class="h-4 w-4 transition-transform" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
                 </button>
-                <div class="flex flex-wrap gap-2 mt-2">
+                <div class="flex flex-wrap gap-2 mt-2" x-show="oK" x-transition>
                     @foreach([
                         'side_dish' => __('Beilage'),
                         'fingerfood' => __('Fingerfood'),
@@ -82,17 +74,18 @@
                         'soup' => __('Suppe'),
                     ] as $key => $label)
                         <label class="flex items-center space-x-2">
-                            <input type="checkbox" name="filterCategory[]" value="{{ $key }}" class="form-checkbox" @if(collect(old('filterCategory', $filterSet['filterCategory'] ?? []))->contains($key)) checked @endif>
+                            <input type="checkbox" name="filterCategory[{{ $key }}]" value="1" class="form-checkbox" @if(old('filterCategory.'.$key, ($filterSet['filterCategory'][$key] ?? false))) checked @endif>
                             <span>{{ $label }}</span>
                         </label>
                     @endforeach
                 </div>
             </div>
             <div class="mb-2">
-                <button type="button" class="w-full flex justify-between items-center py-2">
+                <button type="button" class="w-full flex justify-between items-center py-2" @click="oC=!oC">
                     <span>{{ __('Länderküche') }}</span>
+                    <svg :class="{'rotate-180': oC}" class="h-4 w-4 transition-transform" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
                 </button>
-                <div class="mt-2">
+                <div class="mt-2" x-show="oC" x-transition>
                     <div class="relative">
                         <select name="filterCountry[]" multiple class="filament-input w-full rounded-lg appearance-none pr-8 bg-none">
                             @foreach([
@@ -105,27 +98,29 @@
                 </div>
             </div>
             <div class="mb-2">
-                <button type="button" class="w-full flex justify-between items-center py-2">
+                <button type="button" class="w-full flex justify-between items-center py-2" @click="oG=!oG">
                     <span>{{ __('Gang') }}</span>
+                    <svg :class="{'rotate-180': oG}" class="h-4 w-4 transition-transform" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
                 </button>
-                <div class="flex flex-wrap gap-2 mt-2">
+                <div class="flex flex-wrap gap-2 mt-2" x-show="oG" x-transition>
                     @foreach([
                         'starter' => __('Vorspeise'),
                         'main_course' => __('Hauptgericht'),
                         'dessert' => __('Dessert'),
                     ] as $key => $label)
                         <label class="flex items-center space-x-2">
-                            <input type="checkbox" name="filterCourse[]" value="{{ $key }}" class="form-checkbox" @if(collect(old('filterCourse', $filterSet['filterCourse'] ?? []))->contains($key)) checked @endif>
+                            <input type="checkbox" name="filterCourse[{{ $key }}]" value="1" class="form-checkbox" @if(old('filterCourse.'.$key, ($filterSet['filterCourse'][$key] ?? false))) checked @endif>
                             <span>{{ $label }}</span>
                         </label>
                     @endforeach
                 </div>
             </div>
             <div class="mb-2">
-                <button type="button" class="w-full flex justify-between items-center py-2">
+                <button type="button" class="w-full flex justify-between items-center py-2" @click="oD=!oD">
                     <span>{{ __('Ernährungsweise') }}</span>
+                    <svg :class="{'rotate-180': oD}" class="h-4 w-4 transition-transform" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
                 </button>
-                <div class="flex flex-wrap gap-2 mt-2">
+                <div class="flex flex-wrap gap-2 mt-2" x-show="oD" x-transition>
                     @foreach([
                         'egg-free' => __('Eifrei'),
                         'gluten-free' => __('Glutenfrei'),
@@ -141,34 +136,36 @@
                         'histamine-low' => __('Histaminarm'),
                     ] as $key => $label)
                         <label class="flex items-center space-x-2">
-                            <input type="checkbox" name="filterDiets[]" value="{{ $key }}" class="form-checkbox" @if(collect(old('filterDiets', $filterSet['filterDiets'] ?? []))->contains($key)) checked @endif>
+                            <input type="checkbox" name="filterDiets[{{ $key }}]" value="1" class="form-checkbox" @if(old('filterDiets.'.$key, ($filterSet['filterDiets'][$key] ?? false))) checked @endif>
                             <span>{{ $label }}</span>
                         </label>
                     @endforeach
                 </div>
             </div>
             <div class="mb-2">
-                <button type="button" class="w-full flex justify-between items-center py-2">
+                <button type="button" class="w-full flex justify-between items-center py-2" @click="oS=!oS">
                     <span>{{ __('Schwierigkeitsgrad') }}</span>
+                    <svg :class="{'rotate-180': oS}" class="h-4 w-4 transition-transform" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
                 </button>
-                <div class="flex flex-wrap gap-2 mt-2">
+                <div class="flex flex-wrap gap-2 mt-2" x-show="oS" x-transition>
                     @foreach([
                         'easy' => __('einfach'),
                         'medium' => __('mittel'),
                         'difficult' => __('schwierig'),
                     ] as $key => $label)
                         <label class="flex items-center space-x-2">
-                            <input type="checkbox" name="filterDifficulty[]" value="{{ $key }}" class="form-checkbox" @if(collect(old('filterDifficulty', $filterSet['filterDifficulty'] ?? []))->contains($key)) checked @endif>
+                            <input type="checkbox" name="filterDifficulty[{{ $key }}]" value="1" class="form-checkbox" @if(old('filterDifficulty.'.$key, ($filterSet['filterDifficulty'][$key] ?? false))) checked @endif>
                             <span>{{ $label }}</span>
                         </label>
                     @endforeach
                 </div>
             </div>
             <div class="mb-2">
-                <button type="button" class="w-full flex justify-between items-center py-2">
+                <button type="button" class="w-full flex justify-between items-center py-2" @click="oT=!oT">
                     <span>{{ __('Maximale Gesamtzeit') }}</span>
+                    <svg :class="{'rotate-180': oT}" class="h-4 w-4 transition-transform" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
                 </button>
-                <div class="flex flex-wrap gap-2 mt-2">
+                <div class="flex flex-wrap gap-2 mt-2" x-show="oT" x-transition>
                     @foreach([
                         'lte_30' => __('Bis 30 Minuten'),
                         'lte_60' => __('Bis 60 Minuten'),
@@ -176,36 +173,52 @@
                         'gte_120' => __('Mehr als 2 Stunden'),
                     ] as $key => $label)
                         <label class="flex items-center space-x-2">
-                            <input type="checkbox" name="filterMaxTime[]" value="{{ $key }}" class="form-checkbox" @if(collect(old('filterMaxTime', $filterSet['filterMaxTime'] ?? []))->contains($key)) checked @endif>
+                            <input type="checkbox" name="filterMaxTime[{{ $key }}]" value="1" class="form-checkbox" @if(old('filterMaxTime.'.$key, ($filterSet['filterMaxTime'][$key] ?? false))) checked @endif>
                             <span>{{ $label }}</span>
                         </label>
                     @endforeach
                 </div>
             </div>
             <div class="mb-2">
-                <button type="button" class="w-full flex justify-between items-center py-2">
+                <button type="button" class="w-full flex justify-between items-center py-2" @click="oSub=!oSub">
                     <span>{{ __('Substanzen') }}</span>
+                    <svg :class="{'rotate-180': oSub}" class="h-4 w-4 transition-transform" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
                 </button>
-                <div class="flex flex-col gap-2 mt-2">
+                <div class="mt-2 space-y-2" x-show="oSub" x-transition>
                     @foreach([
                         'fructose' => ['label' => __('Fruktose'), 'unit' => 'mg/100g'],
-                        'vitamin_B1(thiamin)' => ['label' => __('Vitamin B1 (thiamin)'), 'unit' => 'mg/100g'],
+                        'vitamin B1(thiamin)' => ['label' => __('Vitamin B1 (thiamin)'), 'unit' => 'mg/100g'],
                         'carbohydrates' => ['label' => __('Kohlenhydrate'), 'unit' => 'g/100g'],
                         'protein' => ['label' => __('Protein'), 'unit' => 'g/100g'],
-                    ] as $key => $config)
-                        <div class="flex items-center space-x-2">
-                            <input type="checkbox" name="filterSubstances[{{ $key }}][enabled]" value="1" class="form-checkbox" @if(old('filterSubstances.' . $key . '.enabled', $filterSet['filterSubstances'][$key]['enabled'] ?? false)) checked @endif>
-                            <span>{{ $config['label'] }}</span>
-                            <select name="filterSubstances[{{ $key }}][op]" class="form-select w-auto">
-                                <option value="">-</option>
-                                <option value="lt" @if(old('filterSubstances.' . $key . '.op', $filterSet['filterSubstances'][$key]['op'] ?? '') == 'lt') selected @endif>&lt; ({{ __('weniger als') }})</option>
-                                <option value="lte" @if(old('filterSubstances.' . $key . '.op', $filterSet['filterSubstances'][$key]['op'] ?? '') == 'lte') selected @endif>&le; ({{ __('weniger/gleich') }})</option>
-                                <option value="gt" @if(old('filterSubstances.' . $key . '.op', $filterSet['filterSubstances'][$key]['op'] ?? '') == 'gt') selected @endif>&gt; ({{ __('mehr als') }})</option>
-                                <option value="gte" @if(old('filterSubstances.' . $key . '.op', $filterSet['filterSubstances'][$key]['op'] ?? '') == 'gte') selected @endif>&ge; ({{ __('mehr/gleich') }})</option>
-                            </select>
-                            <input type="number" name="filterSubstances[{{ $key }}][val1]" class="w-28 text-lg filament-input rounded-lg" value="{{ old('filterSubstances.' . $key . '.val1', $filterSet['filterSubstances'][$key]['val1'] ?? 0) }}" placeholder="0">
-                            <span class="text-sm text-gray-600">{{ $config['unit'] }}</span>
-                            <input type="number" name="filterSubstances[{{ $key }}][val2]" class="w-28 text-lg filament-input rounded-lg" placeholder="Max" value="{{ old('filterSubstances.' . $key . '.val2', $filterSet['filterSubstances'][$key]['val2'] ?? '') }}">
+                    ] as $key => $meta)
+                        @php
+                            $opVal = old('filterSubstances.' . $key . '.op', $filterSet['filterSubstances'][$key]['op'] ?? '');
+                            $enabled = old('filterSubstances.' . $key, $filterSet['filterSubstances'][$key]['enabled'] ?? false) ? true : false;
+                        @endphp
+                        <div class="grid grid-cols-12 items-center gap-2" x-data="{ op: '{{ $opVal }}' }">
+                            <div class="col-span-3 flex items-center gap-2">
+                                <input type="checkbox" name="filterSubstances[{{ $key }}]" @if($enabled) checked @endif>
+                                <span>{{ $meta['label'] }}</span>
+                            </div>
+                            <div class="col-span-3">
+                                <select name="filterSubstances[{{ $key }}][op]" x-model="op" class="w-full filament-input rounded-lg">
+                                    <option value="">{{ __('Wählen Sie eine Option') }}</option>
+                                    <option value="lt">&lt;</option>
+                                    <option value="lte">&le;</option>
+                                    <option value="gt">&gt;</option>
+                                    <option value="gte">&ge;</option>
+                                    <option value="bw">{{ __('zwischen') }}</option>
+                                    <option value="bwe">{{ __('zwischen (exkl.)') }}</option>
+                                </select>
+                            </div>
+                            <div class="col-span-3 flex items-center gap-2">
+                                <input type="number" step="any" class="filament-input w-full rounded-lg" name="filterSubstances[{{ $key }}][val1]" value="{{ old('filterSubstances.' . $key . '.val1', $filterSet['filterSubstances'][$key]['val1'] ?? '') }}" placeholder="0">
+                                <span class="text-xs text-gray-500">{{ $meta['unit'] }}</span>
+                            </div>
+                            <div class="col-span-3 flex items-center gap-2" x-show="op==='bw' || op==='bwe'" x-transition>
+                                <input type="number" step="any" class="filament-input w-full rounded-lg" name="filterSubstances[{{ $key }}][val2]" value="{{ old('filterSubstances.' . $key . '.val2', $filterSet['filterSubstances'][$key]['val2'] ?? '') }}" placeholder="Max">
+                                <span class="text-xs text-gray-500">{{ $meta['unit'] }}</span>
+                            </div>
                         </div>
                     @endforeach
                 </div>

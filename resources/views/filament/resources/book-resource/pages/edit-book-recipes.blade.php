@@ -156,57 +156,37 @@
         <x-slot name="heading">
             Verfügbare Rezepte (<span x-text="availableRecipes.length"></span>)
         </x-slot>
-        <div class="mb-3 border border-gray-200 dark:border-gray-700 rounded-lg">
-            <div x-data="{ openFilters: false }" class="bg-gray-50 dark:bg-gray-900 rounded-lg">
+        <div class="mb-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+            <div class="bg-gray-50 dark:bg-gray-900 rounded-lg">
                 <button type="button" class="w-full flex items-center justify-between px-3 py-2 text-sm" @click="openFilters = !openFilters">
                     <span class="font-medium">Filter</span>
                     <svg :class="{'rotate-180': openFilters}" class="h-4 w-4 transition-transform" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
                 </button>
                 <div x-show="openFilters" x-transition class="px-3 pb-3">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <input type="text" class="filament-input rounded-lg" placeholder="Titel" x-model.debounce.400ms="filters.filterTitle">
-                        <input type="text" class="filament-input rounded-lg" placeholder="Zutaten (Bsp.: paprika, nudeln -aprikosen)" x-model.debounce.500ms="filters.filterIngredients">
+                    <!-- Active filter tags -->
+                    <div class="py-2 flex flex-wrap gap-2">
+                        <template x-for="tag in activeFilterTags()" :key="tag.k + '-' + (tag.sub||'')">
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-primary-100 text-primary-800 text-xs">
+                                <span x-text="tag.label"></span>
+                                <button type="button" class="ml-1" @click="removeTag(tag)">×</button>
+                            </span>
+                        </template>
+                        <template x-if="hasActiveFilters()">
+                            <button type="button" class="text-xs px-2 py-0.5 rounded bg-gray-200 hover:bg-gray-300" @click="clearAllFilters()">Alle Filter entfernen</button>
+                        </template>
                     </div>
-                    <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div>
-                            <div class="text-xs font-semibold mb-1">Allergene</div>
-                            <div class="flex flex-wrap gap-2">
-                                <label class="flex items-center gap-1 text-xs"><input type="checkbox" x-model="filters.filterAllergen.peanuts"> <span>Erdnüsse</span></label>
-                                <label class="flex items-center gap-1 text-xs"><input type="checkbox" x-model="filters.filterAllergen.fish"> <span>Fisch</span></label>
-                                <label class="flex items-center gap-1 text-xs"><input type="checkbox" x-model="filters.filterAllergen.gluten"> <span>Glutenhaltiges Getreide</span></label>
-                                <label class="flex items-center gap-1 text-xs"><input type="checkbox" x-model="filters.filterAllergen.egg"> <span>Hühnerei</span></label>
-                                <label class="flex items-center gap-1 text-xs"><input type="checkbox" x-model="filters.filterAllergen.crustaceans"> <span>Krebstiere</span></label>
-                                <label class="flex items-center gap-1 text-xs"><input type="checkbox" x-model="filters.filterAllergen.lupin"> <span>Lupinen</span></label>
-                                <label class="flex items-center gap-1 text-xs"><input type="checkbox" x-model="filters.filterAllergen.milk"> <span>Milch</span></label>
-                                <label class="flex items-center gap-1 text-xs"><input type="checkbox" x-model="filters.filterAllergen.nuts"> <span>Schalenfrüchte</span></label>
-                                <label class="flex items-center gap-1 text-xs"><input type="checkbox" x-model="filters.filterAllergen.sulphure"> <span>Schwefeldioxid und Sulfit</span></label>
-                                <label class="flex items-center gap-1 text-xs"><input type="checkbox" x-model="filters.filterAllergen.celery"> <span>Sellerie</span></label>
-                                <label class="flex items-center gap-1 text-xs"><input type="checkbox" x-model="filters.filterAllergen.mustard"> <span>Senf</span></label>
-                                <label class="flex items-center gap-1 text-xs"><input type="checkbox" x-model="filters.filterAllergen.sesame"> <span>Sesamsamen</span></label>
-                                <label class="flex items-center gap-1 text-xs"><input type="checkbox" x-model="filters.filterAllergen.soybeans"> <span>Soja</span></label>
-                                <label class="flex items-center gap-1 text-xs"><input type="checkbox" x-model="filters.filterAllergen.molluscs"> <span>Weichtiere</span></label>
-                            </div>
+                    <!-- Filter form -->
+                    <form x-ref="filterForm" onsubmit="return false;">
+                        @include('components.recipe-filter-form', ['filterSet' => ($serverFilterSet ?? [])])
+                        <div class="mt-2 flex justify-end gap-2">
+                            <button type="button" class="px-3 py-1 bg-primary-600 text-white rounded hover:bg-primary-700 text-sm"
+                                    @click="extractFiltersFromForm($refs.filterForm); applyFilters();">Filter anwenden</button>
+                            <button type="button" class="px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-700 text-sm"
+                                    @click="extractFiltersFromForm($refs.filterForm); saveFilters();">Filter speichern</button>
+                            <button type="button" class="px-3 py-1 bg-amber-600 text-white rounded hover:bg-amber-700 text-sm"
+                                    @click="extractFiltersFromForm($refs.filterForm); recreateBook();">Buch neu generieren</button>
                         </div>
-                        <div>
-                            <div class="text-xs font-semibold mb-1">Ernährungsweise</div>
-                            <div class="flex flex-wrap gap-2">
-                                <label class="flex items-center gap-1 text-xs"><input type="checkbox" x-model="filters.filterDiets.eifrei"> <span>Eifrei</span></label>
-                                <label class="flex items-center gap-1 text-xs"><input type="checkbox" x-model="filters.filterDiets.glutenfrei"> <span>Glutenfrei</span></label>
-                                <label class="flex items-center gap-1 text-xs"><input type="checkbox" x-model="filters.filterDiets.laktosefrei"> <span>Laktosefrei</span></label>
-                                <label class="flex items-center gap-1 text-xs"><input type="checkbox" x-model="filters.filterDiets['fish-free']"> <span>Ohne Fisch</span></label>
-                                <label class="flex items-center gap-1 text-xs"><input type="checkbox" x-model="filters.filterDiets['meat-free']"> <span>Ohne Fleisch</span></label>
-                                <label class="flex items-center gap-1 text-xs"><input type="checkbox" x-model="filters.filterDiets['soy-free']"> <span>Sojafrei</span></label>
-                                <label class="flex items-center gap-1 text-xs"><input type="checkbox" x-model="filters.filterDiets.vegan"> <span>Vegan</span></label>
-                                <label class="flex items-center gap-1 text-xs"><input type="checkbox" x-model="filters.filterDiets.vegetarian"> <span>Vegetarisch</span></label>
-                                <label class="flex items-center gap-1 text-xs"><input type="checkbox" x-model="filters.filterDiets['wheat-free']"> <span>Weizenfrei</span></label>
-                                <label class="flex items-center gap-1 text-xs"><input type="checkbox" x-model="filters.filterDiets['alcohol-free']"> <span>Ohne Alkohol</span></label>
-                                <label class="flex items-center gap-1 text-xs"><input type="checkbox" x-model="filters.filterDiets['histamine-low']"> <span>Histaminarm</span></label>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="mt-3 flex justify-end">
-                        <button type="button" class="px-3 py-1 bg-primary-600 text-white rounded hover:bg-primary-700 text-sm" @click="applyFilters()">Filter anwenden</button>
-                    </div>
+                    </form>
                 </div>
             </div>
         </div>
@@ -261,9 +241,27 @@
                     </div>
                 </div>
             </template>
-        <div class="mt-2 flex items-center justify-between">
+        <div class="mt-4 flex items-center justify-between w-full gap-4">
             <button class="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 rounded disabled:opacity-40" :disabled="availPage<=1" @click="loadAvailPage(availPage-1)">Zurück</button>
-            <div class="text-xs text-gray-500" x-text="pageLabelTotal(availPage, perPageAvail, availTotal)"></div>
+            <div class="flex items-center gap-3">
+                <div class="text-xs text-gray-500" x-text="pageLabelTotal(availPage, perPageAvail, availTotal)"></div>
+                <div class="flex items-center gap-2" x-data="{ jumpPage: '' }">
+                    <span class="text-xs text-gray-500">Seite:</span>
+                    <input type="number" 
+                           x-model="jumpPage" 
+                           @keydown.enter="if(jumpPage && jumpPage >= 1 && jumpPage <= pagesTotal(perPageAvail, availTotal)) { loadAvailPage(parseInt(jumpPage)); jumpPage = ''; }"
+                           min="1" 
+                           :max="pagesTotal(perPageAvail, availTotal)"
+                           placeholder="#"
+                           class="w-16 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800">
+                    <button type="button" 
+                            class="px-2 py-1 text-xs bg-primary-600 text-white rounded hover:bg-primary-700 disabled:opacity-40"
+                            :disabled="!jumpPage || jumpPage < 1 || jumpPage > pagesTotal(perPageAvail, availTotal)"
+                            @click="if(jumpPage && jumpPage >= 1 && jumpPage <= pagesTotal(perPageAvail, availTotal)) { loadAvailPage(parseInt(jumpPage)); jumpPage = ''; }">
+                        Los
+                    </button>
+                </div>
+            </div>
             <button class="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 rounded disabled:opacity-40" :disabled="availPage>=pagesTotal(perPageAvail, availTotal)" @click="loadAvailPage(availPage+1)">Weiter</button>
         </div>
     </x-filament::section>

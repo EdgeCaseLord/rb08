@@ -103,10 +103,11 @@ class CookButlerService
             // NOT: handle both leading '-' and in-between terms '-term'
             // Leading term: "-zucker" or "- zucker" => "-- zucker"
             $ingredientQuery = preg_replace('/^-\s*([\wäöüÄÖÜß]+)/u', '-- $1', $ingredientQuery);
-            // In-between terms: " nudeln -paprika" => " nudeln -- paprika"
-            $ingredientQuery = preg_replace('/\s-([\wäöüÄÖÜß]+)/u', ' -- $1', $ingredientQuery);
+            // In-between terms: " nudeln -paprika" or " nudeln - paprika" => " nudeln -- paprika"
+            $ingredientQuery = preg_replace('/\s-\s*([\wäöüÄÖÜß]+)/u', ' -- $1', $ingredientQuery);
             // Handle AND logic: space-separated terms should be AND
-            $ingredientQuery = preg_replace('/\s+/', ' && ', $ingredientQuery); // AND
+            // But don't replace spaces that are part of || or -- operators
+            $ingredientQuery = preg_replace('/(?<!\|)(?<!-)\s+(?!\|)(?!-)/', ' && ', $ingredientQuery); // AND
             $ingredientQuery = trim($ingredientQuery);
         }
         if (!empty($ingredientQuery)) {

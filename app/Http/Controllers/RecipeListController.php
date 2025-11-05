@@ -362,24 +362,35 @@ class RecipeListController extends Controller
             'filterDifficulty',
             'filterMaxTime',
             'filterSubstances',
-            'offset',
-            'randomize_offset',
         ]);
-        // Request a larger pool and slice locally to avoid upstream paging quirks
-        $poolSize = max($perPage * 10, 60);
-        $result = $service->fetchAvailableRecipesForPatient($user, $filters, $poolSize, 0);
+        // Normalize legacy filter shapes to match legacy Livewire behavior
+        $dictKeys = ['filterAllergen','filterCategory','filterCourse','filterDiets','filterDifficulty','filterMaxTime'];
+        foreach ($dictKeys as $k) {
+            if (isset($filters[$k]) && is_array($filters[$k])) {
+                // Accept either ['a'=>true] or ['a','b']
+                $v = $filters[$k];
+                if (array_values($v) !== $v) {
+                    $filters[$k] = array_keys(array_filter($v, fn($x)=>$x===true || $x==='1' || $x===1));
+                }
+            }
+        }
+        // Countries always as array values
+        if (isset($filters['filterCountry']) && is_array($filters['filterCountry']) && array_values($filters['filterCountry']) !== $filters['filterCountry']) {
+            $filters['filterCountry'] = array_keys(array_filter($filters['filterCountry'], fn($x)=>$x===true || $x==='1' || $x===1));
+        }
+        // Use the page-based offset for API call
+        $filters['offset'] = $offset;
+        $filters['randomize_offset'] = false;
+        
+        // Fetch recipes from API with proper offset
+        $result = $service->fetchAvailableRecipesForPatient($user, $filters, $perPage, $offset);
         $recipeIds = $result['recipe_ids'] ?? [];
         $total = $result['total']['value'] ?? 0;
         if (empty($recipeIds)) {
-            return response()->json(['items' => [], 'total' => 0, 'page' => $page, 'perPage' => $perPage]);
-        }
-        // Deterministic pagination window regardless of upstream behavior
-        $start = max(0, ($page - 1) * $perPage);
-        $sliceIds = array_slice(array_values($recipeIds), $start, $perPage);
-        if (empty($sliceIds)) {
             return response()->json(['items' => [], 'total' => (int)$total, 'page' => $page, 'perPage' => $perPage]);
         }
-        $details = $service->fetchRecipeDetailsBatch($sliceIds);
+        // API already returned the correct page of results based on offset, no need to slice
+        $details = $service->fetchRecipeDetailsBatch($recipeIds);
         // $details may be associative keyed by id; normalize to values array
         if (is_array($details) && $this->isAssoc($details)) {
             $details = array_values($details);
