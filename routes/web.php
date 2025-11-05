@@ -124,6 +124,7 @@ Route::middleware(['auth'])->group(function () {
 
     // Minimal JSON endpoints for Edit Book page
     Route::get('/books/{book}/recipes.json', [\App\Http\Controllers\RecipeListController::class, 'bookRecipes'])->name('books.recipes.json');
+    Route::get('/books/{book}/status', [\App\Http\Controllers\BookController::class, 'status'])->name('books.status');
     Route::get('/favorites.json', [\App\Http\Controllers\RecipeListController::class, 'favorites'])->name('favorites.json');
     Route::get('/available.json', [\App\Http\Controllers\RecipeListController::class, 'available'])->name('available.json');
     Route::post('/favorites/{id}', [\App\Http\Controllers\RecipeListController::class, 'addFavorite'])->name('favorites.add');

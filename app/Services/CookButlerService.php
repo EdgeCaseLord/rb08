@@ -739,11 +739,6 @@ class CookButlerService
     {
         $prefs = $this->getUserFilterPreferences($user);
 
-        // Special handling for filterDiets: if provided in $filters, use it directly
-        if (isset($filters['filterDiets'])) {
-            $prefs['filterDiets'] = $filters['filterDiets'];
-        }
-
         // Remove any object-style substance filters from both prefs and filters
         $cleanSubstances = function($arr) {
             if (!is_array($arr)) return $arr;
@@ -763,8 +758,21 @@ class CookButlerService
             $filters['filterSubstances'] = $cleanSubstances($filters['filterSubstances']);
         }
 
-        // Use a recursive merge for all other filters
-        return array_merge_recursive($prefs, $filters);
+        // Merge filters: form filters override user preferences
+        // Use regular array_merge to avoid duplicates and array conversion issues
+        $merged = array_merge($prefs, $filters);
+        
+        // For array-type filters, merge and deduplicate
+        $arrayFilters = ['filterAllergen', 'filterCategory', 'filterCountry', 'filterCourse', 'filterDiets', 'filterDifficulty', 'filterMaxTime'];
+        foreach ($arrayFilters as $key) {
+            if (isset($prefs[$key]) && isset($filters[$key])) {
+                $prefVals = is_array($prefs[$key]) ? $prefs[$key] : [];
+                $filterVals = is_array($filters[$key]) ? $filters[$key] : [];
+                $merged[$key] = array_values(array_unique(array_merge($prefVals, $filterVals)));
+            }
+        }
+        
+        return $merged;
     }
 
     /**

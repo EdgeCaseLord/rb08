@@ -4,7 +4,9 @@
     'availableRecipes' => [],
     'bookRecipeCounts' => $bookRecipeCounts ?? ['starter' => 0, 'main_course' => 0, 'dessert' => 0],
     'recipeLimits' => $recipeLimits ?? ['starter' => 5, 'main_course' => 5, 'dessert' => 5],
-    'bookId' => $bookId ?? null
+    'bookId' => $bookId ?? null,
+    'patientId' => $patient->id ?? null,
+    'savedFilters' => $serverFilterSet ?? []
 ]))" x-init="init()" wire:ignore>
 
     <!-- Book Recipes Section -->

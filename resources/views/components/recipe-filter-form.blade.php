@@ -4,8 +4,27 @@
         $contextRecord = $record ?? ($this->record ?? null);
         $filterSet = $filterSet($contextRecord);
     }
+    
+    // Check if each filter section has active values to auto-expand
+    $hasAllergen = !empty(array_filter($filterSet['filterAllergen'] ?? []));
+    $hasCategory = !empty(array_filter($filterSet['filterCategory'] ?? []));
+    $hasCountry = !empty($filterSet['filterCountry'] ?? []);
+    $hasCourse = !empty(array_filter($filterSet['filterCourse'] ?? []));
+    $hasDiets = !empty(array_filter($filterSet['filterDiets'] ?? []));
+    $hasDifficulty = !empty(array_filter($filterSet['filterDifficulty'] ?? []));
+    $hasMaxTime = !empty(array_filter($filterSet['filterMaxTime'] ?? []));
+    $hasSubstances = !empty($filterSet['filterSubstances'] ?? []);
 @endphp
-<div class="mt-4" x-data="{ oA:false, oC:false, oK:false, oG:false, oD:false, oS:false, oT:false, oSub:false }">
+<div class="mt-4" x-data="{ 
+    oA: {{ $hasAllergen ? 'true' : 'false' }}, 
+    oC: {{ $hasCategory ? 'true' : 'false' }}, 
+    oK: {{ $hasCountry ? 'true' : 'false' }}, 
+    oG: {{ $hasCourse ? 'true' : 'false' }}, 
+    oD: {{ $hasDiets ? 'true' : 'false' }}, 
+    oS: {{ $hasDifficulty ? 'true' : 'false' }}, 
+    oT: {{ $hasMaxTime ? 'true' : 'false' }}, 
+    oSub: {{ $hasSubstances ? 'true' : 'false' }} 
+}">
     <div class="mb-4 grid grid-cols-1 md:grid-cols-5 gap-2 items-end">
         <div class="col-span-full grid grid-cols-2 gap-4">
             <input type="text" placeholder="{{ __('Titel') }}" class="filament-input w-full rounded-lg" name="filterTitle" value="{{ old('filterTitle', $filterSet['filterTitle'] ?? '') }}">
@@ -108,8 +127,13 @@
                         'main_course' => __('Hauptgericht'),
                         'dessert' => __('Dessert'),
                     ] as $key => $label)
+                        @php
+                            $courseFilter = $filterSet['filterCourse'] ?? [];
+                            // Handle both array format ['dessert'] and object format {dessert: true}
+                            $isChecked = is_array($courseFilter) && (in_array($key, $courseFilter) || ($courseFilter[$key] ?? false));
+                        @endphp
                         <label class="flex items-center space-x-2">
-                            <input type="checkbox" name="filterCourse[{{ $key }}]" value="1" class="form-checkbox" @if(old('filterCourse.'.$key, ($filterSet['filterCourse'][$key] ?? false))) checked @endif>
+                            <input type="checkbox" name="filterCourse[{{ $key }}]" value="1" class="form-checkbox" @if(old('filterCourse.'.$key, $isChecked)) checked @endif>
                             <span>{{ $label }}</span>
                         </label>
                     @endforeach

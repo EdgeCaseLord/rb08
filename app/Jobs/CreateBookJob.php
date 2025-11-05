@@ -178,6 +178,18 @@ class CreateBookJob implements ShouldQueue
                 $service = new \App\Services\CookButlerService();
                 $selectedRecipes = [];
                 foreach ($recipesPerCourse as $course => $limit) {
+                    // Check if user has a course filter active
+                    $userCourseFilter = $this->filters['filterCourse'] ?? [];
+                    
+                    // If user has a course filter and this course is not in it, skip
+                    if (!empty($userCourseFilter) && !in_array($course, $userCourseFilter)) {
+                        Log::debug('CreateBookJob: Skipping course due to user filter', [
+                            'course' => $course,
+                            'user_course_filter' => $userCourseFilter,
+                        ]);
+                        continue;
+                    }
+                    
                     $courseFilter = ['filterCourse' => [$course]];
                     $requestFilters = array_merge($this->filters ?? [], $courseFilter);
                     $result = $service->fetchAvailableRecipesForPatient($patient, $requestFilters, $limit);
@@ -222,19 +234,30 @@ class CreateBookJob implements ShouldQueue
             ]);
 
             // Check if any recipes were added
-            if (empty($currentRecipes)) {
+            // Only fail if no recipes found AND no course filter is set (user expected all courses)
+            $hasCourseFilter = !empty($this->filters['filterCourse'] ?? []);
+            if (empty($currentRecipes) && !$hasCourseFilter) {
                 \Filament\Notifications\Notification::make()
                     ->title(__('No Recipes Found'))
-                    ->body(__('No recipes were found for :name due to their allergen combination. No book was created.', ['name' => $patient->name]))
+                    ->body(__('No recipes were found for :name with the current filter settings. Please adjust your filters and try again.', ['name' => $patient->name]))
                     ->warning()
                     ->persistent()
                     ->send();
 
-                Log::warning('CreateBookJob: No recipes found for patient, no book created', [
+                Log::warning('CreateBookJob: No recipes found for patient with current filters', [
                     'patient_id' => $patient->id,
                     'patient_name' => $patient->name,
+                    'filters' => $this->filters,
                 ]);
                 return;
+            }
+            
+            // If course filter is set and no recipes found, allow book creation with warning
+            if (empty($currentRecipes) && $hasCourseFilter) {
+                Log::info('CreateBookJob: No recipes found but course filter is active, allowing book creation', [
+                    'patient_id' => $patient->id,
+                    'course_filter' => $this->filters['filterCourse'],
+                ]);
             }
 
             // Send email to lab

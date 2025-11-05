@@ -36,6 +36,25 @@ class PatientFilterController extends Controller
                 'filterSubstances' => $filters['filterSubstances'] ?? [],
                 'updateBookWithFilters' => (bool)($payload['updateBookWithFilters'] ?? false),
             ];
+            
+            // Normalize filter formats: convert {key: true} to ['key']
+            $dictKeys = ['filterAllergen', 'filterCategory', 'filterCourse', 'filterDiets', 'filterDifficulty', 'filterMaxTime'];
+            foreach ($dictKeys as $k) {
+                if (isset($filterSet[$k]) && is_array($filterSet[$k])) {
+                    $v = $filterSet[$k];
+                    // If it's an associative array with boolean values, convert to indexed array of keys
+                    if (array_values($v) !== $v) {
+                        $filterSet[$k] = array_keys(array_filter($v, fn($x) => $x === true || $x === '1' || $x === 1));
+                    }
+                }
+            }
+            
+            // Countries: ensure it's an array of values
+            if (isset($filterSet['filterCountry']) && is_array($filterSet['filterCountry'])) {
+                if (array_values($filterSet['filterCountry']) !== $filterSet['filterCountry']) {
+                    $filterSet['filterCountry'] = array_keys(array_filter($filterSet['filterCountry'], fn($x) => $x === true || $x === '1' || $x === 1));
+                }
+            }
 
             // Persist into patient settings
             $settings = is_array($patientModel->settings) ? $patientModel->settings : (json_decode($patientModel->settings ?? '{}', true) ?: []);

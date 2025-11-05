@@ -11,6 +11,22 @@
         $patient = $book ? $book->patient : null;
         // Try to get the latest analysis for the patient
         $analysis = $patient ? ($patient->analyses()->latest('created_at')->first()) : null;
+        
+        // Get saved filter set from patient settings
+        $patientSettings = $patient ? (is_array($patient->settings) ? $patient->settings : json_decode($patient->settings ?? '{}', true)) : [];
+        $savedFilterSet = $patientSettings['recipe_filter_set'] ?? [];
+        $serverFilterSet = [
+            'filterTitle' => $savedFilterSet['filterTitle'] ?? '',
+            'filterIngredients' => $savedFilterSet['filterIngredients'] ?? '',
+            'filterAllergen' => $savedFilterSet['filterAllergen'] ?? [],
+            'filterCategory' => $savedFilterSet['filterCategory'] ?? [],
+            'filterCountry' => $savedFilterSet['filterCountry'] ?? [],
+            'filterCourse' => $savedFilterSet['filterCourse'] ?? [],
+            'filterDiets' => $savedFilterSet['filterDiets'] ?? [],
+            'filterDifficulty' => $savedFilterSet['filterDifficulty'] ?? [],
+            'filterMaxTime' => $savedFilterSet['filterMaxTime'] ?? [],
+            'filterSubstances' => $savedFilterSet['filterSubstances'] ?? [],
+        ];
     @endphp
     <div class="space-y-8">
         <div class="mb-6">
@@ -91,27 +107,43 @@
     </div>
     <script>
     function recipeManager(initial) {
+        // Initialize filters from saved filters or defaults
+        const savedFilters = initial.savedFilters || {};
+        const initialFilters = {
+            filterTitle: savedFilters.filterTitle || '',
+            filterIngredients: savedFilters.filterIngredients || '',
+            filterAllergen: savedFilters.filterAllergen || {},
+            filterCategory: savedFilters.filterCategory || {},
+            filterCountry: savedFilters.filterCountry || [],
+            filterCourse: savedFilters.filterCourse || {},
+            filterDiets: savedFilters.filterDiets || {},
+            filterDifficulty: savedFilters.filterDifficulty || {},
+            filterMaxTime: savedFilters.filterMaxTime || {},
+            filterSubstances: savedFilters.filterSubstances || {}
+        };
+        
+        // Check if any filters are active
+        const hasFilters = initialFilters.filterTitle || initialFilters.filterIngredients || 
+            (Array.isArray(initialFilters.filterCountry) && initialFilters.filterCountry.length) ||
+            Object.keys(initialFilters.filterAllergen || {}).some(k => initialFilters.filterAllergen[k]) ||
+            Object.keys(initialFilters.filterCategory || {}).some(k => initialFilters.filterCategory[k]) ||
+            Object.keys(initialFilters.filterCourse || {}).some(k => initialFilters.filterCourse[k]) ||
+            Object.keys(initialFilters.filterDiets || {}).some(k => initialFilters.filterDiets[k]) ||
+            Object.keys(initialFilters.filterDifficulty || {}).some(k => initialFilters.filterDifficulty[k]) ||
+            Object.keys(initialFilters.filterMaxTime || {}).some(k => initialFilters.filterMaxTime[k]) ||
+            Object.keys(initialFilters.filterSubstances || {}).length > 0;
+        
         return {
             // state
             bookRecipes: initial.bookRecipes || [],
             favoriteRecipes: initial.favoriteRecipes || [],
             availableRecipes: initial.availableRecipes || [],
             bookId: initial.bookId,
+            patientId: initial.patientId,
             recipeLimits: initial.recipeLimits || { starter: 5, main_course: 5, dessert: 5 },
-            openFilters: false,
+            openFilters: hasFilters, // Open if filters are active
             // filters (legacy-compatible keys)
-            filters: {
-                filterTitle: '',
-                filterIngredients: '',
-                filterAllergen: {},
-                filterCategory: {},
-                filterCountry: [],
-                filterCourse: {},
-                filterDiets: {},
-                filterDifficulty: {},
-                filterMaxTime: {},
-                filterSubstances: {}
-            },
+            filters: initialFilters,
             // pagination
             perPage: 6,
             perPageAvail: 6,
@@ -433,22 +465,110 @@
                 });
             },
             async saveFilters() {
-                if (!this.bookId || !this.patientId) return;
+                if (!this.bookId || !this.patientId) {
+                    console.error('saveFilters: missing bookId or patientId', { bookId: this.bookId, patientId: this.patientId });
+                    return;
+                }
                 const body = { 
                     filters: this.filters || {},
                     availTotal: this.availTotal || 0
                 };
-                await fetch(`/admin/patients/${encodeURIComponent(this.patientId)}/filters`, {
-                    method: 'POST', headers: { 'Content-Type':'application/json', 'X-CSRF-TOKEN': this.csrf() }, body: JSON.stringify(body)
-                }).catch(()=>{});
+                try {
+                    const response = await fetch(`/admin/patients/${encodeURIComponent(this.patientId)}/filters`, {
+                        method: 'POST', headers: { 'Content-Type':'application/json', 'X-CSRF-TOKEN': this.csrf() }, body: JSON.stringify(body)
+                    });
+                    if (response.ok) {
+                        new FilamentNotification().title('Filter gespeichert').success().send();
+                    } else {
+                        throw new Error('Failed to save filters');
+                    }
+                } catch (e) {
+                    console.error('saveFilters error:', e);
+                    new FilamentNotification().title('Fehler beim Speichern').danger().send();
+                }
             },
             async recreateBook() {
-                if (!this.bookId) return;
+                if (!this.bookId || !this.patientId) {
+                    console.error('recreateBook: missing bookId or patientId', { bookId: this.bookId, patientId: this.patientId });
+                    return;
+                }
+                
+                // Show immediate notification
+                new FilamentNotification().title('Buch wird neu generiert').body('Bitte warten...').info().send();
+                
                 const body = { filters: this.filters || {}, updateBookWithFilters: true };
-                if (!this.patientId) return;
-                await fetch(`/admin/patients/${encodeURIComponent(this.patientId)}/filters`, {
-                    method: 'POST', headers: { 'Content-Type':'application/json', 'X-CSRF-TOKEN': this.csrf() }, body: JSON.stringify(body)
-                }).then(()=>{ window.dispatchEvent(new Event('startBookPolling')); }).catch(()=>{});
+                try {
+                    const response = await fetch(`/admin/patients/${encodeURIComponent(this.patientId)}/filters`, {
+                        method: 'POST', headers: { 'Content-Type':'application/json', 'X-CSRF-TOKEN': this.csrf() }, body: JSON.stringify(body)
+                    });
+                    if (!response.ok) {
+                        throw new Error('Failed to start book recreation');
+                    }
+                    
+                    // Start polling for book status
+                    this.pollBookStatus();
+                } catch (e) {
+                    console.error('recreateBook error:', e);
+                    new FilamentNotification().title('Fehler beim Starten').danger().send();
+                }
+            },
+            pollBookStatus() {
+                let pollCount = 0;
+                const maxPolls = 60; // 60 * 3 seconds = 3 minutes max
+                
+                const checkStatus = async () => {
+                    pollCount++;
+                    
+                    try {
+                        const response = await fetch(`/books/${this.bookId}/status`, {
+                            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error('Failed to check book status');
+                        }
+                        
+                        const data = await response.json();
+                        const status = data.status;
+                        
+                        // Check if book is ready
+                        if (['Warten auf Versand', 'Versendet'].includes(status)) {
+                            clearInterval(pollInterval);
+                            new FilamentNotification()
+                                .title('Buch erfolgreich erstellt')
+                                .body('Das Buch wurde mit den aktuellen Filtern neu generiert.')
+                                .success()
+                                .send();
+                            
+                            // Reload the page to show updated recipes
+                            setTimeout(() => window.location.reload(), 2000);
+                            return;
+                        }
+                        
+                        // Check if we've exceeded max polls
+                        if (pollCount >= maxPolls) {
+                            clearInterval(pollInterval);
+                            new FilamentNotification()
+                                .title('Zeitüberschreitung')
+                                .body('Die Bucherstellung dauert länger als erwartet. Bitte laden Sie die Seite neu.')
+                                .warning()
+                                .send();
+                        }
+                    } catch (e) {
+                        console.error('Poll error:', e);
+                        clearInterval(pollInterval);
+                        new FilamentNotification()
+                            .title('Fehler beim Überprüfen')
+                            .body('Status konnte nicht abgerufen werden.')
+                            .danger()
+                            .send();
+                    }
+                };
+                
+                // Poll every 3 seconds
+                const pollInterval = setInterval(checkStatus, 3000);
+                // Check immediately
+                checkStatus();
             },
             // ui actions
             openRecipe(r) { const id = this.idOf(r); if (!id) return; window.open(`/recipes/${id}`, '_blank'); },
