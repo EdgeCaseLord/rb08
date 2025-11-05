@@ -27,6 +27,12 @@
             'filterMaxTime' => $savedFilterSet['filterMaxTime'] ?? [],
             'filterSubstances' => $savedFilterSet['filterSubstances'] ?? [],
         ];
+        
+        \Log::debug('Loading patient filters on page load', [
+            'patient_id' => $patient ? $patient->id : null,
+            'savedFilterSet' => $savedFilterSet,
+            'serverFilterSet' => $serverFilterSet,
+        ]);
     @endphp
     <div class="space-y-8">
         <div class="mb-6">
@@ -109,16 +115,27 @@
     function recipeManager(initial) {
         // Initialize filters from saved filters or defaults
         const savedFilters = initial.savedFilters || {};
+        
+        // Helper to convert array format ['dessert'] to object format {dessert: true}
+        const arrayToObj = (val) => {
+            if (Array.isArray(val)) {
+                const obj = {};
+                val.forEach(k => { if (k) obj[k] = true; });
+                return obj;
+            }
+            return val || {};
+        };
+        
         const initialFilters = {
             filterTitle: savedFilters.filterTitle || '',
             filterIngredients: savedFilters.filterIngredients || '',
-            filterAllergen: savedFilters.filterAllergen || {},
-            filterCategory: savedFilters.filterCategory || {},
+            filterAllergen: arrayToObj(savedFilters.filterAllergen),
+            filterCategory: arrayToObj(savedFilters.filterCategory),
             filterCountry: savedFilters.filterCountry || [],
-            filterCourse: savedFilters.filterCourse || {},
-            filterDiets: savedFilters.filterDiets || {},
-            filterDifficulty: savedFilters.filterDifficulty || {},
-            filterMaxTime: savedFilters.filterMaxTime || {},
+            filterCourse: arrayToObj(savedFilters.filterCourse),
+            filterDiets: arrayToObj(savedFilters.filterDiets),
+            filterDifficulty: arrayToObj(savedFilters.filterDifficulty),
+            filterMaxTime: arrayToObj(savedFilters.filterMaxTime),
             filterSubstances: savedFilters.filterSubstances || {}
         };
         
@@ -348,8 +365,13 @@
                     f.filterCountry.forEach(c => { if (c) push('filterCountry', c, 'Land: ' + (countryLabels[c] || c)); });
                 }
                 const expandDict = (obj, k, map, prefix) => {
-                    if (!obj || typeof obj !== 'object') return;
-                    Object.keys(obj).forEach(key => { if (obj[key]) push(k, key, prefix + ': ' + (map[key] || key)); });
+                    if (!obj) return;
+                    // Handle both array format ['dessert'] and object format {dessert: true}
+                    if (Array.isArray(obj)) {
+                        obj.forEach(key => { if (key) push(k, key, prefix + ': ' + (map[key] || key)); });
+                    } else if (typeof obj === 'object') {
+                        Object.keys(obj).forEach(key => { if (obj[key]) push(k, key, prefix + ': ' + (map[key] || key)); });
+                    }
                 };
                 expandDict(f.filterAllergen, 'filterAllergen', { 'peanuts':'Erdnüsse','fish':'Fisch','gluten':'Glutenhaltiges Getreide','egg':'Hühnerei','crustaceans':'Krebstiere','lupin':'Lupinen','milk':'Milch','nuts':'Schalenfrüchte','sulphure':'Schwefeldioxid und Sulfit','celery':'Sellerie','mustard':'Senf','sesame':'Sesamsamen','soybeans':'Soja','molluscs':'Weichtiere' }, 'Allergen');
                 expandDict(f.filterCategory, 'filterCategory', { 'side_dish':'Beilage','fingerfood':'Fingerfood','fish':'Fisch & Meeresfrüchte','meat':'Fleisch','vegetables':'Gemüse','drink':'Getränk','cake':'Kuchen','salad':'Salat','soup':'Suppe' }, 'Kategorie');

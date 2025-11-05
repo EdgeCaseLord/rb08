@@ -22,6 +22,11 @@ class PatientFilterController extends Controller
             $payload = $request->all();
             $filters = $payload['filters'] ?? $payload ?? [];
 
+            \Log::debug('PatientFilterController received filters', [
+                'patient_id' => $patient,
+                'raw_filters' => $filters,
+            ]);
+
             // Build a legacy-compatible filter set
             $filterSet = [
                 'filterTitle' => $filters['filterTitle'] ?? '',
@@ -63,6 +68,12 @@ class PatientFilterController extends Controller
             if (isset($payload['availTotal'])) {
                 $settings['recipe_filter_total'] = (int)$payload['availTotal'];
             }
+            
+            \Log::debug('Saving patient filters', [
+                'patient_id' => $patientModel->id,
+                'filterSet' => $filterSet,
+            ]);
+            
             $patientModel->settings = $settings;
             $patientModel->save();
 
