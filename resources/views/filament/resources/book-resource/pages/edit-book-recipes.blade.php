@@ -77,9 +77,9 @@
             </template>
         </div>
         <div class="mt-2 flex items-center justify-between">
-            <button class="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 rounded disabled:opacity-40" :disabled="bookPage<=1" @click="loadBookPage(bookPage-1)">Zurück</button>
+            <button class="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 rounded hover:bg-orange-100 hover:border-orange-500 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-gray-200 dark:disabled:hover:bg-gray-700" :disabled="bookPage<=1" @click="loadBookPage(bookPage-1)">Zurück</button>
             <div class="text-xs text-gray-500" x-text="pageLabelTotal(bookPage, perPage, bookTotal)"></div>
-            <button class="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 rounded disabled:opacity-40" :disabled="bookPage>=pagesTotal(perPage, bookTotal)" @click="loadBookPage(bookPage+1)">Weiter</button>
+            <button class="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 rounded hover:bg-orange-100 hover:border-orange-500 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-gray-200 dark:disabled:hover:bg-gray-700" :disabled="bookPage>=pagesTotal(perPage, bookTotal)" @click="loadBookPage(bookPage+1)">Weiter</button>
         </div>
         <div class="mt-4 text-sm text-gray-600">
             Vorspeisen: <span x-text="bookCourseCounts.starter"></span>/<span x-text="recipeLimits.starter"></span> |
@@ -147,9 +147,9 @@
             </template>
         </div>
         <div class="mt-2 flex items-center justify-between">
-            <button class="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 rounded disabled:opacity-40" :disabled="favPage<=1" @click="loadFavPage(favPage-1)">Zurück</button>
+            <button class="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 rounded hover:bg-orange-100 hover:border-orange-500 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-gray-200 dark:disabled:hover:bg-gray-700" :disabled="favPage<=1" @click="loadFavPage(favPage-1)">Zurück</button>
             <div class="text-xs text-gray-500" x-text="pageLabelTotal(favPage, perPage, favTotal)"></div>
-            <button class="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 rounded disabled:opacity-40" :disabled="favPage>=pagesTotal(perPage, favTotal)" @click="loadFavPage(favPage+1)">Weiter</button>
+            <button class="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 rounded hover:bg-orange-100 hover:border-orange-500 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-gray-200 dark:disabled:hover:bg-gray-700" :disabled="favPage>=pagesTotal(perPage, favTotal)" @click="loadFavPage(favPage+1)">Weiter</button>
         </div>
     </x-filament::section>
 
@@ -247,7 +247,7 @@
                     </template>
                 </div>
                 <div class="mt-4 flex items-center justify-between w-full gap-4">
-                <button class="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 rounded disabled:opacity-40" :disabled="availPage<=1" @click="loadAvailPage(availPage-1)">Zurück</button>
+                <button class="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 rounded hover:bg-orange-100 hover:border-orange-500 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-gray-200 dark:disabled:hover:bg-gray-700" :disabled="availPage<=1" @click="loadAvailPage(availPage-1)">Zurück</button>
                 <div class="flex items-center gap-3">
                     <div class="text-xs text-gray-500" x-text="pageLabelTotal(availPage, perPageAvail, availTotal)"></div>
                     <div class="flex items-center gap-2" x-data="{ jumpPage: '' }">
@@ -260,14 +260,14 @@
                             placeholder="#"
                             class="w-16 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800">
                         <button type="button"
-                                class="px-2 py-1 text-xs bg-primary-600 text-white rounded hover:bg-primary-700 disabled:opacity-40"
+                                class="px-2 py-1 text-xs bg-primary-600 text-white rounded hover:bg-orange-600 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-primary-600"
                                 :disabled="!jumpPage || jumpPage < 1 || jumpPage > pagesTotal(perPageAvail, availTotal)"
                                 @click="if(jumpPage && jumpPage >= 1 && jumpPage <= pagesTotal(perPageAvail, availTotal)) { loadAvailPage(parseInt(jumpPage)); jumpPage = ''; }">
                             Los
                         </button>
                     </div>
                 </div>
-                <button class="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 rounded disabled:opacity-40" :disabled="availPage>=pagesTotal(perPageAvail, availTotal)" @click="loadAvailPage(availPage+1)">Weiter</button>
+                <button class="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 rounded hover:bg-orange-100 hover:border-orange-500 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-gray-200 dark:disabled:hover:bg-gray-700" :disabled="availPage>=pagesTotal(perPageAvail, availTotal)" @click="loadAvailPage(availPage+1)">Weiter</button>
             </div>
         </div>
 
