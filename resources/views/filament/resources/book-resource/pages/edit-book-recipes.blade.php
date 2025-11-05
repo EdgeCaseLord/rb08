@@ -192,79 +192,86 @@
                 </div>
             </div>
         </div>
-        <div class="columns-1 sm:columns-2 xl:columns-3 2xl:columns-4 gap-4" wire:ignore>
-            <template x-for="(recipe, i) in availableRecipes" :key="idOf(recipe) ? 'avail-'+idOf(recipe) : 'avail-'+i">
-                <div class="mb-4 break-inside-avoid">
-                    <!-- Recipe card -->
-                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden relative">
-                        <!-- Image -->
-                        <div class="relative aspect-w-16 aspect-h-9">
-                            <template x-if="recipe.media && recipe.media.search && recipe.media.search.length > 0">
-                                <img :src="recipe.media.search[0]" alt="Rezept Bild" loading="lazy" decoding="async" fetchpriority="low" width="640" height="360" class="w-full h-48 object-cover object-center">
-                            </template>
-                            <template x-if="(!recipe.media || !recipe.media.search || recipe.media.search.length === 0) && recipe.images && recipe.images.length > 0">
-                                <img :src="recipe.images[0]" alt="Rezept Bild" loading="lazy" decoding="async" fetchpriority="low" width="640" height="360" class="w-full h-48 object-cover object-center">
-                            </template>
-                            <template x-if="(!recipe.media || !recipe.media.search || recipe.media.search.length === 0) && (!recipe.images || recipe.images.length === 0)">
-                                <div class="w-full h-48 bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-                                    <span class="text-gray-500 dark:text-gray-300 text-sm">Kein Bild</span>
+        <div>
+            <div>
+                <div  class="columns-1 sm:columns-2 xl:columns-3 2xl:columns-4 gap-4" wire:ignore>
+                    <template x-for="(recipe, i) in availableRecipes" :key="idOf(recipe) ? 'avail-'+idOf(recipe) : 'avail-'+i">
+                        <div class="mb-4 break-inside-avoid">
+                            <!-- Recipe card -->
+                            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden relative">
+                                <!-- Image -->
+                                <div class="relative aspect-w-16 aspect-h-9">
+                                    <template x-if="recipe.media && recipe.media.search && recipe.media.search.length > 0">
+                                        <img :src="recipe.media.search[0]" alt="Rezept Bild" loading="lazy" decoding="async" fetchpriority="low" width="640" height="360" class="w-full h-48 object-cover object-center">
+                                    </template>
+                                    <template x-if="(!recipe.media || !recipe.media.search || recipe.media.search.length === 0) && recipe.images && recipe.images.length > 0">
+                                        <img :src="recipe.images[0]" alt="Rezept Bild" loading="lazy" decoding="async" fetchpriority="low" width="640" height="360" class="w-full h-48 object-cover object-center">
+                                    </template>
+                                    <template x-if="(!recipe.media || !recipe.media.search || recipe.media.search.length === 0) && (!recipe.images || recipe.images.length === 0)">
+                                        <div class="w-full h-48 bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                                            <span class="text-gray-500 dark:text-gray-300 text-sm">Kein Bild</span>
+                                        </div>
+                                    </template>
+                                    <!-- Category tags overlay (Available) -->
+                                    <div class="absolute bottom-2 left-2 flex flex-wrap gap-1" x-show="categories(recipe.category).length > 0">
+                                        <template x-for="cat in categories(recipe.category)" :key="cat">
+                                            <span class="px-2 py-0.5 rounded-sm bg-orange-500 text-white text-xs" x-text="cat"></span>
+                                        </template>
+                                    </div>
                                 </div>
-                            </template>
-                            <!-- Category tags overlay (Available) -->
-                            <div class="absolute bottom-2 left-2 flex flex-wrap gap-1" x-show="categories(recipe.category).length > 0">
-                                <template x-for="cat in categories(recipe.category)" :key="cat">
-                                    <span class="px-2 py-0.5 rounded-sm bg-orange-500 text-white text-xs" x-text="cat"></span>
-                                </template>
+
+                                <!-- Content -->
+                                <div class="p-4">
+                                    <h3 x-text="recipe.title" class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2"></h3>
+
+                                    <div class="space-y-2 text-sm text-gray-600 dark:text-gray-300">
+                                        <p><strong>Allergene:</strong> <span x-text="labels(recipe.allergens)"></span></p>
+                                        <p><strong>Ernährungsweise:</strong> <span x-text="labels(recipe.diets)"></span></p>
+                                    </div>
+
+                                    <!-- Actions -->
+                                    <div class="mt-4 flex justify-end space-x-2">
+                                        <button type="button" class="px-2 py-1 rounded text-blue-600 hover:text-blue-800" @click.prevent="openRecipe(recipe)">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.25 12s3.75-6.75 9.75-6.75S21.75 12 21.75 12s-3.75 6.75-9.75 6.75S2.25 12 2.25 12z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                                        </button>
+                                        <button type="button" class="px-2 py-1 rounded text-gray-600 hover:text-red-500 dark:text-gray-400 dark:hover:text-red-400" @click.stop.prevent="addToFavorites(recipe)">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" viewBox="0 0 20 20" fill="currentColor"><path d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 18.656l-6.828-6.829a4 4 0 010-5.656z"/></svg>
+                                        </button>
+                                        <button type="button" class="px-2 py-1 rounded text-green-600 hover:text-green-800" @click.prevent="addToBook(recipe)">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-
-                        <!-- Content -->
-                        <div class="p-4">
-                            <h3 x-text="recipe.title" class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2"></h3>
-
-                            <div class="space-y-2 text-sm text-gray-600 dark:text-gray-300">
-                                <p><strong>Allergene:</strong> <span x-text="labels(recipe.allergens)"></span></p>
-                                <p><strong>Ernährungsweise:</strong> <span x-text="labels(recipe.diets)"></span></p>
-                            </div>
-
-                            <!-- Actions -->
-                            <div class="mt-4 flex justify-end space-x-2">
-                                <button type="button" class="px-2 py-1 rounded text-blue-600 hover:text-blue-800" @click.prevent="openRecipe(recipe)">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.25 12s3.75-6.75 9.75-6.75S21.75 12 21.75 12s-3.75 6.75-9.75 6.75S2.25 12 2.25 12z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                                </button>
-                                <button type="button" class="px-2 py-1 rounded text-gray-600 hover:text-red-500 dark:text-gray-400 dark:hover:text-red-400" @click.stop.prevent="addToFavorites(recipe)">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" viewBox="0 0 20 20" fill="currentColor"><path d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 18.656l-6.828-6.829a4 4 0 010-5.656z"/></svg>
-                                </button>
-                                <button type="button" class="px-2 py-1 rounded text-green-600 hover:text-green-800" @click.prevent="addToBook(recipe)">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4.5v15m7.5-7.5h-15"/></svg>
-                                </button>
-                            </div>
-                        </div>
+                    </template>
+                </div>
+                <div class="mt-4 flex items-center justify-between w-full gap-4">
+                <button class="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 rounded disabled:opacity-40" :disabled="availPage<=1" @click="loadAvailPage(availPage-1)">Zurück</button>
+                <div class="flex items-center gap-3">
+                    <div class="text-xs text-gray-500" x-text="pageLabelTotal(availPage, perPageAvail, availTotal)"></div>
+                    <div class="flex items-center gap-2" x-data="{ jumpPage: '' }">
+                        <span class="text-xs text-gray-500">Seite:</span>
+                        <input type="number"
+                            x-model="jumpPage"
+                            @keydown.enter="if(jumpPage && jumpPage >= 1 && jumpPage <= pagesTotal(perPageAvail, availTotal)) { loadAvailPage(parseInt(jumpPage)); jumpPage = ''; }"
+                            min="1"
+                            :max="pagesTotal(perPageAvail, availTotal)"
+                            placeholder="#"
+                            class="w-16 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800">
+                        <button type="button"
+                                class="px-2 py-1 text-xs bg-primary-600 text-white rounded hover:bg-primary-700 disabled:opacity-40"
+                                :disabled="!jumpPage || jumpPage < 1 || jumpPage > pagesTotal(perPageAvail, availTotal)"
+                                @click="if(jumpPage && jumpPage >= 1 && jumpPage <= pagesTotal(perPageAvail, availTotal)) { loadAvailPage(parseInt(jumpPage)); jumpPage = ''; }">
+                            Los
+                        </button>
                     </div>
                 </div>
-            </template>
-        <div class="mt-4 flex items-center justify-between w-full gap-4">
-            <button class="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 rounded disabled:opacity-40" :disabled="availPage<=1" @click="loadAvailPage(availPage-1)">Zurück</button>
-            <div class="flex items-center gap-3">
-                <div class="text-xs text-gray-500" x-text="pageLabelTotal(availPage, perPageAvail, availTotal)"></div>
-                <div class="flex items-center gap-2" x-data="{ jumpPage: '' }">
-                    <span class="text-xs text-gray-500">Seite:</span>
-                    <input type="number" 
-                           x-model="jumpPage" 
-                           @keydown.enter="if(jumpPage && jumpPage >= 1 && jumpPage <= pagesTotal(perPageAvail, availTotal)) { loadAvailPage(parseInt(jumpPage)); jumpPage = ''; }"
-                           min="1" 
-                           :max="pagesTotal(perPageAvail, availTotal)"
-                           placeholder="#"
-                           class="w-16 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800">
-                    <button type="button" 
-                            class="px-2 py-1 text-xs bg-primary-600 text-white rounded hover:bg-primary-700 disabled:opacity-40"
-                            :disabled="!jumpPage || jumpPage < 1 || jumpPage > pagesTotal(perPageAvail, availTotal)"
-                            @click="if(jumpPage && jumpPage >= 1 && jumpPage <= pagesTotal(perPageAvail, availTotal)) { loadAvailPage(parseInt(jumpPage)); jumpPage = ''; }">
-                        Los
-                    </button>
-                </div>
+                <button class="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 rounded disabled:opacity-40" :disabled="availPage>=pagesTotal(perPageAvail, availTotal)" @click="loadAvailPage(availPage+1)">Weiter</button>
             </div>
-            <button class="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 rounded disabled:opacity-40" :disabled="availPage>=pagesTotal(perPageAvail, availTotal)" @click="loadAvailPage(availPage+1)">Weiter</button>
         </div>
+
+
+
     </x-filament::section>
     </div>

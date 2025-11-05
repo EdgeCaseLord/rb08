@@ -11,7 +11,7 @@
         $patient = $book ? $book->patient : null;
         // Try to get the latest analysis for the patient
         $analysis = $patient ? ($patient->analyses()->latest('created_at')->first()) : null;
-        
+
         // Get saved filter set from patient settings
         $patientSettings = $patient ? (is_array($patient->settings) ? $patient->settings : json_decode($patient->settings ?? '{}', true)) : [];
         $savedFilterSet = $patientSettings['recipe_filter_set'] ?? [];
@@ -27,7 +27,7 @@
             'filterMaxTime' => $savedFilterSet['filterMaxTime'] ?? [],
             'filterSubstances' => $savedFilterSet['filterSubstances'] ?? [],
         ];
-        
+
         \Log::debug('Loading patient filters on page load', [
             'patient_id' => $patient ? $patient->id : null,
             'savedFilterSet' => $savedFilterSet,
@@ -115,7 +115,7 @@
     function recipeManager(initial) {
         // Initialize filters from saved filters or defaults
         const savedFilters = initial.savedFilters || {};
-        
+
         // Helper to convert array format ['dessert'] to object format {dessert: true}
         const arrayToObj = (val) => {
             if (Array.isArray(val)) {
@@ -125,7 +125,7 @@
             }
             return val || {};
         };
-        
+
         const initialFilters = {
             filterTitle: savedFilters.filterTitle || '',
             filterIngredients: savedFilters.filterIngredients || '',
@@ -138,9 +138,9 @@
             filterMaxTime: arrayToObj(savedFilters.filterMaxTime),
             filterSubstances: savedFilters.filterSubstances || {}
         };
-        
+
         // Check if any filters are active
-        const hasFilters = initialFilters.filterTitle || initialFilters.filterIngredients || 
+        const hasFilters = initialFilters.filterTitle || initialFilters.filterIngredients ||
             (Array.isArray(initialFilters.filterCountry) && initialFilters.filterCountry.length) ||
             Object.keys(initialFilters.filterAllergen || {}).some(k => initialFilters.filterAllergen[k]) ||
             Object.keys(initialFilters.filterCategory || {}).some(k => initialFilters.filterCategory[k]) ||
@@ -149,7 +149,7 @@
             Object.keys(initialFilters.filterDifficulty || {}).some(k => initialFilters.filterDifficulty[k]) ||
             Object.keys(initialFilters.filterMaxTime || {}).some(k => initialFilters.filterMaxTime[k]) ||
             Object.keys(initialFilters.filterSubstances || {}).length > 0;
-        
+
         return {
             // state
             bookRecipes: initial.bookRecipes || [],
@@ -498,7 +498,7 @@
                     console.error('saveFilters: missing bookId or patientId', { bookId: this.bookId, patientId: this.patientId });
                     return;
                 }
-                const body = { 
+                const body = {
                     filters: this.filters || {},
                     availTotal: this.availTotal || 0
                 };
@@ -521,10 +521,10 @@
                     console.error('recreateBook: missing bookId or patientId', { bookId: this.bookId, patientId: this.patientId });
                     return;
                 }
-                
+
                 // Show immediate notification
                 new FilamentNotification().title('Buch wird neu generiert').body('Bitte warten...').info().send();
-                
+
                 const body = { filters: this.filters || {}, updateBookWithFilters: true };
                 try {
                     const response = await fetch(`/admin/patients/${encodeURIComponent(this.patientId)}/filters`, {
@@ -533,7 +533,7 @@
                     if (!response.ok) {
                         throw new Error('Failed to start book recreation');
                     }
-                    
+
                     // Start polling for book status
                     this.pollBookStatus();
                 } catch (e) {
@@ -544,22 +544,22 @@
             pollBookStatus() {
                 let pollCount = 0;
                 const maxPolls = 60; // 60 * 3 seconds = 3 minutes max
-                
+
                 const checkStatus = async () => {
                     pollCount++;
-                    
+
                     try {
                         const response = await fetch(`/books/${this.bookId}/status`, {
                             headers: { 'X-Requested-With': 'XMLHttpRequest' }
                         });
-                        
+
                         if (!response.ok) {
                             throw new Error('Failed to check book status');
                         }
-                        
+
                         const data = await response.json();
                         const status = data.status;
-                        
+
                         // Check if book is ready
                         if (['Warten auf Versand', 'Versendet'].includes(status)) {
                             clearInterval(pollInterval);
@@ -568,12 +568,12 @@
                                 .body('Das Buch wurde mit den aktuellen Filtern neu generiert.')
                                 .success()
                                 .send();
-                            
+
                             // Reload the page to show updated recipes
                             setTimeout(() => window.location.reload(), 2000);
                             return;
                         }
-                        
+
                         // Check if we've exceeded max polls
                         if (pollCount >= maxPolls) {
                             clearInterval(pollInterval);
@@ -593,7 +593,7 @@
                             .send();
                     }
                 };
-                
+
                 // Poll every 3 seconds
                 const pollInterval = setInterval(checkStatus, 3000);
                 // Check immediately
