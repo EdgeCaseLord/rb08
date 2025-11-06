@@ -51,7 +51,7 @@
 
                             <!-- Actions -->
                             <div class="mt-4 flex justify-end space-x-2">
-                                <button type="button" class="px-2 py-1 rounded text-blue-600 hover:text-blue-800" @click.stop.prevent="openRecipe(recipe)">
+                                <button type="button" class="px-2 py-1 rounded text-orange-600 hover:text-orange-800 dark:text-orange-400 dark:hover:text-orange-300" @click.stop.prevent="openRecipe(recipe)">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.25 12s3.75-6.75 9.75-6.75S21.75 12 21.75 12s-3.75 6.75-9.75 6.75S2.25 12 2.25 12z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                                 </button>
                                 <button type="button" class="px-2 py-1 rounded"
@@ -131,7 +131,7 @@
 
                             <!-- Actions -->
                             <div class="mt-4 flex justify-end space-x-2">
-                                <button type="button" class="px-2 py-1 rounded text-blue-600 hover:text-blue-800" @click.prevent="openRecipe(recipe)">
+                                <button type="button" class="px-2 py-1 rounded text-orange-600 hover:text-orange-800 dark:text-orange-400 dark:hover:text-orange-300" @click.prevent="openRecipe(recipe)">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.25 12s3.75-6.75 9.75-6.75S21.75 12 21.75 12s-3.75 6.75-9.75 6.75S2.25 12 2.25 12z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                                 </button>
                                 <button type="button" class="px-2 py-1 rounded text-red-600 hover:text-red-800" @click.stop.prevent="if(confirm('Wirklich aus Favoriten entfernen?')) { removeFromFavorites(recipe) }">
@@ -231,7 +231,7 @@
 
                                     <!-- Actions -->
                                     <div class="mt-4 flex justify-end space-x-2">
-                                        <button type="button" class="px-2 py-1 rounded text-blue-600 hover:text-blue-800" @click.prevent="openRecipe(recipe)">
+                                        <button type="button" class="px-2 py-1 rounded text-orange-600 hover:text-orange-800 dark:text-orange-400 dark:hover:text-orange-300" @click.prevent="openRecipe(recipe)">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.25 12s3.75-6.75 9.75-6.75S21.75 12 21.75 12s-3.75 6.75-9.75 6.75S2.25 12 2.25 12z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                                         </button>
                                         <button type="button" class="px-2 py-1 rounded text-gray-600 hover:text-red-500 dark:text-gray-400 dark:hover:text-red-400" @click.stop.prevent="addToFavorites(recipe)">
@@ -274,4 +274,19 @@
 
 
     </x-filament::section>
+
+    <!-- Recipe Modal -->
+    <div x-show="showModal"
+         x-cloak
+         class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+         @click="closeModal()"
+         style="display: none;">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg w-full max-w-6xl relative"
+             @click.stop
+             style="max-height:90vh; overflow-y:auto;">
+            <button class="absolute top-4 right-4 z-10 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-3xl font-bold"
+                    @click="closeModal()">&times;</button>
+            <div class="p-6" x-html="modalRecipe"></div>
+        </div>
+    </div>
     </div>

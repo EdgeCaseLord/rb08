@@ -25,9 +25,7 @@ Route::middleware(['auth'])->group(function () {
 //    Route::get('/recipe/{recipe}/view', function (Recipe $recipe) {
 //        return view('filament.resources.recipe-resource.view-recipe', ['recipe' => $recipe]);
 //    })->name('recipe.view');
-    Route::get('/recipes/{recipe}', function (Recipe $recipe) {
-        return view('filament.resources.recipe-resource.view-recipe', ['recipe' => $recipe]);
-    })->name('recipe.view');
+    Route::get('/recipe/view/{id}', [\App\Http\Controllers\RecipeViewController::class, 'show'])->name('recipe.view');
 
     Route::get('/recipes/{recipe}/pdf', function (Recipe $recipe) {
         return Pdf::view('filament.resources.recipe-resource.view-recipe-pdf', [

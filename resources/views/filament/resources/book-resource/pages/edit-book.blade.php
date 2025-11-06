@@ -602,7 +602,32 @@
                 checkStatus();
             },
             // ui actions
-            openRecipe(r) { const id = this.idOf(r); if (!id) return; window.open(`/recipes/${id}`, '_blank'); },
+            showModal: false,
+            modalRecipeId: null,
+            modalRecipe: null,
+            openRecipe(r) { 
+                const id = this.idOf(r); 
+                if (!id) return; 
+                this.modalRecipeId = id;
+                this.loadRecipeForModal(id);
+            },
+            async loadRecipeForModal(id) {
+                try {
+                    const response = await fetch(`/recipe/view/${id}`);
+                    if (!response.ok) throw new Error('Failed to load recipe');
+                    const html = await response.text();
+                    this.modalRecipe = html;
+                    this.showModal = true;
+                } catch (error) {
+                    console.error('Error loading recipe:', error);
+                    alert('Fehler beim Laden des Rezepts');
+                }
+            },
+            closeModal() {
+                this.showModal = false;
+                this.modalRecipeId = null;
+                this.modalRecipe = null;
+            },
             isFavorite(id) { return !!this.favoriteRecipes.find(x => this.idOf(x)===id); },
             addToBook(r) {
                 const id = this.idOf(r); if (!id || !this.bookId) return;
@@ -663,4 +688,19 @@
         }
     }
     </script>
+
+    <!-- Recipe Modal -->
+    <div x-show="showModal" 
+         x-cloak
+         class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" 
+         @click="closeModal()"
+         style="display: none;">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg w-full max-w-6xl relative" 
+             @click.stop 
+             style="max-height:90vh; overflow-y:auto;">
+            <button class="absolute top-4 right-4 z-10 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-3xl font-bold" 
+                    @click="closeModal()">&times;</button>
+            <div class="p-6" x-html="modalRecipe"></div>
+        </div>
+    </div>
 </x-filament-panels::page>

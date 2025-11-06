@@ -718,6 +718,17 @@ class CookButlerService
     }
 
     /**
+     * Get a recipe by ID (alias for fetchRecipeDetails for clarity)
+     *
+     * @param string|int $recipeId
+     * @return array|null
+     */
+    public function getRecipeById($recipeId): ?array
+    {
+        return $this->fetchRecipeDetails($recipeId);
+    }
+
+    /**
      * Get the user's filter preferences from the settings JSON.
      *
      * @param User $user
