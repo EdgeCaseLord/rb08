@@ -190,7 +190,7 @@ class CreateBookJob implements ShouldQueue
                         continue;
                     }
                     
-                    $courseFilter = ['filterCourse' => [$course]];
+                    $courseFilter = ['filterCourse' => [$course], 'randomize_offset' => true];
                     $requestFilters = array_merge($this->filters ?? [], $courseFilter);
                     $result = $service->fetchAvailableRecipesForPatient($patient, $requestFilters, $limit);
                     $recipeIds = $result['recipe_ids'] ?? [];

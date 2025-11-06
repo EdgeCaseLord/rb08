@@ -483,35 +483,7 @@ class CookButlerService
         // Handle offset and randomize_offset separately
         $apiOffset = isset($filters['offset']) ? (int) $filters['offset'] : 0;
         $randomizeOffset = isset($filters['randomize_offset']) ? (bool) $filters['randomize_offset'] : false;
-        // After $apiFilters and $q are defined
-        if ($randomizeOffset) {
-            // Try to get the total number of available recipes for the current filters
-            $total = null;
-            try {
-                $searchDataForCount = [
-                    'language' => 'de-de',
-                    'searchtype' => 'extended',
-                    'add_info' => [],
-                    'limit' => 1,
-                    'offset' => 0,
-                ];
-                if (!empty($apiReadyFilters)) {
-                    $searchDataForCount['filters'] = $apiReadyFilters;
-                }
-                if (!empty($q)) {
-                    $searchDataForCount['q'] = $q;
-                }
-                $countData = $this->makeApiRequest('POST', $this->searchEndpoint, $searchDataForCount, $patient, !empty($apiReadyFilters['allergen']) ? (array)$apiReadyFilters['allergen'] : []);
-                $total = $countData['total']['value'] ?? null;
-            } catch (\Exception $e) {
-                \Illuminate\Support\Facades\Log::warning('CookButlerService: Could not fetch total for random offset', ['error' => $e->getMessage()]);
-            }
-            $maxOffset = 1000;
-            if ($total !== null && $total > $limit) {
-                $maxOffset = $total - $limit;
-            }
-            $apiOffset = random_int(0, max(0, $maxOffset));
-        }
+        
         Log::info('fetchAvailableRecipesForPatient called', [
             'patient_id' => $patient->id,
             'filters' => $apiReadyFilters,
@@ -604,6 +576,41 @@ class CookButlerService
             }
             if (!empty($finalApiFilters)) {
                 $searchData['filters'] = $finalApiFilters;
+            }
+
+            // Apply random offset AFTER filters are normalized
+            if ($randomizeOffset) {
+                $total = null;
+                try {
+                    $searchDataForCount = [
+                        'language' => 'de-de',
+                        'searchtype' => 'extended',
+                        'add_info' => [],
+                        'limit' => 1,
+                        'offset' => 0,
+                    ];
+                    if (!empty($q)) {
+                        $searchDataForCount['q'] = $q;
+                    }
+                    // Copy filters but let makeApiRequest handle allergens to ensure patient allergens are always included
+                    if (!empty($finalApiFilters)) {
+                        $searchDataForCount['filters'] = $finalApiFilters;
+                        // Remove allergens from the data since makeApiRequest will add them
+                        unset($searchDataForCount['filters']['allergen']);
+                    }
+                    // Pass allergens separately so makeApiRequest can merge with patient allergens
+                    $countData = $this->makeApiRequest('POST', $this->searchEndpoint, $searchDataForCount, $patient, !empty($finalApiFilters['allergen']) ? (array)$finalApiFilters['allergen'] : []);
+                    $total = $countData['total']['value'] ?? null;
+                    Log::debug('CookButlerService: Got total for randomization', ['total' => $total, 'limit' => $limit]);
+                } catch (\Exception $e) {
+                    Log::warning('CookButlerService: Could not fetch total for random offset', ['error' => $e->getMessage()]);
+                }
+                if ($total !== null && $total > $limit) {
+                    $maxOffset = $total - $limit;
+                    $apiOffset = random_int(0, max(0, $maxOffset));
+                    $searchData['offset'] = $apiOffset;
+                    Log::debug('CookButlerService: Applied random offset', ['offset' => $apiOffset, 'total' => $total, 'limit' => $limit]);
+                }
             }
 
             Log::debug('CookButlerService: searchData payload before API request', ['searchData' => $searchData]);
@@ -763,13 +770,19 @@ class CookButlerService
         $merged = array_merge($prefs, $filters);
         
         // For array-type filters, merge and deduplicate
-        $arrayFilters = ['filterAllergen', 'filterCategory', 'filterCountry', 'filterCourse', 'filterDiets', 'filterDifficulty', 'filterMaxTime'];
+        // EXCEPT filterCourse which should be replaced, not merged (for per-course recipe fetching)
+        $arrayFilters = ['filterAllergen', 'filterCategory', 'filterCountry', 'filterDiets', 'filterDifficulty', 'filterMaxTime'];
         foreach ($arrayFilters as $key) {
             if (isset($prefs[$key]) && isset($filters[$key])) {
                 $prefVals = is_array($prefs[$key]) ? $prefs[$key] : [];
                 $filterVals = is_array($filters[$key]) ? $filters[$key] : [];
                 $merged[$key] = array_values(array_unique(array_merge($prefVals, $filterVals)));
             }
+        }
+        
+        // filterCourse should REPLACE, not merge (when explicitly provided in filters)
+        if (isset($filters['filterCourse'])) {
+            $merged['filterCourse'] = $filters['filterCourse'];
         }
         
         return $merged;
