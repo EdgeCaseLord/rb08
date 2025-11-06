@@ -138,7 +138,7 @@
         </div>
         
         <form x-ref="filterForm" onsubmit="return false;" @change="formChanged = true">
-            @include('components.recipe-filter-form', ['filterSet' => $filterSet])
+            @include('components.recipe-filter-form', ['filterSet' => $filterSet, 'showSearchFields' => false])
 
         <div class="mt-4 flex justify-end gap-2">
             @if($showApplyButton)

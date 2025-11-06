@@ -5,6 +5,9 @@
         $filterSet = $filterSet($contextRecord);
     }
     
+    // Control visibility of search fields (Title and Ingredients)
+    $showSearchFields = $showSearchFields ?? true;
+    
     // Check if each filter section has active values to auto-expand
     // Handle both array format ['dessert'] and object format {dessert: true}
     $checkActive = function($val) {
@@ -48,6 +51,7 @@
     oSub: {{ $hasSubstances ? 'true' : 'false' }} 
 }">
     <div class="mb-4 grid grid-cols-1 md:grid-cols-5 gap-2 items-end">
+        @if($showSearchFields)
         <div class="col-span-full grid grid-cols-2 gap-4">
             <input type="text" placeholder="{{ __('Titel') }}" class="filament-input w-full rounded-lg" name="filterTitle" value="{{ old('filterTitle', $filterSet['filterTitle'] ?? '') }}">
             <div class="relative flex items-center">
@@ -67,6 +71,7 @@
                 <input type="text" placeholder="{{ __('Zutaten (Bsp.: paprika nudeln -aprikosen)') }}" class="filament-input w-full rounded-lg" name="filterIngredients" value="{{ old('filterIngredients', $filterSet['filterIngredients'] ?? '') }}">
             </div>
         </div>
+        @endif
         <div class="col-span-full">
             <div class="mb-2">
                 <button type="button" class="w-full flex justify-between items-center py-2" @click="oA=!oA">
