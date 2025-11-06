@@ -12,8 +12,17 @@
     <!-- Book Recipes Section -->
     <x-filament::section collapsible="true" class="mb-6">
         <x-slot name="heading">
-            Rezepte im Buch (<span x-text="bookRecipes.length"></span>)
+            Rezepte im Buch
         </x-slot>
+
+        <!-- Recipe count bar -->
+        <div class="mb-4 p-2 bg-orange-100 dark:bg-orange-900 rounded text-xs flex justify-end">
+            <div class="text-right w-full text-orange-700 dark:text-orange-200 font-bold" style="color: #8B0000;">
+                Vorspeisen: <span x-text="bookCourseCounts.starter"></span>/<span x-text="recipeLimits.starter"></span> |
+                Hauptgerichte: <span x-text="bookCourseCounts.main_course"></span>/<span x-text="recipeLimits.main_course"></span> |
+                Desserts: <span x-text="bookCourseCounts.dessert"></span>/<span x-text="recipeLimits.dessert"></span>
+            </div>
+        </div>
 
         <div class="columns-1 sm:columns-2 xl:columns-3 2xl:columns-4 gap-4" wire:ignore>
             <template x-for="(recipe, i) in bookRecipes" :key="idOf(recipe) ? 'book-'+idOf(recipe) : 'book-'+i">
@@ -81,11 +90,6 @@
             <div class="text-xs text-gray-500" x-text="pageLabelTotal(bookPage, perPage, bookTotal)"></div>
             <button class="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 rounded hover:bg-orange-100 hover:border-orange-500 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-gray-200 dark:disabled:hover:bg-gray-700" :disabled="bookPage>=pagesTotal(perPage, bookTotal)" @click="loadBookPage(bookPage+1)">Weiter</button>
         </div>
-        <div class="mt-4 text-sm text-gray-600">
-            Vorspeisen: <span x-text="bookCourseCounts.starter"></span>/<span x-text="recipeLimits.starter"></span> |
-            Hauptgerichte: <span x-text="bookCourseCounts.main_course"></span>/<span x-text="recipeLimits.main_course"></span> |
-            Desserts: <span x-text="bookCourseCounts.dessert"></span>/<span x-text="recipeLimits.dessert"></span>
-        </div>
     </x-filament::section>
 
     <!-- Favorites Section -->
@@ -94,8 +98,15 @@
             Favoriten (<span x-text="favoriteRecipes.length"></span>)
         </x-slot>
 
+        <!-- Favorites in book count bar -->
+        <div class="mb-4 p-2 bg-orange-100 dark:bg-orange-900 rounded text-xs flex justify-end">
+            <div class="text-right w-full text-orange-700 dark:text-orange-200 font-bold" style="color: #8B0000;">
+                <span x-text="bookRecipes.filter(book => favoriteRecipes.some(fav => idOf(fav) === idOf(book))).length"></span>/<span x-text="favTotal"></span> Favoriten im Buch
+            </div>
+        </div>
+
         <div class="columns-1 sm:columns-2 xl:columns-3 2xl:columns-4 gap-4" wire:ignore>
-            <template x-for="(recipe, i) in favoriteRecipes" :key="idOf(recipe) ? 'fav-'+idOf(recipe) : 'fav-'+i">
+            <template x-for="(recipe, i) in favoriteRecipes.filter(fav => !bookRecipes.some(book => idOf(book) === idOf(fav)))" :key="idOf(recipe) ? 'fav-'+idOf(recipe) : 'fav-'+i">
                 <div class="mb-4 break-inside-avoid">
                     <!-- Recipe card -->
                     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden relative">

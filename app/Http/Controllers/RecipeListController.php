@@ -286,9 +286,9 @@ class RecipeListController extends Controller
     {
         $perPage = max(1, min(60, (int)$request->get('perPage', 24)));
         $page = max(1, (int)$request->get('page', 1));
-        $query = $book->recipes()->orderBy('title');
+        $query = $book->recipes()->whereNotNull('title')->where('title', '!=', '')->orderBy('title');
         $total = $query->count();
-        $items = $query->forPage($page, $perPage)->get()->map(fn($r) => $this->mapRecipeMinimal($r))->all();
+        $items = $query->forPage($page, $perPage)->get()->map(fn($r) => $this->mapRecipeMinimal($r))->filter(fn($r) => !empty($r['title']))->values()->all();
         return response()->json([
             'items' => $items,
             'total' => $total,
@@ -304,9 +304,9 @@ class RecipeListController extends Controller
         $user = Auth::user();
         if (!$user) return response()->json(['items' => [], 'total' => 0, 'page' => $page, 'perPage' => $perPage]);
         $favoriteIds = $user->settings['favorites'] ?? [];
-        $query = Recipe::whereIn('id_recipe', $favoriteIds)->orderBy('title');
+        $query = Recipe::whereIn('id_recipe', $favoriteIds)->whereNotNull('title')->where('title', '!=', '')->orderBy('title');
         $total = $query->count();
-        $items = $query->forPage($page, $perPage)->get()->map(fn($r) => $this->mapRecipeMinimal($r))->all();
+        $items = $query->forPage($page, $perPage)->get()->map(fn($r) => $this->mapRecipeMinimal($r))->filter(fn($r) => !empty($r['title']))->values()->all();
         return response()->json([
             'items' => $items,
             'total' => $total,
@@ -400,6 +400,8 @@ class RecipeListController extends Controller
         $items = array_map(function ($r) {
             return $this->mapRecipeMinimal($r);
         }, is_array($details) ? $details : []);
+        // Filter out recipes without titles
+        $items = array_filter($items, fn($r) => !empty($r['title']));
         // Items already correspond to the sliced IDs; ensure numeric index
         $items = array_values($items);
         return response()->json([

@@ -605,9 +605,9 @@
             showModal: false,
             modalRecipeId: null,
             modalRecipe: null,
-            openRecipe(r) { 
-                const id = this.idOf(r); 
-                if (!id) return; 
+            openRecipe(r) {
+                const id = this.idOf(r);
+                if (!id) return;
                 this.modalRecipeId = id;
                 this.loadRecipeForModal(id);
             },
@@ -629,15 +629,43 @@
                 this.modalRecipe = null;
             },
             isFavorite(id) { return !!this.favoriteRecipes.find(x => this.idOf(x)===id); },
+            getCourse(recipe) {
+                // Determine course from recipe category
+                const cats = this.categories(recipe.category);
+                if (!cats || cats.length === 0) return null;
+                const primary = cats[0].toLowerCase();
+                if (primary.includes('vorspeise') || primary.includes('starter')) return 'starter';
+                if (primary.includes('hauptgericht') || primary.includes('main')) return 'main_course';
+                if (primary.includes('dessert') || primary.includes('nachspeise')) return 'dessert';
+                return null;
+            },
+            canAddRecipe(recipe) {
+                const course = this.getCourse(recipe);
+                if (!course) return true;
+                const limit = this.recipeLimits[course] || 5;
+                const current = this.bookCourseCounts[course] || 0;
+                return current < limit;
+            },
             addToBook(r) {
                 const id = this.idOf(r); if (!id || !this.bookId) return;
+
+                // Check limit before adding
+                if (!this.canAddRecipe(r)) {
+                    const course = this.getCourse(r);
+                    const names = { starter: 'Vorspeisen', main_course: 'Hauptgerichte', dessert: 'Desserts' };
+                    alert(`Limit erreicht! Sie können keine weiteren ${names[course] || 'Rezepte'} hinzufügen.`);
+                    return;
+                }
+
                 if (!this.bookRecipes.find(x => this.idOf(x)===id)) this.bookRecipes.unshift(r);
                 this.favoriteRecipes = this.favoriteRecipes.filter(x => this.idOf(x)!==id);
                 this.availableRecipes = this.availableRecipes.filter(x => this.idOf(x)!==id);
-                this.computeBookCourseCounts();
                 fetch(`/books/${this.bookId}/recipes/${id}`, {
                     method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json', 'X-CSRF-TOKEN': this.csrf() }
-                }).then(resp => { if (!resp.ok) throw new Error('failed') })
+                }).then(resp => {
+                    if (!resp.ok) throw new Error('failed');
+                    this.computeBookCourseCounts();
+                })
                   .catch(() => {
                       this.bookRecipes = this.bookRecipes.filter(x => this.idOf(x)!==id);
                       this.availableRecipes.unshift(r);
@@ -648,10 +676,12 @@
                 const id = this.idOf(r); if (!id || !this.bookId) return;
                 this.bookRecipes = this.bookRecipes.filter(x => this.idOf(x)!==id);
                 if (!this.availableRecipes.find(x => this.idOf(x)===id)) this.availableRecipes.unshift(r);
-                this.computeBookCourseCounts();
                 fetch(`/books/${this.bookId}/recipes/${id}`, {
                     method: 'DELETE', headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json', 'X-CSRF-TOKEN': this.csrf() }
-                }).then(resp => { if (!resp.ok) throw new Error('failed') })
+                }).then(resp => {
+                    if (!resp.ok) throw new Error('failed');
+                    this.computeBookCourseCounts();
+                })
                   .catch(() => {
                       this.availableRecipes = this.availableRecipes.filter(x => this.idOf(x)!==id);
                       this.bookRecipes.unshift(r);
@@ -690,15 +720,15 @@
     </script>
 
     <!-- Recipe Modal -->
-    <div x-show="showModal" 
+    <div x-show="showModal"
          x-cloak
-         class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" 
+         class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
          @click="closeModal()"
          style="display: none;">
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg w-full max-w-6xl relative" 
-             @click.stop 
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg w-full max-w-6xl relative"
+             @click.stop
              style="max-height:90vh; overflow-y:auto;">
-            <button class="absolute top-4 right-4 z-10 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-3xl font-bold" 
+            <button class="absolute top-4 right-4 z-10 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-3xl font-bold"
                     @click="closeModal()">&times;</button>
             <div class="p-6" x-html="modalRecipe"></div>
         </div>
