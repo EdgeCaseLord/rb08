@@ -178,7 +178,7 @@
                         </template>
                     </div>
                     <!-- Filter form -->
-                    <form x-ref="filterForm" onsubmit="return false;">
+                    <form x-ref="filterForm" onsubmit="return false;" @change="formChanged = true">
                         @include('components.recipe-filter-form', ['filterSet' => ($serverFilterSet ?? [])])
                         <div class="mt-2 flex justify-end gap-2">
                             <button type="button" class="px-3 py-1 bg-primary-600 text-white rounded hover:bg-primary-700 text-sm"
@@ -186,7 +186,7 @@
                             <button type="button" class="px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-700 text-sm"
                                     @click="extractFiltersFromForm($refs.filterForm); saveFilters();">Filter speichern</button>
                             <button type="button" class="px-3 py-1 bg-amber-600 text-white rounded hover:bg-amber-700 text-sm"
-                                    @click="extractFiltersFromForm($refs.filterForm); recreateBook();">Buch neu generieren</button>
+                                    @click="if (formChanged) { new FilamentNotification().title('Bitte speichern Sie die Filter zuerst').danger().send(); } else { extractFiltersFromForm($refs.filterForm); recreateBook(); }">Buch neu generieren</button>
                         </div>
                     </form>
                 </div>

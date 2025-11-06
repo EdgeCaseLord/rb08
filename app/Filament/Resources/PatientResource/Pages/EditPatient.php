@@ -14,6 +14,8 @@ use Illuminate\Support\Facades\Log;
 class EditPatient extends EditRecord
 {
     protected static string $resource = PatientResource::class;
+    
+    protected static string $view = 'filament.resources.patient-resource.pages.edit-patient';
 
     protected function getHeaderActions(): array
     {

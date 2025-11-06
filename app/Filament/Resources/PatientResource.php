@@ -104,7 +104,8 @@ class PatientResource extends Resource
                     ->required(),
                 Forms\Components\Hidden::make('role')
                     ->default('patient'),
-                Forms\Components\Section::make(__('Rezepte Filter'))
+                // Rezepte Filter section removed - now using unified component in edit-patient.blade.php
+                /*Forms\Components\Section::make(__('Rezepte Filter'))
                     ->collapsible()
                     ->schema([
                         Forms\Components\Fieldset::make('Allergene')
@@ -285,7 +286,7 @@ class PatientResource extends Resource
                                         'xl' => 3
                                     ]),
                             ]),
-                    ]),
+                    ]),*/
             ]);
     }
 

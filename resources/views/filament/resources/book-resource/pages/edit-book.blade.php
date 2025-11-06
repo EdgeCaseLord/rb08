@@ -161,6 +161,7 @@
             openFilters: hasFilters, // Open if filters are active
             // filters (legacy-compatible keys)
             filters: initialFilters,
+            formChanged: false,
             // pagination
             perPage: 6,
             perPageAvail: 6,
@@ -492,6 +493,7 @@
                 ['filterAllergen','filterCategory','filterCourse','filterDiets','filterDifficulty','filterMaxTime'].forEach(k => {
                     if (!this.filters[k]) this.filters[k] = {};
                 });
+                this.formChanged = false;
             },
             async saveFilters() {
                 if (!this.bookId || !this.patientId) {

@@ -41,7 +41,7 @@ class PatientFilterController extends Controller
                 'filterSubstances' => $filters['filterSubstances'] ?? [],
                 'updateBookWithFilters' => (bool)($payload['updateBookWithFilters'] ?? false),
             ];
-            
+
             // Normalize filter formats: convert {key: true} to ['key']
             $dictKeys = ['filterAllergen', 'filterCategory', 'filterCourse', 'filterDiets', 'filterDifficulty', 'filterMaxTime'];
             foreach ($dictKeys as $k) {
@@ -53,7 +53,7 @@ class PatientFilterController extends Controller
                     }
                 }
             }
-            
+
             // Countries: ensure it's an array of values
             if (isset($filterSet['filterCountry']) && is_array($filterSet['filterCountry'])) {
                 if (array_values($filterSet['filterCountry']) !== $filterSet['filterCountry']) {
@@ -68,12 +68,12 @@ class PatientFilterController extends Controller
             if (isset($payload['availTotal'])) {
                 $settings['recipe_filter_total'] = (int)$payload['availTotal'];
             }
-            
+
             \Log::debug('Saving patient filters', [
                 'patient_id' => $patientModel->id,
                 'filterSet' => $filterSet,
             ]);
-            
+
             $patientModel->settings = $settings;
             $patientModel->save();
 

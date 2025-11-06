@@ -152,7 +152,7 @@
                         @php
                             $courseFilter = $filterSet['filterCourse'] ?? [];
                             // Handle both array format ['dessert'] and object format {dessert: true}
-                            $isChecked = is_array($courseFilter) && (in_array($key, $courseFilter) || ($courseFilter[$key] ?? false));
+                            $isChecked = is_array($courseFilter) && (in_array($key, $courseFilter, true) || !empty($courseFilter[$key]));
                         @endphp
                         <label class="flex items-center space-x-2">
                             <input type="checkbox" name="filterCourse[{{ $key }}]" value="1" class="form-checkbox" @if(old('filterCourse.'.$key, $isChecked)) checked @endif>
