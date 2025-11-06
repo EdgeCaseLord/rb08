@@ -148,18 +148,27 @@ class TextTemplateResource extends Resource
                         'en' => 'English',
                     ])
                     ->default(function ($record) {
-                        if ($record && isset($record->body) && is_array($record->body)) {
-                            if (array_key_exists('de', $record->body)) {
-                                return 'de';
-                            }
-                            // Pick the first available language key
-                            $firstLang = array_key_first($record->body);
-                            if ($firstLang) {
-                                return $firstLang;
-                            }
+                        // For new records, default to user's locale (German or English)
+                        if (!$record) {
+                            $userLocale = app()->getLocale();
+                            return in_array($userLocale, ['de', 'en']) ? $userLocale : 'de';
                         }
-                        return 'de';
+                        return null; // Let afterStateHydrated handle existing records
                     })
+                    ->afterStateHydrated(function ($component, $state, $record, $set) {
+                        // For existing records, detect language from stored data and SET it
+                        if ($record && isset($record->body) && is_array($record->body)) {
+                            $detectedLang = 'de'; // Default to German
+                            if (array_key_exists('de', $record->body) && !empty($record->body['de'])) {
+                                $detectedLang = 'de';
+                            } elseif (array_key_exists('en', $record->body) && !empty($record->body['en'])) {
+                                $detectedLang = 'en';
+                            }
+                            // Set the language field value
+                            $component->state($detectedLang);
+                        }
+                    })
+                    ->required()
                     ->reactive()
                     ->visible(fn(\Filament\Forms\Get $get) =>
                         ($get('type') !== 'book_text' && filled($get('type')))

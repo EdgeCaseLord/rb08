@@ -35,9 +35,22 @@ class BookPdfController extends Controller
         //     ]);
         // }
 
-        // Fetch book text templates
-        $impressumTemplate = \App\Models\TextTemplate::where('type', 'book_text_impressum')->first();
-        $erlaeuterungTemplate = \App\Models\TextTemplate::where('type', 'book_text_erlaeuterung')->first();
+        // Fetch book text templates for the patient's lab user
+        $labUserId = $book->patient->lab_id ?? null;
+        $impressumTemplate = \App\Models\TextTemplate::where('type', 'book_text_impressum')
+            ->where('user_id', $labUserId)
+            ->first();
+        $erlaeuterungTemplate = \App\Models\TextTemplate::where('type', 'book_text_erlaeuterung')
+            ->where('user_id', $labUserId)
+            ->first();
+        
+        // Fallback to any template if lab-specific not found
+        if (!$impressumTemplate) {
+            $impressumTemplate = \App\Models\TextTemplate::where('type', 'book_text_impressum')->first();
+        }
+        if (!$erlaeuterungTemplate) {
+            $erlaeuterungTemplate = \App\Models\TextTemplate::where('type', 'book_text_erlaeuterung')->first();
+        }
 
         // PDF mit --no-sandbox generieren
         return Pdf::view('pdf.book', [

@@ -39,9 +39,22 @@ class PdfController extends Controller
             @ini_set('memory_limit', '1024M');
             @set_time_limit(600);
 
-            // Fetch optional text templates so they appear in the PDF
-            $impressumTemplate = TextTemplate::where('type', 'book_text_impressum')->first();
-            $erlaeuterungTemplate = TextTemplate::where('type', 'book_text_erlaeuterung')->first();
+            // Fetch optional text templates for the patient's lab user
+            $labUserId = $book->patient->lab_id ?? null;
+            $impressumTemplate = TextTemplate::where('type', 'book_text_impressum')
+                ->where('user_id', $labUserId)
+                ->first();
+            $erlaeuterungTemplate = TextTemplate::where('type', 'book_text_erlaeuterung')
+                ->where('user_id', $labUserId)
+                ->first();
+            
+            // Fallback to any template if lab-specific not found
+            if (!$impressumTemplate) {
+                $impressumTemplate = TextTemplate::where('type', 'book_text_impressum')->first();
+            }
+            if (!$erlaeuterungTemplate) {
+                $erlaeuterungTemplate = TextTemplate::where('type', 'book_text_erlaeuterung')->first();
+            }
 
             $pdf = Pdf::view('pdf.book', [
                     'book' => $book,
