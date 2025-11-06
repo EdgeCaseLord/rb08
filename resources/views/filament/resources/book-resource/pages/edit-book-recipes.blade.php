@@ -57,9 +57,9 @@
                                 <button type="button" class="px-2 py-1 rounded"
                                     :class="isFavorite(idOf(recipe))
                                         ? 'text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300'
-                                        : 'text-gray-600 hover:text-red-500 dark:text-gray-400 dark:hover:text-red-400'"
+                                        : 'text-gray-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400'"
                                     @click.stop.prevent="isFavorite(idOf(recipe)) ? removeFromFavorites(recipe) : addToFavorites(recipe)">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" viewBox="0 0 20 20" fill="currentColor"><path d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 18.656l-6.828-6.829a4 4 0 010-5.656z"/></svg>
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" :fill="isFavorite(idOf(recipe)) ? 'currentColor' : 'none'" viewBox="0 0 20 20" stroke="currentColor" stroke-width="1.5"><path d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 18.656l-6.828-6.829a4 4 0 010-5.656z"/></svg>
                                 </button>
                                 <button type="button" class="px-2 py-1 rounded text-red-600 hover:text-red-800" @click.stop.prevent="removeFromBook(recipe)">
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5 inline">
@@ -234,9 +234,9 @@
                                         <button type="button" class="px-2 py-1 rounded text-orange-600 hover:text-orange-800 dark:text-orange-400 dark:hover:text-orange-300" @click.prevent="openRecipe(recipe)">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.25 12s3.75-6.75 9.75-6.75S21.75 12 21.75 12s-3.75 6.75-9.75 6.75S2.25 12 2.25 12z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                                         </button>
-                                        <button type="button" class="px-2 py-1 rounded text-gray-600 hover:text-red-500 dark:text-gray-400 dark:hover:text-red-400" @click.stop.prevent="addToFavorites(recipe)">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" viewBox="0 0 20 20" fill="currentColor"><path d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 18.656l-6.828-6.829a4 4 0 010-5.656z"/></svg>
-                                        </button>
+                                        <button type="button" class="px-2 py-1 rounded text-gray-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400" @click.stop.prevent="addToFavorites(recipe)">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" fill="none" viewBox="0 0 20 20" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 18.656l-6.828-6.829a4 4 0 010-5.656z"/></svg>
+                                </button>
                                         <button type="button" class="px-2 py-1 rounded text-green-600 hover:text-green-800" @click.prevent="addToBook(recipe)">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4.5v15m7.5-7.5h-15"/></svg>
                                         </button>
