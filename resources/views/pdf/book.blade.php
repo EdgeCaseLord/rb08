@@ -288,12 +288,13 @@
         $randomMedia = $randomRecipe ? (is_string($randomRecipe->media ?? null) ? json_decode($randomRecipe->media, true) : (is_array($randomRecipe->media ?? null) ? $randomRecipe->media : null)) : null;
         $randomImage = null;
         if ($randomMedia) {
-            if (!empty($randomMedia['search'])) {
-                $randomImage = is_array($randomMedia['search']) ? ($randomMedia['search'][0] ?? null) : $randomMedia['search'];
+            // Use full-size images for cover pages
+            if (!empty($randomMedia['preview_no_wm'])) {
+                $randomImage = is_array($randomMedia['preview_no_wm']) ? ($randomMedia['preview_no_wm'][0] ?? null) : $randomMedia['preview_no_wm'];
             } elseif (!empty($randomMedia['preview'])) {
                 $randomImage = is_array($randomMedia['preview']) ? ($randomMedia['preview'][0] ?? null) : $randomMedia['preview'];
-            } elseif (!empty($randomMedia['preview_no_wm'])) {
-                $randomImage = is_array($randomMedia['preview_no_wm']) ? ($randomMedia['preview_no_wm'][0] ?? null) : $randomMedia['preview_no_wm'];
+            } elseif (!empty($randomMedia['search'])) {
+                $randomImage = is_array($randomMedia['search']) ? ($randomMedia['search'][0] ?? null) : $randomMedia['search'];
             }
         }
         $currentPage = 0; // Initialize page counter at 0 since cover pages don't count

@@ -573,6 +573,11 @@ class EditBook extends EditRecord
         ];
     }
 
+    public function getTitle(): string
+    {
+        return __('Rezeptbuch bearbeiten');
+    }
+
     public function getView(): string
     {
         return 'filament.resources.book-resource.pages.edit-book';
