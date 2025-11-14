@@ -16,6 +16,8 @@ use Filament\Notifications\Notification;
 use Spatie\LaravelPdf\Facades\Pdf;
 use Spatie\Browsershot\Browsershot;
 use Illuminate\Support\Facades\Storage;
+use App\Models\TextTemplate;
+use Illuminate\Support\Facades\Auth;
 
 class CreateBookJobWithPdf implements ShouldQueue
 {
@@ -201,19 +203,48 @@ class CreateBookJobWithPdf implements ShouldQueue
 
     protected function sendEmailToLab(Book $book, string $pdfPath, User $patient): bool
     {
-        // Use test email for now
-        $labEmail = 'daniel@pixelhoch.de';
-        // Uncomment to use actual lab email
-        // $lab = $patient->lab ?? null;
-        // $labEmail = $lab && $lab->email ? $lab->email : null;
+        // Get lab user and email
+        $authUser = Auth::user();
+        if ($authUser instanceof \App\Models\User && method_exists($authUser, 'isLab') && $authUser->isLab()) {
+            $lab = $authUser;
+        } else {
+            $lab = $patient->lab;
+        }
+        $labEmail = $lab && $lab->email ? $lab->email : 'daniel@pixelhoch.de';
+        $labLanguage = $lab && $lab->language ? $lab->language : 'de';
+
+        // Fetch the text template for book_send_email for this lab
+        $template = TextTemplate::where('type', 'book_send_email')
+            ->where('user_id', $lab ? $lab->id : null)
+            ->first();
+        // Fallback to global template if not found
+        if (!$template) {
+            $template = TextTemplate::where('type', 'book_send_email')->first();
+        }
 
         $editLink = url("/filament/resources/books/{$book->id}/edit");
-        $subject = 'Rezeptbuch für Ihre Patient:innen – Jetzt einsehen und bearbeiten';
+        $userName = $lab ? $lab->name : ($patient->name ?? 'Lab');
+        $patientName = $patient->name;
+
+        // Prepare variables for template
+        $vars = [
+            'book' => $book,
+            'patient' => $patient,
+            'lab' => $lab,
+            'edit_link' => $editLink,
+            'record' => $book,
+            'name' => $patientName,
+            'lab_name' => $userName,
+        ];
+
+        // Get subject and body from template with variable replacement
+        $subject = $template ? $template->getSubjectForLocaleWithVars($labLanguage, $vars) : 'Rezeptbuch für Ihre Patient:innen – Jetzt einsehen und bearbeiten';
+        $body = $template ? $template->getBodyForLocale($labLanguage, $vars) : $this->getEmailBody($editLink, $patient->name);
 
         // Email template data
         $emailData = [
             'subject' => $subject,
-            'body' => $this->getEmailBody($editLink, $patient->name),
+            'body' => $body,
             'pdfPath' => Storage::path($pdfPath),
             'pdfName' => basename($pdfPath),
         ];
@@ -239,6 +270,7 @@ class CreateBookJobWithPdf implements ShouldQueue
         try {
             Mail::send([], [], function ($message) use ($emailData, $labEmail) {
                 $message->to($labEmail)
+                    ->from(config('mail.from.address'), config('mail.from.name'))
                     ->subject(mb_encode_mimeheader($emailData['subject'], 'UTF-8'))
                     ->html($emailData['body'])
                     ->attach($emailData['pdfPath'], [

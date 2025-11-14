@@ -28,6 +28,7 @@ class TestEmailCommand extends Command
 
             Mail::send([], [], function ($message) use ($email) {
                 $message->to($email)
+                    ->from(config('mail.from.address'), config('mail.from.name'))
                     ->subject('Test Email from Laravel App')
                     ->html('<h1>Test Email</h1><p>This is a test email to verify email functionality.</p>');
             });

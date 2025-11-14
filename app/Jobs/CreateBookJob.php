@@ -180,7 +180,7 @@ class CreateBookJob implements ShouldQueue
                 foreach ($recipesPerCourse as $course => $limit) {
                     // Check if user has a course filter active
                     $userCourseFilter = $this->filters['filterCourse'] ?? [];
-                    
+
                     // If user has a course filter and this course is not in it, skip
                     if (!empty($userCourseFilter) && !in_array($course, $userCourseFilter)) {
                         Log::debug('CreateBookJob: Skipping course due to user filter', [
@@ -189,7 +189,7 @@ class CreateBookJob implements ShouldQueue
                         ]);
                         continue;
                     }
-                    
+
                     $courseFilter = ['filterCourse' => [$course], 'randomize_offset' => true];
                     $requestFilters = array_merge($this->filters ?? [], $courseFilter);
                     $result = $service->fetchAvailableRecipesForPatient($patient, $requestFilters, $limit);
@@ -251,7 +251,7 @@ class CreateBookJob implements ShouldQueue
                 ]);
                 return;
             }
-            
+
             // If course filter is set and no recipes found, allow book creation with warning
             if (empty($currentRecipes) && $hasCourseFilter) {
                 Log::info('CreateBookJob: No recipes found but course filter is active, allowing book creation', [
@@ -357,20 +357,20 @@ class CreateBookJob implements ShouldQueue
         $userName = $lab ? $lab->name : ($patient->name ?? 'Lab');
         $patientName = $patient->name;
 
-        // Prepare replacements for template variables
-        $replacements = [
-            '{edit_link}' => $editLink,
-            '{lab_name}' => $userName,
-            '{patient_name}' => $patientName,
+        // Prepare variables for template
+        $vars = [
+            'book' => $book,
+            'patient' => $patient,
+            'lab' => $lab,
+            'edit_link' => $editLink,
+            'record' => $book,
+            'name' => $patientName,
+            'lab_name' => $userName,
         ];
 
-        // Get subject and body from template, fallback to default if needed
-        $subject = $template ? $template->getSubjectForLocale($labLanguage) : 'Rezeptbuch für Ihre Patient:innen – Jetzt einsehen und bearbeiten';
-        $body = $template ? $template->getBodyForLocale($labLanguage) : $this->getEmailBody($editLink, $userName);
-
-        // Replace variables in subject and body
-        $subject = strtr($subject, $replacements);
-        $body = strtr($body, $replacements);
+        // Get subject and body from template with variable replacement
+        $subject = $template ? $template->getSubjectForLocaleWithVars($labLanguage, $vars) : 'Rezeptbuch für Ihre Patient:innen – Jetzt einsehen und bearbeiten';
+        $body = $template ? $template->getBodyForLocale($labLanguage, $vars) : $this->getEmailBody($editLink, $userName);
 
         // Log email content to email channel
         Log::channel('email')->debug('Email content prepared', [
@@ -409,6 +409,7 @@ class CreateBookJob implements ShouldQueue
 
             Mail::send([], [], function ($message) use ($subject, $body, $labEmail) {
                 $message->to($labEmail)
+                    ->from(config('mail.from.address'), config('mail.from.name'))
                     ->subject(mb_encode_mimeheader($subject, 'UTF-8'))
                     ->html($body);
             });

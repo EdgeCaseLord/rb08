@@ -338,13 +338,16 @@ class BookResource extends Resource
                         $recipient = $data['recipient'];
                         $email = '';
                         $name = '';
+                        $recipientUser = null;
 
                         if ($recipient === 'patient') {
                             $email = $record->patient->email;
                             $name = $record->patient->name;
+                            $recipientUser = $record->patient;
                         } elseif ($recipient === 'lab' && $record->patient->lab) {
                             $email = $record->patient->lab->email;
                             $name = $record->patient->lab->name;
+                            $recipientUser = $record->patient->lab;
                         }
 
                         if (!$email) {
@@ -356,32 +359,43 @@ class BookResource extends Resource
                             return;
                         }
 
-                        // Generate PDF
-                        $pdfPath = "books/book-{$record->id}-rezepte.pdf";
-                        \Spatie\LaravelPdf\Facades\Pdf::view('pdf.book', [
+                        // Get language preference
+                        $language = $recipientUser && isset($recipientUser->settings['language'])
+                            ? $recipientUser->settings['language']
+                            : 'de';
+
+                        // Fetch text template
+                        $lab = $record->patient->lab;
+                        $template = \App\Models\TextTemplate::where('type', 'book_send_email')
+                            ->where('user_id', $lab ? $lab->id : null)
+                            ->first();
+                        if (!$template) {
+                            $template = \App\Models\TextTemplate::where('type', 'book_send_email')->first();
+                        }
+
+                        // Prepare variables
+                        $editLink = url("/filament/resources/books/{$record->id}/edit");
+                        $vars = [
                             'book' => $record,
-                            'recipes' => $record->recipes()->get()
-                        ])
-                        ->format('a4')
-                        ->name("buch-{$record->id}-rezepte.pdf")
-                        ->withBrowsershot(function (\Spatie\Browsershot\Browsershot $browsershot) {
-                            $browsershot->noSandbox();
-                        })
-                        ->save(\Illuminate\Support\Facades\Storage::path($pdfPath));
+                            'patient' => $record->patient,
+                            'lab' => $lab,
+                            'edit_link' => $editLink,
+                            'record' => $record,
+                            'name' => $record->patient->name,
+                            'lab_name' => $lab ? $lab->name : '',
+                        ];
 
-                        // Send email
-                        \Illuminate\Support\Facades\Mail::send([], [], function ($message) use ($email, $name, $record, $pdfPath) {
+                        // Get subject and body with variables
+                        $subject = $template ? $template->getSubjectForLocaleWithVars($language, $vars) : "Ihr Rezeptbuch: {$record->title}";
+                        $body = $template ? $template->getBodyForLocale($language, $vars) : "Sehr geehrte(r) $name,<br><br>Sie können Ihr Rezeptbuch unter folgendem Link einsehen: <a href=\"$editLink\">Rezeptbuch öffnen</a><br><br>Mit freundlichen Grüßen";
+
+                        // Send email with link (no PDF attachment)
+                        \Illuminate\Support\Facades\Mail::send([], [], function ($message) use ($email, $name, $subject, $body) {
                             $message->to($email, $name)
-                                ->subject("Ihr Rezeptbuch: {$record->title}")
-                                ->html("Sehr geehrte(r) {$name},<br><br>anbei finden Sie Ihr Rezeptbuch als PDF-Datei.<br><br>Mit freundlichen Grüßen")
-                                ->attach(\Illuminate\Support\Facades\Storage::path($pdfPath), [
-                                    'as' => "buch-{$record->id}-rezepte.pdf",
-                                    'mime' => 'application/pdf',
-                                ]);
+                                ->from(config('mail.from.address'), config('mail.from.name'))
+                                ->subject($subject)
+                                ->html($body);
                         });
-
-                        // Delete PDF after sending
-                        \Illuminate\Support\Facades\Storage::delete($pdfPath);
 
                         // Update book status to 'Versendet' and save
                         $record->status = 'Versendet';
@@ -478,13 +492,16 @@ class BookResource extends Resource
                     $recipient = $data['recipient'];
                     $email = '';
                     $name = '';
+                    $recipientUser = null;
 
                     if ($recipient === 'patient') {
                         $email = $record->patient->email;
                         $name = $record->patient->name;
+                        $recipientUser = $record->patient;
                     } elseif ($recipient === 'lab' && $record->patient->lab) {
                         $email = $record->patient->lab->email;
                         $name = $record->patient->lab->name;
+                        $recipientUser = $record->patient->lab;
                     }
 
                     if (!$email) {
@@ -496,33 +513,43 @@ class BookResource extends Resource
                         return;
                     }
 
-                    // Generate PDF
-                    $pdfPath = "books/book-{$record->id}-rezepte.pdf";
-                    \Spatie\LaravelPdf\Facades\Pdf::view('pdf.book', [
-                        'book' => $record,
-                        'recipes' => $record->recipes()->get()
-                    ])
-                    ->format('a4')
-                    ->name("buch-{$record->id}-rezepte.pdf")
-                    ->withBrowsershot(function (\Spatie\Browsershot\Browsershot $browsershot) {
-                        $browsershot->noSandbox();
-                    })
-                    ->save(\Illuminate\Support\Facades\Storage::path($pdfPath));
+                    // Get language preference
+                    $language = $recipientUser && isset($recipientUser->settings['language'])
+                        ? $recipientUser->settings['language']
+                        : 'de';
 
-                    // Send email
-                    \Illuminate\Support\Facades\Mail::send([], [], function ($message) use ($email, $name, $record, $pdfPath) {
+                    // Fetch text template
+                    $lab = $record->patient->lab;
+                    $template = \App\Models\TextTemplate::where('type', 'book_send_email')
+                        ->where('user_id', $lab ? $lab->id : null)
+                        ->first();
+                    if (!$template) {
+                        $template = \App\Models\TextTemplate::where('type', 'book_send_email')->first();
+                    }
+
+                    // Prepare variables
+                    $editLink = url("/filament/resources/books/{$record->id}/edit");
+                    $vars = [
+                        'book' => $record,
+                        'patient' => $record->patient,
+                        'lab' => $lab,
+                        'edit_link' => $editLink,
+                        'record' => $record,
+                        'name' => $record->patient->name,
+                        'lab_name' => $lab ? $lab->name : '',
+                    ];
+
+                    // Get subject and body with variables
+                    $subject = $template ? $template->getSubjectForLocaleWithVars($language, $vars) : "Ihr Rezeptbuch: {$record->title}";
+                    $body = $template ? $template->getBodyForLocale($language, $vars) : "Sehr geehrte(r) $name,<br><br>Sie können Ihr Rezeptbuch unter folgendem Link einsehen: <a href=\"$editLink\">Rezeptbuch öffnen</a><br><br>Mit freundlichen Grüßen";
+
+                    // Send email with link (no PDF attachment)
+                    \Illuminate\Support\Facades\Mail::send([], [], function ($message) use ($email, $name, $subject, $body) {
                         $message->to($email, $name)
-                            ->subject("Ihr Rezeptbuch: {$record->title}")
-                            ->html("Sehr geehrte(r) {$name},<br><br>anbei finden Sie Ihr Rezeptbuch als PDF-Datei.<br><br>Mit freundlichen Grüßen")
-                            ->attach(\Illuminate\Support\Facades\Storage::path($pdfPath), [
-                                'as' => "buch-{$record->id}-rezepte.pdf",
-                                'mime' => 'application/pdf',
-                            ]);
+                            ->from(config('mail.from.address'), config('mail.from.name'))
+                            ->subject($subject)
+                            ->html($body);
                     });
-                    // Log only the filename, not the file content or path
-                    \Illuminate\Support\Facades\Log::info('Email sent with attachment', [
-                        'filename' => "buch-{$record->id}-rezepte.pdf",
-                    ]);
 
                     // Update book status to 'Versendet' and save
                     $record->status = 'Versendet';
