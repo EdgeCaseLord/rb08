@@ -213,13 +213,13 @@ class CreateBookJobWithPdf implements ShouldQueue
         $labEmail = $lab && $lab->email ? $lab->email : 'daniel@pixelhoch.de';
         $labLanguage = $lab && $lab->language ? $lab->language : 'de';
 
-        // Fetch the text template for book_send_email for this lab
-        $template = TextTemplate::where('type', 'book_send_email')
+        // Fetch the text template for analysis_import_email for this lab
+        $template = TextTemplate::where('type', 'analysis_import_email')
             ->where('user_id', $lab ? $lab->id : null)
             ->first();
         // Fallback to global template if not found
         if (!$template) {
-            $template = TextTemplate::where('type', 'book_send_email')->first();
+            $template = TextTemplate::where('type', 'analysis_import_email')->first();
         }
 
         $editLink = url("/filament/resources/books/{$book->id}/edit");
@@ -271,7 +271,7 @@ class CreateBookJobWithPdf implements ShouldQueue
             Mail::send([], [], function ($message) use ($emailData, $labEmail) {
                 $message->to($labEmail)
                     ->from(config('mail.from.address'), config('mail.from.name'))
-                    ->subject(mb_encode_mimeheader($emailData['subject'], 'UTF-8'))
+                    ->subject($emailData['subject'])
                     ->html($emailData['body'])
                     ->attach($emailData['pdfPath'], [
                         'as' => $emailData['pdfName'],
