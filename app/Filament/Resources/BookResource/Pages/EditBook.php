@@ -548,7 +548,7 @@ class EditBook extends EditRecord
                     }
                     \Illuminate\Support\Facades\Mail::send([], [], function ($message) use ($email, $name, $subject, $body, $pdfPath, $pdfFileName) {
                         $message->to($email, $name)
-                            ->from('no-reply@myintest-rezepte.de', 'myintest-rezepte.de')
+                            ->from(config('mail.from.address'), config('mail.from.name'))
                             ->subject($subject)
                             ->html($body)
                             ->attach(\Illuminate\Support\Facades\Storage::path($pdfPath), [
