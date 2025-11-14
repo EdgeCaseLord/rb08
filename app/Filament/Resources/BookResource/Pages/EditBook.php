@@ -536,7 +536,7 @@ class EditBook extends EditRecord
                     // Get template and language from form data
                     $template = \App\Models\TextTemplate::find($data['template_id'] ?? null);
                     $lang = $data['language'] ?? 'de';
-                    $subject = $template ? $template->getSubjectForLocale($lang) : '';
+                    $subject = $template ? $template->getSubjectForLocaleWithVars($lang, $vars) : '';
                     $body = $template ? $template->getBodyForLocale($lang, $vars) : '';
                     // Remove all line breaks and extra spaces from subject, force string
                     $subject = preg_replace('/[\r\n]+/', ' ', (string)$subject);
